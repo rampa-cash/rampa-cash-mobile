@@ -40,7 +40,10 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.mobile.wallet.adapter.clientlib.ktx)
+    implementation(libs.web3.solana)
+    implementation(libs.rpc.core)
+    implementation(libs.multimult)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
