@@ -18,86 +18,44 @@ import java.security.MessageDigest
 import java.util.UUID
 
 object AssociatedTokenAccountUtils {
-    // 1. DERIVE ATA ADDRESS
     fun deriveAssociatedTokenAccount(
-        owner: SolanaPublicKey,  // User's wallet address
-        mint: SolanaPublicKey    // Token mint address (USDC, EURC, etc.)
+        owner: SolanaPublicKey, mint: SolanaPublicKey
     ): SolanaPublicKey {
-
-        android.util.Log.d("ATAUtils", "=== Deriving ATA Address ===")
-        android.util.Log.d("ATAUtils", "Owner: ${owner.base58()}")
-        android.util.Log.d("ATAUtils", "Mint: ${mint.base58()}")
-        android.util.Log.d("ATAUtils", "Token Program: ${ProgramIds.TOKEN_PROGRAM}")
-        android.util.Log.d("ATAUtils", "ATA Program: ${ProgramIds.ASSOCIATED_TOKEN_PROGRAM}")
-
-        // Create seeds for Program Derived Address (PDA)
         val seeds = listOf(
-            owner.bytes,                                                // User's wallet
-            SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM).bytes,      // SPL Token Program
-            mint.bytes                                                  // Token mint
+            owner.bytes, SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM).bytes, mint.bytes
         )
-
-        android.util.Log.d("ATAUtils", "Seeds created: ${seeds.size} seeds")
-        seeds.forEachIndexed { index, seed ->
-            android.util.Log.d("ATAUtils", "  Seed [$index]: ${seed.size} bytes - ${seed.take(8).joinToString { "%02x".format(it) }}...")
-        }
-
-        // Generate deterministic address that has no private key
-        val derivedAddress = try {
-            findProgramAddress(
-                seeds,
-                SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM)
-            )
-        } catch (e: Exception) {
-            android.util.Log.e("ATAUtils", "❌ PDA derivation failed: ${e.message}", e)
-            throw e
-        }
-        
-        android.util.Log.d("ATAUtils", "✅ Derived ATA: ${derivedAddress.base58()}")
-        return derivedAddress
+        return findProgramAddress(seeds, SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM))
     }
 
     // Custom PDA derivation function since SolanaPublicKey doesn't have findProgramAddress
-    private fun findProgramAddress(seeds: List<ByteArray>, programId: SolanaPublicKey): SolanaPublicKey {
-        android.util.Log.d("ATAUtils", "Finding program address with ${seeds.size} seeds for program ${programId.base58()}")
-        
-        for (nonce in 255 downTo 1) {
+    private fun findProgramAddress(
+        seeds: List<ByteArray>, programId: SolanaPublicKey
+    ): SolanaPublicKey {
+        for (nonce in 255 downTo 0) {
             try {
-                val address = createProgramAddress(seeds + listOf(byteArrayOf(nonce.toByte())), programId)
-                android.util.Log.d("ATAUtils", "✅ Found valid PDA with nonce $nonce: ${address.base58()}")
+                // Flatten all seeds and append the nonce as a single byte
+                val flatSeeds =
+                    seeds.fold(ByteArray(0)) { acc, bytes -> acc + bytes } + nonce.toByte()
+                val address = createProgramAddress(flatSeeds, programId)
                 return address
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Continue trying with next nonce
-                if (nonce == 1) {
-                    android.util.Log.d("ATAUtils", "Tried nonce $nonce, continuing...")
-                }
             }
         }
-        android.util.Log.e("ATAUtils", "❌ Unable to find a viable program address nonce")
         throw IllegalStateException("Unable to find a viable program address nonce")
     }
 
-    private fun createProgramAddress(seeds: List<ByteArray>, programId: SolanaPublicKey): SolanaPublicKey {
+    private fun createProgramAddress(
+        flatSeeds: ByteArray, programId: SolanaPublicKey
+    ): SolanaPublicKey {
         val sha256 = MessageDigest.getInstance("SHA-256")
-        
-        // Add all seeds to the hash
-        seeds.forEach { seed ->
-            sha256.update(seed)
-        }
-        
-        // Add program ID
+        sha256.update(flatSeeds)
         sha256.update(programId.bytes)
-        
-        // Add the PDA marker
         sha256.update("ProgramDerivedAddress".toByteArray(StandardCharsets.UTF_8))
-        
         val hash = sha256.digest()
-        
-        // Check if the hash is on the curve (for Ed25519, we need to ensure it's a valid point)
         if (isOnCurve(hash)) {
             throw IllegalArgumentException("Invalid seeds, address is on curve")
         }
-        
         return SolanaPublicKey(hash)
     }
 
@@ -110,11 +68,9 @@ object AssociatedTokenAccountUtils {
         return try {
             val rpc = Rpc20Driver(rpcUri.toString(), KtorHttpDriver())
             val request = JsonRpc20Request(
-                method = "getAccountInfo",
-                params = buildJsonArray {
+                method = "getAccountInfo", params = buildJsonArray {
                     add(accountAddress.base58())
-                },
-                UUID.randomUUID().toString()
+                }, UUID.randomUUID().toString()
             )
 
             val response = rpc.makeRequest(request, JsonElement.serializer())
@@ -134,22 +90,30 @@ object AssociatedTokenAccountUtils {
         val associatedTokenAccount = deriveAssociatedTokenAccount(owner, mint)
 
         return TransactionInstruction(
-            SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM),
-            listOf(
-                AccountMeta(payer, isSigner = true, isWritable = true),                    // Payer (signer, writable)
-                AccountMeta(associatedTokenAccount, isSigner = false, isWritable = true),  // New ATA (writable)
-                AccountMeta(owner, isSigner = false, isWritable = false),                  // Owner (read-only)
-                AccountMeta(mint, isSigner = false, isWritable = false),                   // Token mint (read-only)
-                AccountMeta(SolanaPublicKey.from(ProgramIds.SYSTEM_PROGRAM),
+            SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM), listOf(
+                AccountMeta(
+                    payer, isSigner = true, isWritable = true
+                ),                    // Payer (signer, writable)
+                AccountMeta(
+                    associatedTokenAccount, isSigner = false, isWritable = true
+                ),  // New ATA (writable)
+                AccountMeta(
+                    owner, isSigner = false, isWritable = false
+                ),                  // Owner (read-only)
+                AccountMeta(
+                    mint, isSigner = false, isWritable = false
+                ),                   // Token mint (read-only)
+                AccountMeta(
+                    SolanaPublicKey.from(ProgramIds.SYSTEM_PROGRAM),
                     isSigner = false,
                     isWritable = false
                 ), // System Program
-                AccountMeta(SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM),
+                AccountMeta(
+                    SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM),
                     isSigner = false,
                     isWritable = false
                 ), // Token Program
-            ),
-            byteArrayOf() // No instruction data needed
+            ), byteArrayOf() // No instruction data needed
         )
     }
 
@@ -175,31 +139,20 @@ object AssociatedTokenAccountUtils {
         ownerAddress: SolanaPublicKey,      // Owner of source account
         amount: Long                        // Amount (consider token decimals)
     ): TransactionInstruction {
-        android.util.Log.d("ATAUtils", "=== Creating SPL Transfer Instruction ===")
-        android.util.Log.d("ATAUtils", "From token account: ${fromTokenAccount.base58()}")
-        android.util.Log.d("ATAUtils", "To token account: ${toTokenAccount.base58()}")
-        android.util.Log.d("ATAUtils", "Owner address: ${ownerAddress.base58()}")
-        android.util.Log.d("ATAUtils", "Amount: $amount")
-        android.util.Log.d("ATAUtils", "Token program: ${ProgramIds.TOKEN_PROGRAM}")
-        
         val accounts = listOf(
-            AccountMeta(fromTokenAccount, isSigner = false, isWritable = true), // Source token account
-            AccountMeta(toTokenAccount, isSigner = false, isWritable = true),   // Dest token account
+            AccountMeta(
+                fromTokenAccount, isSigner = false, isWritable = true
+            ), // Source token account
+            AccountMeta(
+                toTokenAccount, isSigner = false, isWritable = true
+            ),   // Dest token account
             AccountMeta(ownerAddress, isSigner = true, isWritable = false)      // Owner (signer)
         )
-        
-        android.util.Log.d("ATAUtils", "Account metas:")
-        accounts.forEachIndexed { index, account ->
-            android.util.Log.d("ATAUtils", "  [$index] ${account.publicKey.base58()} (signer=${account.isSigner}, writable=${account.isWritable})")
-        }
-        
+
         val instructionData = createSplTransferInstructionData(amount)
-        android.util.Log.d("ATAUtils", "Instruction data: ${instructionData.joinToString { "%02x".format(it) }}")
-        
+
         return TransactionInstruction(
-            SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM),
-            accounts,
-            instructionData
+            SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM), accounts, instructionData
         )
     }
 
@@ -212,17 +165,9 @@ object AssociatedTokenAccountUtils {
         mint: SolanaPublicKey,          // Token mint address
         amount: Long                    // Amount to transfer
     ): TransactionInstruction {
-        android.util.Log.d("ATAUtils", "=== Creating SPL Transfer with ATA Derivation ===")
-        android.util.Log.d("ATAUtils", "From owner: ${fromOwner.base58()}")
-        android.util.Log.d("ATAUtils", "To owner: ${toOwner.base58()}")
-        android.util.Log.d("ATAUtils", "Mint: ${mint.base58()}")
-        
         val fromTokenAccount = deriveAssociatedTokenAccount(fromOwner, mint)
         val toTokenAccount = deriveAssociatedTokenAccount(toOwner, mint)
-        
-        android.util.Log.d("ATAUtils", "Derived from ATA: ${fromTokenAccount.base58()}")
-        android.util.Log.d("ATAUtils", "Derived to ATA: ${toTokenAccount.base58()}")
-        
+
         return createSplTransferInstruction(fromTokenAccount, toTokenAccount, fromOwner, amount)
     }
 
@@ -237,20 +182,19 @@ object AssociatedTokenAccountUtils {
         payer: SolanaPublicKey
     ): List<TransactionInstruction> {
         val instructions = mutableListOf<TransactionInstruction>()
-        
         val fromAta = deriveAssociatedTokenAccount(fromOwner, mint)
         val toAta = deriveAssociatedTokenAccount(toOwner, mint)
-        
+
         // Check if fromAta exists (should exist for sender)
         if (!checkAccountExists(rpcUri, fromAta)) {
             instructions.add(createAssociatedTokenAccountInstruction(payer, fromOwner, mint))
         }
-        
+
         // Check if toAta exists (might need to be created for recipient)
         if (!checkAccountExists(rpcUri, toAta)) {
             instructions.add(createAssociatedTokenAccountInstruction(payer, toOwner, mint))
         }
-        
+
         return instructions
     }
 }

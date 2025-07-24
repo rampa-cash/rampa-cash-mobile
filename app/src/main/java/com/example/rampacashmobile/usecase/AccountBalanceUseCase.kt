@@ -26,7 +26,6 @@ object AccountBalanceUseCase {
                 throw InvalidAccountException("Could not fetch balance for account [${address.base58()}]: ${error.code}, ${error.message}")
             }
 
-            Log.d(TAG, "getBalance pubKey=${address.base58()}, balance=${response.result}")
             return@withContext response.result!!.value
         }
 
@@ -41,5 +40,6 @@ object AccountBalanceUseCase {
 
     @Serializable
     data class BalanceResponse(val value: Long)
-    class InvalidAccountException(message: String? = null, cause: Throwable? = null) : RuntimeException(message, cause)
+    class InvalidAccountException(message: String? = null, cause: Throwable? = null) :
+        RuntimeException(message, cause)
 }

@@ -3,6 +3,7 @@ package com.example.rampacashmobile.usecase
 import android.content.SharedPreferences
 import com.solana.publickey.SolanaPublicKey
 import javax.inject.Inject
+import androidx.core.content.edit
 
 sealed class WalletConnection
 
@@ -12,7 +13,7 @@ data class Connected(
     val publicKey: SolanaPublicKey,
     val accountLabel: String,
     val authToken: String
-): WalletConnection()
+) : WalletConnection()
 
 class PersistenceUseCase @Inject constructor(
     private val sharedPreferences: SharedPreferences
@@ -20,7 +21,7 @@ class PersistenceUseCase @Inject constructor(
     private var connection: WalletConnection = NotConnected
 
     fun getWalletConnection(): WalletConnection {
-        return when(connection) {
+        return when (connection) {
             is Connected -> connection
             is NotConnected -> {
                 val key = sharedPreferences.getString(PUBKEY_KEY, "")
@@ -39,21 +40,21 @@ class PersistenceUseCase @Inject constructor(
     }
 
     fun persistConnection(pubKey: SolanaPublicKey, accountLabel: String, token: String) {
-        sharedPreferences.edit().apply {
+        sharedPreferences.edit {
             putString(PUBKEY_KEY, pubKey.base58())
             putString(ACCOUNT_LABEL, accountLabel)
             putString(AUTH_TOKEN_KEY, token)
-        }.apply()
+        }
 
         connection = Connected(pubKey, accountLabel, token)
     }
 
     fun clearConnection() {
-        sharedPreferences.edit().apply {
+        sharedPreferences.edit {
             putString(PUBKEY_KEY, "")
             putString(ACCOUNT_LABEL, "")
             putString(AUTH_TOKEN_KEY, "")
-        }.apply()
+        }
 
         connection = NotConnected
     }

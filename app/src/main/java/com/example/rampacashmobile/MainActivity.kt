@@ -40,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -57,10 +56,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 // Token selection data class
 data class SupportedToken(
-    val name: String,
-    val symbol: String,
-    val mintAddress: String,
-    val decimals: Int
+    val name: String, val symbol: String, val mintAddress: String, val decimals: Int
 )
 
 // Available tokens for selection
@@ -91,8 +87,7 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun MainScreen(
-    intentSender: ActivityResultSender? = null,
-    viewModel: MainViewModel = hiltViewModel()
+    intentSender: ActivityResultSender? = null, viewModel: MainViewModel = hiltViewModel()
 ) {
     val viewState by viewModel.viewState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -103,8 +98,7 @@ fun MainScreen(
                 text = "Rampa Cash - Mobile",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .padding(all = 24.dp)
+                modifier = Modifier.padding(all = 24.dp)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -123,12 +117,12 @@ fun MainScreen(
         Column(
             modifier = Modifier.padding(padding)
         ) {
-            if (viewState.canTransact)
-                AccountInfo(
-                    walletName = viewState.userLabel,
-                    address = viewState.userAddress,
-                    balance = viewState.solBalance
-                )
+            if (viewState.canTransact) AccountInfo(
+                walletName = viewState.userLabel,
+                address = viewState.userAddress,
+                solBalance = viewState.solBalance,
+                eurcBalance = viewState.eurcBalance
+            )
 
             // SPL Token Transfer Section with Token Selection
             if (viewState.canTransact && intentSender != null) {
@@ -141,25 +135,22 @@ fun MainScreen(
                             tokenMintAddress = token.mintAddress,
                             tokenDecimals = token.decimals
                         )
-                    },
-                    onCheckBalance = { token ->
+                    }, onCheckBalance = { token ->
                         viewModel.checkTokenBalance(
-                            tokenMintAddress = token.mintAddress,
-                            tokenDecimals = token.decimals
+                            tokenMintAddress = token.mintAddress, tokenDecimals = token.decimals
                         )
-                    }
+                    }, eurcBalance = viewState.eurcBalance
                 )
             }
 
             Row() {
                 Button(
                     onClick = {
-                        if (intentSender != null && !viewState.canTransact)
-                            viewModel.connect(intentSender)
-                        else
-                            viewModel.disconnect()
-                    },
-                    modifier = Modifier
+                        if (intentSender != null && !viewState.canTransact) viewModel.connect(
+                            intentSender
+                        )
+                        else viewModel.disconnect()
+                    }, modifier = Modifier
                         .weight(1f)
                         .padding(start = 4.dp)
                         .fillMaxWidth()
@@ -185,7 +176,7 @@ fun Section(sectionTitle: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun AccountInfo(walletName: String, address: String, balance: Number) {
+fun AccountInfo(walletName: String, address: String, solBalance: Number, eurcBalance: Number) {
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
@@ -209,9 +200,19 @@ fun AccountInfo(walletName: String, address: String, balance: Number) {
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(8.dp))
+
+            // SOL Balance
             Text(
-                text = "$balance SOL", // TODO: Nicely format the displayed number (e.g: 0.089 SOL)
-                style = MaterialTheme.typography.headlineLarge
+                text = "%.3f SOL".format(solBalance.toDouble()),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            // EURC Balance
+            Text(
+                text = "%.2f EURC".format(eurcBalance.toDouble()),
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color(0xFF4CAF50) // Green color for EURC
             )
         }
     }
@@ -242,40 +243,33 @@ fun TokenSelectionDropdown(
             label = { Text("Select Token") },
             trailingIcon = {
                 Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "Dropdown"
+                    imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown"
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = true }
-        )
-        
+                .clickable { expanded = true })
+
         DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+            expanded = expanded, onDismissRequest = { expanded = false }) {
             supportedTokens.forEach { token ->
-                DropdownMenuItem(
-                    text = { 
-                        Column {
-                            Text(
-                                text = token.symbol,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = token.name,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                        }
-                    },
-                    onClick = {
-                        onTokenSelected(token)
-                        expanded = false
+                DropdownMenuItem(text = {
+                    Column {
+                        Text(
+                            text = token.symbol,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = token.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
                     }
-                )
+                }, onClick = {
+                    onTokenSelected(token)
+                    expanded = false
+                })
             }
         }
     }
@@ -284,7 +278,8 @@ fun TokenSelectionDropdown(
 @Composable
 fun TokenTransferSection(
     onTransfer: (token: SupportedToken, recipientAddress: String, amount: String) -> Unit,
-    onCheckBalance: (token: SupportedToken) -> Unit = {}
+    onCheckBalance: (token: SupportedToken) -> Unit = {},
+    eurcBalance: Double = 0.0
 ) {
     var selectedToken by remember { mutableStateOf(supportedTokens.first()) }
     var recipientAddress by remember { mutableStateOf("") }
@@ -294,7 +289,7 @@ fun TokenTransferSection(
     // Test addresses for development (Devnet)
     val testAddresses = listOf(
         "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn" to "Test Wallet 1",
-        "HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy" to "Test Wallet 2",
+        "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG" to "Test Wallet 2",
     )
 
     Section(sectionTitle = "Token Transfer") {
@@ -307,9 +302,9 @@ fun TokenTransferSection(
 
         // Show current balance placeholder (you might want to fetch actual token balance)
         Text(
-            text = "Available: -- ${selectedToken.symbol}",
+            text = "Available: %.2f ${selectedToken.symbol}".format(eurcBalance),
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
+            color = if (eurcBalance > 0) Color(0xFF4CAF50) else Color.Red,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -329,8 +324,7 @@ fun TokenTransferSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
-            singleLine = true
-        )
+            singleLine = true)
 
         // Test Address Quick Fill Buttons (Development Helper)
         Text(
@@ -339,7 +333,7 @@ fun TokenTransferSection(
             color = Color.Gray,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -347,7 +341,7 @@ fun TokenTransferSection(
         ) {
             testAddresses.forEach { (address, name) ->
                 Button(
-                    onClick = { 
+                    onClick = {
                         recipientAddress = address
                         isValidAddress = true
                     },
@@ -359,8 +353,7 @@ fun TokenTransferSection(
                     )
                 ) {
                     Text(
-                        text = name,
-                        style = MaterialTheme.typography.bodySmall
+                        text = name, style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -396,8 +389,7 @@ fun TokenTransferSection(
                     )
                 ) {
                     Text(
-                        text = testAmount,
-                        style = MaterialTheme.typography.bodySmall
+                        text = testAmount, style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -409,20 +401,16 @@ fun TokenTransferSection(
                 onTransfer(selectedToken, recipientAddress, amount)
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = recipientAddress.isNotBlank() &&
-                    amount.isNotBlank() &&
-                    isValidAddress &&
-                    amount.toDoubleOrNull() != null &&
-                    amount.toDouble() > 0
+            enabled = recipientAddress.isNotBlank() && amount.isNotBlank() && isValidAddress && amount.toDoubleOrNull() != null && amount.toDouble() > 0
         ) {
             Text(text = "Send $amount ${selectedToken.symbol}")
         }
 
-                       // Quick balance check button for debugging
-               Button(
-                   onClick = {
-                       onCheckBalance(selectedToken)
-                   },
+        // Quick balance check button for debugging
+        Button(
+            onClick = {
+                onCheckBalance(selectedToken)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
