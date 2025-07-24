@@ -2,11 +2,15 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.ksp)
+    alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.dagger.hilt.android)
 }
 
 android {
     namespace = "com.example.rampacashmobile"
     compileSdk = 36
+    android.buildFeatures.buildConfig = true
 
     defaultConfig {
         applicationId = "com.example.rampacashmobile"
@@ -37,6 +41,9 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+    }
 }
 
 dependencies {
@@ -59,4 +66,11 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.dagger.hilt.android)
+    ksp(libs.dagger.hilt.compiler)
 }
