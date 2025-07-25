@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +36,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,7 +65,8 @@ data class SupportedToken(
 
 // Available tokens for selection
 val supportedTokens = listOf(
-    SupportedToken("Euro Coin", "EURC", TokenMints.EURC_DEVNET, TokenDecimals.EURC)
+    SupportedToken("Euro Coin", "EURC", TokenMints.EURC_DEVNET, TokenDecimals.EURC),
+    SupportedToken("USD Coin", "USDC", TokenMints.USDC_DEVNET, TokenDecimals.USDC)
 )
 
 @AndroidEntryPoint
@@ -94,11 +99,18 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            Text(
-                text = "Rampa Cash - Mobile",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(all = 24.dp)
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "Rampa Cash - Mobile",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -115,13 +127,16 @@ fun MainScreen(
         }
 
         Column(
-            modifier = Modifier.padding(padding)
+            modifier = Modifier
+                .padding(padding)
+                .padding(horizontal = 16.dp)
         ) {
             if (viewState.canTransact) AccountInfo(
                 walletName = viewState.userLabel,
                 address = viewState.userAddress,
                 solBalance = viewState.solBalance,
-                eurcBalance = viewState.eurcBalance
+                eurcBalance = viewState.eurcBalance,
+                usdcBalance = viewState.usdcBalance
             )
 
             // SPL Token Transfer Section with Token Selection
@@ -140,23 +155,25 @@ fun MainScreen(
                             tokenMintAddress = token.mintAddress, tokenDecimals = token.decimals
                         )
                     }, eurcBalance = viewState.eurcBalance,
+                    usdcBalance = viewState.usdcBalance,
                     onRecipientATA = { recipient, token ->
                         viewModel.checkATA(recipient, token.mintAddress)
                     }
                 )
             }
 
-            Row() {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
                 Button(
                     onClick = {
                         if (intentSender != null && !viewState.canTransact) viewModel.connect(
                             intentSender
                         )
                         else viewModel.disconnect()
-                    }, modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 4.dp)
-                        .fillMaxWidth()
+                    },
+                    modifier = Modifier.width(200.dp)
                 ) {
                     Text(if (viewState.canTransact) "Disconnect" else "Connect")
                 }
@@ -179,7 +196,7 @@ fun Section(sectionTitle: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun AccountInfo(walletName: String, address: String, solBalance: Number, eurcBalance: Number) {
+fun AccountInfo(walletName: String, address: String, solBalance: Number, eurcBalance: Number, usdcBalance: Number) {
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
@@ -216,6 +233,13 @@ fun AccountInfo(walletName: String, address: String, solBalance: Number, eurcBal
                 text = "%.2f EURC".format(eurcBalance.toDouble()),
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color(0xFF4CAF50) // Green color for EURC
+            )
+
+            // USDC Balance
+            Text(
+                text = "%.2f USDC".format(usdcBalance.toDouble()),
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color(0xFF2196F3) // Blue color for USDC
             )
         }
     }
@@ -283,6 +307,7 @@ fun TokenTransferSection(
     onTransfer: (token: SupportedToken, recipientAddress: String, amount: String) -> Unit,
     onCheckBalance: (token: SupportedToken) -> Unit = {},
     eurcBalance: Double = 0.0,
+    usdcBalance: Double = 0.0,
     onRecipientATA: (sender: String, token: SupportedToken) -> Unit
 ) {
     var selectedToken by remember { mutableStateOf(supportedTokens.first()) }
@@ -304,11 +329,17 @@ fun TokenTransferSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Show current balance placeholder (you might want to fetch actual token balance)
+        // Show current balance for the selected token
+        val currentBalance = when (selectedToken.symbol) {
+            "EURC" -> eurcBalance
+            "USDC" -> usdcBalance
+            else -> 0.0
+        }
+        
         Text(
-            text = "Available: %.2f ${selectedToken.symbol}".format(eurcBalance),
+            text = "Available: %.2f ${selectedToken.symbol}".format(currentBalance),
             style = MaterialTheme.typography.bodySmall,
-            color = if (eurcBalance > 0) Color(0xFF4CAF50) else Color.Red,
+            color = if (currentBalance > 0) Color(0xFF4CAF50) else Color.Red,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 

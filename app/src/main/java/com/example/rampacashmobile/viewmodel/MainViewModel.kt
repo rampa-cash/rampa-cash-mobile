@@ -32,6 +32,7 @@ data class MainViewState(
     val canTransact: Boolean = false,
     val solBalance: Double = 0.0,
     val eurcBalance: Double = 0.0,
+    val usdcBalance: Double = 0.0,
     val userAddress: String = "",
     val userLabel: String = "",
     val walletFound: Boolean = true,
@@ -72,6 +73,7 @@ class MainViewModel @Inject constructor(
 
             getSolanaBalance(persistedConnection.publicKey)
             getEurcBalance(persistedConnection.publicKey)
+            getUsdcBalance(persistedConnection.publicKey)
 
             _state.value.copy(
                 isLoading = false,
@@ -108,6 +110,7 @@ class MainViewModel @Inject constructor(
 
                     getSolanaBalance(currentConn.publicKey)
                     getEurcBalance(currentConn.publicKey)
+                    getUsdcBalance(currentConn.publicKey)
 
                     _state.value.copy(
                         isLoading = false,
@@ -201,6 +204,42 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun getUsdcBalance(account: SolanaPublicKey) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
+                val usdcAta =
+                    AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, usdcMint)
+
+                // 1. Check if the ATA exists
+                val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, usdcAta)
+                if (!exists) {
+                    _state.value.copy(
+                        usdcBalance = 0.0
+                    ).updateViewState()
+                    return@launch
+                }
+
+                // 2. If it exists, fetch the balance
+                val tokenBalance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
+                val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
+
+                _state.value.copy(
+                    usdcBalance = humanReadableBalance
+                ).updateViewState()
+
+            } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
+                _state.value.copy(
+                    usdcBalance = 0.0
+                ).updateViewState()
+            } catch (e: Exception) {
+                _state.value.copy(
+                    usdcBalance = 0.0
+                ).updateViewState()
+            }
+        }
+    }
+
     private suspend fun getAccountBalance(account: SolanaPublicKey): Double {
         return try {
             AccountBalanceUseCase(rpcUri, account) / 1000000000.0
@@ -266,6 +305,7 @@ class MainViewModel @Inject constructor(
                                 SolanaPublicKey(Base58.decode(viewState.value.userAddress))
                             getSolanaBalance(userAccount)
                             getEurcBalance(userAccount)
+                            getUsdcBalance(userAccount)
 
                             _state.value.copy(
                                 snackbarMessage = "✅ | Token transfer successful: $signature"
@@ -380,15 +420,22 @@ class MainViewModel @Inject constructor(
                 )
                 Log.d(TAG, "Sender ATA: $senderAta")
 
+                // Determine token symbol based on mint address
+                val tokenSymbol = when (tokenMintAddress) {
+                    TokenMints.EURC_DEVNET -> "EURC"
+                    TokenMints.USDC_DEVNET -> "USDC"
+                    else -> "Token"
+                }
+
                 // Get balance using the clean UseCase (same pattern as SOL balance)
                 val tokenBalance = TokenAccountBalanceUseCase(rpcUri, senderAta)
                 val humanReadableBalance =
                     tokenBalance.toDouble() / 10.0.pow(tokenDecimals.toDouble())
 
                 val balanceMessage = if (tokenBalance == 0L) {
-                    "💸 | No EURC tokens! Balance: 0 (Need devnet tokens)"
+                    "💸 | No $tokenSymbol tokens! Balance: 0 (Need devnet tokens)"
                 } else {
-                    "💰 | EURC Balance: $humanReadableBalance tokens"
+                    "💰 | $tokenSymbol Balance: $humanReadableBalance tokens"
                 }
 
                 _state.value.copy(
@@ -396,12 +443,22 @@ class MainViewModel @Inject constructor(
                 ).updateViewState()
 
             } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
+                val tokenSymbol = when (tokenMintAddress) {
+                    TokenMints.EURC_DEVNET -> "EURC"
+                    TokenMints.USDC_DEVNET -> "USDC"
+                    else -> "Token"
+                }
                 _state.value.copy(
-                    snackbarMessage = "💸 | EURC ATA doesn't exist - Need to get devnet tokens first!"
+                    snackbarMessage = "💸 | $tokenSymbol ATA doesn't exist - Need to get devnet tokens first!"
                 ).updateViewState()
             } catch (e: TokenAccountBalanceUseCase.TokenBalanceException) {
+                val tokenSymbol = when (tokenMintAddress) {
+                    TokenMints.EURC_DEVNET -> "EURC"
+                    TokenMints.USDC_DEVNET -> "USDC"
+                    else -> "Token"
+                }
                 _state.value.copy(
-                    snackbarMessage = "❌ | Could not check EURC balance: ${e.message}"
+                    snackbarMessage = "❌ | Could not check $tokenSymbol balance: ${e.message}"
                 ).updateViewState()
             } catch (e: Exception) {
                 _state.value.copy(
