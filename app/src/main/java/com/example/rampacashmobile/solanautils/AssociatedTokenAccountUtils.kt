@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.add
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -19,47 +20,55 @@ import java.util.UUID
 
 object AssociatedTokenAccountUtils {
     fun deriveAssociatedTokenAccount(
-        owner: SolanaPublicKey, mint: SolanaPublicKey
+        walletAddress: SolanaPublicKey,
+        mintAddress: SolanaPublicKey
     ): SolanaPublicKey {
         val seeds = listOf(
-            owner.bytes, SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM).bytes, mint.bytes
+            walletAddress.bytes,
+            SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM).bytes,
+            mintAddress.bytes
         )
+
         return findProgramAddress(seeds, SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM))
     }
 
     // Custom PDA derivation function since SolanaPublicKey doesn't have findProgramAddress
-    private fun findProgramAddress(
-        seeds: List<ByteArray>, programId: SolanaPublicKey
+    fun findProgramAddress(
+        seeds: List<ByteArray>,
+        programId: SolanaPublicKey
     ): SolanaPublicKey {
-        for (nonce in 255 downTo 0) {
+        for (bump in 255 downTo 0) {
             try {
-                // Flatten all seeds and append the nonce as a single byte
-                val flatSeeds =
-                    seeds.fold(ByteArray(0)) { acc, bytes -> acc + bytes } + nonce.toByte()
-                val address = createProgramAddress(flatSeeds, programId)
-                return address
+                val bumpedSeeds = seeds + listOf(byteArrayOf(bump.toByte()))
+                val hash = createProgramAddressHash(bumpedSeeds, programId)
+                if (!isOnCurve(hash)) {
+                    return SolanaPublicKey(hash)
+                }
             } catch (_: Exception) {
-                // Continue trying with next nonce
+                // ignore
             }
         }
-        throw IllegalStateException("Unable to find a viable program address nonce")
+        throw IllegalStateException("Unable to find valid PDA bump")
     }
 
-    private fun createProgramAddress(
-        flatSeeds: ByteArray, programId: SolanaPublicKey
-    ): SolanaPublicKey {
-        val sha256 = MessageDigest.getInstance("SHA-256")
-        sha256.update(flatSeeds)
-        sha256.update(programId.bytes)
-        sha256.update("ProgramDerivedAddress".toByteArray(StandardCharsets.UTF_8))
-        val hash = sha256.digest()
-        if (isOnCurve(hash)) {
-            throw IllegalArgumentException("Invalid seeds, address is on curve")
+    fun createProgramAddressHash(
+        seeds: List<ByteArray>,
+        programId: SolanaPublicKey
+    ): ByteArray {
+        val buffer = ByteArrayOutputStream()
+
+        for (seed in seeds) {
+            if (seed.size > 32) throw IllegalArgumentException("Seed too long")
+            buffer.write(seed)
         }
-        return SolanaPublicKey(hash)
+
+        buffer.write(programId.bytes)
+        buffer.write("ProgramDerivedAddress".toByteArray(StandardCharsets.UTF_8))
+
+        return MessageDigest.getInstance("SHA-256").digest(buffer.toByteArray())
     }
 
-    private fun isOnCurve(pubkeyBytes: ByteArray): Boolean {
+    fun isOnCurve(pubkeyBytes: ByteArray): Boolean {
         return (pubkeyBytes[31].toInt() and 0xE0) != 0
     }
 
@@ -91,33 +100,15 @@ object AssociatedTokenAccountUtils {
 
         return TransactionInstruction(
             SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM), listOf(
-                AccountMeta(
-                    payer, isSigner = true, isWritable = true
-                ),                    // Payer (signer, writable)
-                AccountMeta(
-                    associatedTokenAccount, isSigner = false, isWritable = true
-                ),  // New ATA (writable)
-                AccountMeta(
-                    owner, isSigner = false, isWritable = false
-                ),                  // Owner (read-only)
-                AccountMeta(
-                    mint, isSigner = false, isWritable = false
-                ),                   // Token mint (read-only)
-                AccountMeta(
-                    SolanaPublicKey.from(ProgramIds.SYSTEM_PROGRAM),
-                    isSigner = false,
-                    isWritable = false
-                ), // System Program
-                AccountMeta(
-                    SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM),
-                    isSigner = false,
-                    isWritable = false
-                ), // Token Program
-            ), byteArrayOf() // No instruction data needed
+                AccountMeta(payer, isSigner = true, isWritable = true), // Payer (signer, writable)
+                AccountMeta(associatedTokenAccount, isSigner = false, isWritable = true),  // New ATA (writable)
+                AccountMeta(owner, isSigner = false, isWritable = false), // Owner (read-only)
+                AccountMeta(mint, isSigner = false, isWritable = false), // Token mint (read-only)
+                AccountMeta(SolanaPublicKey.from(ProgramIds.SYSTEM_PROGRAM), isSigner = false, isWritable = false),
+                AccountMeta(SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM), isSigner = false, isWritable = false),
+            ), byteArrayOf()
         )
     }
-
-    // 4. SPL TOKEN TRANSFER UTILITIES
 
     /**
      * Creates instruction data for SPL token transfer
@@ -140,20 +131,14 @@ object AssociatedTokenAccountUtils {
         amount: Long                        // Amount (consider token decimals)
     ): TransactionInstruction {
         val accounts = listOf(
-            AccountMeta(
-                fromTokenAccount, isSigner = false, isWritable = true
-            ), // Source token account
-            AccountMeta(
-                toTokenAccount, isSigner = false, isWritable = true
-            ),   // Dest token account
+            AccountMeta(fromTokenAccount, isSigner = false, isWritable = true), // Source token account
+            AccountMeta(toTokenAccount, isSigner = false, isWritable = true),   // Dest token account
             AccountMeta(ownerAddress, isSigner = true, isWritable = false)      // Owner (signer)
         )
 
         val instructionData = createSplTransferInstructionData(amount)
 
-        return TransactionInstruction(
-            SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM), accounts, instructionData
-        )
+        return TransactionInstruction(SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM), accounts, instructionData)
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.example.rampacashmobile
 
+import android.R
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -139,7 +140,10 @@ fun MainScreen(
                         viewModel.checkTokenBalance(
                             tokenMintAddress = token.mintAddress, tokenDecimals = token.decimals
                         )
-                    }, eurcBalance = viewState.eurcBalance
+                    }, eurcBalance = viewState.eurcBalance,
+                    onRecipientATA = { recipient, token ->
+                        viewModel.checkATA(recipient, token.mintAddress)
+                    }
                 )
             }
 
@@ -279,7 +283,8 @@ fun TokenSelectionDropdown(
 fun TokenTransferSection(
     onTransfer: (token: SupportedToken, recipientAddress: String, amount: String) -> Unit,
     onCheckBalance: (token: SupportedToken) -> Unit = {},
-    eurcBalance: Double = 0.0
+    eurcBalance: Double = 0.0,
+    onRecipientATA: (sender: String, token: SupportedToken) -> Unit
 ) {
     var selectedToken by remember { mutableStateOf(supportedTokens.first()) }
     var recipientAddress by remember { mutableStateOf("") }
@@ -288,8 +293,8 @@ fun TokenTransferSection(
 
     // Test addresses for development (Devnet)
     val testAddresses = listOf(
-        "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn" to "Test Wallet 1",
-        "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG" to "Test Wallet 2",
+        "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc" to "Test Wallet 1", // solflare
+        "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG" to "Test Wallet 2", // phantomwallet
     )
 
     Section(sectionTitle = "Token Transfer") {
@@ -404,6 +409,24 @@ fun TokenTransferSection(
             enabled = recipientAddress.isNotBlank() && amount.isNotBlank() && isValidAddress && amount.toDoubleOrNull() != null && amount.toDouble() > 0
         ) {
             Text(text = "Send $amount ${selectedToken.symbol}")
+        }
+
+        // Quick check ATA for Sender
+        Button(
+            onClick = {
+                onRecipientATA(recipientAddress, selectedToken)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.outline
+            )
+        ) {
+            Text(
+                text = "🔍 Check $recipientAddress ATA (Debug)",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
 
         // Quick balance check button for debugging

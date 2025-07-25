@@ -51,8 +51,12 @@ object SplTokenTransferUseCase {
 
         // Add the transfer instruction
         val transferInstruction = AssociatedTokenAccountUtils.createSplTransferInstructionWithAta(
-            fromOwner = fromWallet, toOwner = toWallet, mint = mint, amount = amount
+            fromOwner = fromWallet,
+            toOwner = toWallet,
+            mint = mint,
+            amount = amount
         )
+
         instructions.add(transferInstruction)
 
         // Get latest blockhash
@@ -60,6 +64,7 @@ object SplTokenTransferUseCase {
 
         // Build transaction message
         val messageBuilder = Message.Builder()
+
         instructions.forEach { instruction ->
             messageBuilder.addInstruction(instruction)
         }

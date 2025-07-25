@@ -334,6 +334,28 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun checkATA(
+        recipientAddress: String,
+        tokenMintAddress: String
+    ) {
+
+        val tokenMint = SolanaPublicKey.from(tokenMintAddress)
+        val recipientPubkey = SolanaPublicKey.from(recipientAddress)
+
+        val atAccount = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
+            recipientPubkey, tokenMint
+        )
+
+        val toStringATA = atAccount.toString()
+        Log.d(TAG, "checkTokenBalance: Deriving ATA $toStringATA")
+
+        _state.value.copy(
+            snackbarMessage = "⚠️ | Ata for recipient: $recipientAddress is $toStringATA"
+        ).updateViewState()
+
+        return
+    }
+
     /**
      * Check token balance for debugging purposes
      */
@@ -352,9 +374,11 @@ class MainViewModel @Inject constructor(
                 val tokenMint = SolanaPublicKey.from(tokenMintAddress)
 
                 // Derive ATA
+                Log.d(TAG, "checkTokenBalance: Deriving ATA")
                 val senderAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
                     ownerAccount, tokenMint
                 )
+                Log.d(TAG, "Sender ATA: $senderAta")
 
                 // Get balance using the clean UseCase (same pattern as SOL balance)
                 val tokenBalance = TokenAccountBalanceUseCase(rpcUri, senderAta)
