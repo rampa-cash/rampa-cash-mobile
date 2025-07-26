@@ -11,7 +11,9 @@ import com.example.rampacashmobile.usecase.AccountBalanceUseCase
 import com.example.rampacashmobile.usecase.Connected
 import com.example.rampacashmobile.usecase.PersistenceUseCase
 import com.example.rampacashmobile.usecase.SplTokenTransferUseCase
+import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.TokenAccountBalanceUseCase
+import com.example.rampacashmobile.usecase.TransferConfig
 import com.funkatronics.encoders.Base58
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
@@ -261,6 +263,11 @@ class MainViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
+                // Show which implementation is being used
+                if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
+                    Log.d(TAG, "${TransferConfig.getImplementationEmoji()} Using ${TransferConfig.getImplementationName()}")
+                }
+                
                 // Check if we have a valid connection first
                 val currentConnection = persistenceUseCase.getWalletConnection()
 
@@ -282,16 +289,43 @@ class MainViewModel @Inject constructor(
                     val multiplier = 10.0.pow(tokenDecimals.toDouble())
                     val amountInTokenUnits = (amountDouble * multiplier).toLong()
 
-                    // Use the simplified transfer function that handles ATA creation automatically
-                    val tokenTransferTx = SplTokenTransferUseCase.transfer(
-                        rpcUri = rpcUri,
-                        fromWallet = ownerAccount,
-                        toWallet = recipientPubkey,
-                        mint = tokenMint,
-                        amount = amountInTokenUnits
-                    )
-
-                    signAndSendTransactions(arrayOf(tokenTransferTx.serialize()))
+                    // Choose implementation based on configuration
+                    if (TransferConfig.USE_MANUAL_TRANSFER) {
+                        if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
+                            Log.d(TAG, "🔧 Building transaction manually (bypasses web3-solana bugs)")
+                        }
+                        
+                        // Use manual implementation that bypasses library serialization bugs
+                        val transactionBytes = try {
+                            ManualSplTokenTransferUseCase.transfer(
+                                rpcUri = rpcUri,
+                                fromWallet = ownerAccount,
+                                toWallet = recipientPubkey,
+                                mint = tokenMint,
+                                amount = amountInTokenUnits
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "❌ Manual transfer failed: ${e.message}", e)
+                            throw RuntimeException("Manual transfer failed: ${e.message}", e)
+                        }
+                        
+                        signAndSendTransactions(arrayOf(transactionBytes))
+                    } else {
+                        if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
+                            Log.d(TAG, "📚 Using web3-solana library transaction building")
+                        }
+                        
+                        // Use original implementation via web3-solana library
+                        val tokenTransferTx = SplTokenTransferUseCase.transfer(
+                            rpcUri = rpcUri,
+                            fromWallet = ownerAccount,
+                            toWallet = recipientPubkey,
+                            mint = tokenMint,
+                            amount = amountInTokenUnits
+                        )
+                        
+                        signAndSendTransactions(arrayOf(tokenTransferTx.serialize()))
+                    }
                 }
 
                 _state.value = when (result) {
