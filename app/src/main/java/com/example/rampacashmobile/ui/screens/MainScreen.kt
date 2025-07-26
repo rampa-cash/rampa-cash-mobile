@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.rampacashmobile.ui.components.Section
-import com.example.rampacashmobile.ui.components.SupportedToken
 import com.example.rampacashmobile.ui.components.TokenTransferSection
 import com.example.rampacashmobile.ui.components.WalletConnectionCard
 import com.example.rampacashmobile.viewmodel.MainViewModel
@@ -67,23 +66,24 @@ fun MainScreen(
 
         LaunchedEffect(viewState.snackbarMessage) {
             viewState.snackbarMessage?.let { message ->
-                println("🚨 DEBUG: UI LaunchedEffect triggered for message: $message")
-                println("🚨 DEBUG: About to show snackbar...")
-                // Show snackbar and wait for it to be displayed
                 snackbarHostState.showSnackbar(message)
-                println("🚨 DEBUG: Snackbar display completed")
-                // Clear message after snackbar is shown
                 viewModel.clearSnackBar()
-                println("🚨 DEBUG: UI triggered clearSnackBar()")
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-        ) {
+        // Show transaction success screen or main screen
+        if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
+            TransactionSuccessScreen(
+                transactionDetails = viewState.transactionDetails!!,
+                onDone = { viewModel.onTransactionSuccessDone() }
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
             // Wallet Connection Card
             if (viewState.canTransact) {
                 WalletConnectionCard(
@@ -161,6 +161,7 @@ fun MainScreen(
                     )
                 }
             }
+        }
         }
     }
 } 

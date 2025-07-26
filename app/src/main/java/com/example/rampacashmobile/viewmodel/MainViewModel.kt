@@ -14,6 +14,7 @@ import com.example.rampacashmobile.usecase.SplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.TokenAccountBalanceUseCase
 import com.example.rampacashmobile.usecase.TransferConfig
+import com.example.rampacashmobile.ui.screens.TransactionDetails
 import com.funkatronics.encoders.Base58
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
@@ -40,7 +41,9 @@ data class MainViewState(
     val userLabel: String = "",
     val walletFound: Boolean = true,
     val memoTxSignature: String? = null,
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+    val showTransactionSuccess: Boolean = false,
+    val transactionDetails: TransactionDetails? = null
 )
 
 @HiltViewModel
@@ -55,9 +58,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun MainViewState.updateViewState() {
-        Log.d(TAG, "🚨 DEBUG: updateViewState() - snackbarMessage: '${this.snackbarMessage}'")
         _state.update { this }
-        Log.d(TAG, "🚨 DEBUG: State updated successfully")
     }
 
     private val _state = MutableStateFlow(MainViewState())
@@ -80,14 +81,11 @@ class MainViewModel @Inject constructor(
             getEurcBalance(persistedConnection.publicKey)
             getUsdcBalance(persistedConnection.publicKey)
 
-            val autoConnectMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
-            Log.d(TAG, "🚨 DEBUG: Setting auto-connect snackbar: $autoConnectMessage")
             _state.value.copy(
                 isLoading = false,
                 // TODO: Move all Snackbar message strings into resources
-                snackbarMessage = autoConnectMessage
+                snackbarMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
             ).updateViewState()
-            Log.d(TAG, "🚨 DEBUG: Auto-connect snackbar set in state")
 
             // Set the auth token in walletAdapter
             walletAdapter.authToken = persistedConnection.authToken
@@ -120,23 +118,17 @@ class MainViewModel @Inject constructor(
                     getEurcBalance(currentConn.publicKey)
                     getUsdcBalance(currentConn.publicKey)
 
-                    val successMessage = "✅ | Successfully connected to: \n" + currentConn.publicKey.base58() + "."
-                    Log.d(TAG, "🚨 DEBUG: Setting snackbar message: $successMessage")
                     _state.value.copy(
                         isLoading = false,
                         canTransact = true,
-                        snackbarMessage = successMessage
+                        snackbarMessage = "✅ | Successfully connected to: \n" + currentConn.publicKey.base58() + "."
                     ).updateViewState()
-                    Log.d(TAG, "🚨 DEBUG: Snackbar message set in state")
                 }
 
                 is TransactionResult.NoWalletFound -> {
-                    val noWalletMessage = "❌ | No wallet found."
-                    Log.d(TAG, "🚨 DEBUG: Setting no wallet snackbar: $noWalletMessage")
                     _state.value.copy(
-                        walletFound = false, snackbarMessage = noWalletMessage
+                        walletFound = false, snackbarMessage = "❌ | No wallet found."
                     ).updateViewState()
-                    Log.d(TAG, "🚨 DEBUG: No wallet snackbar set in state")
                 }
 
                 is TransactionResult.Failure -> {
@@ -488,8 +480,27 @@ class MainViewModel @Inject constructor(
                                 SolanaPublicKey(Base58.decode(viewState.value.userAddress))
                             refreshBalancesAfterTransaction(userAccount, signature)
 
+                            // Determine token symbol
+                            val tokenSymbol = when (tokenMintAddress) {
+                                TokenMints.EURC_DEVNET -> "EURC"
+                                TokenMints.USDC_DEVNET -> "USDC"
+                                else -> "Token"
+                            }
+
+                            // Create transaction details for success screen
+                            val transactionDetails = TransactionDetails(
+                                signature = signature,
+                                amount = amount,
+                                tokenSymbol = tokenSymbol,
+                                recipientAddress = recipientAddress,
+                                timestamp = System.currentTimeMillis(),
+                                isDevnet = true // Update this based on your network configuration
+                            )
+
+                            // Navigate to success screen instead of showing snackbar
                             _state.value.copy(
-                                snackbarMessage = "✅ | Token transfer successful: $signature"
+                                showTransactionSuccess = true,
+                                transactionDetails = transactionDetails
                             )
                         } ?: _state.value.copy(
                             snackbarMessage = "❌ | Incorrect payload returned"
@@ -652,10 +663,18 @@ class MainViewModel @Inject constructor(
     }
 
     fun clearSnackBar() {
-        Log.d(TAG, "🚨 DEBUG: clearSnackBar() called")
         _state.value.copy(
             snackbarMessage = null
         ).updateViewState()
-        Log.d(TAG, "🚨 DEBUG: Snackbar message cleared from state")
+    }
+
+    /**
+     * Navigate back from transaction success screen to main screen
+     */
+    fun onTransactionSuccessDone() {
+        _state.value.copy(
+            showTransactionSuccess = false,
+            transactionDetails = null
+        ).updateViewState()
     }
 }
