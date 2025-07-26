@@ -22,6 +22,7 @@ import com.solana.mobilewalletadapter.clientlib.successPayload
 import com.solana.publickey.SolanaPublicKey
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -54,7 +55,9 @@ class MainViewModel @Inject constructor(
     }
 
     private fun MainViewState.updateViewState() {
+        Log.d(TAG, "🚨 DEBUG: updateViewState() - snackbarMessage: '${this.snackbarMessage}'")
         _state.update { this }
+        Log.d(TAG, "🚨 DEBUG: State updated successfully")
     }
 
     private val _state = MutableStateFlow(MainViewState())
@@ -77,11 +80,14 @@ class MainViewModel @Inject constructor(
             getEurcBalance(persistedConnection.publicKey)
             getUsdcBalance(persistedConnection.publicKey)
 
+            val autoConnectMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
+            Log.d(TAG, "🚨 DEBUG: Setting auto-connect snackbar: $autoConnectMessage")
             _state.value.copy(
                 isLoading = false,
                 // TODO: Move all Snackbar message strings into resources
-                snackbarMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
+                snackbarMessage = autoConnectMessage
             ).updateViewState()
+            Log.d(TAG, "🚨 DEBUG: Auto-connect snackbar set in state")
 
             // Set the auth token in walletAdapter
             walletAdapter.authToken = persistedConnection.authToken
@@ -114,18 +120,23 @@ class MainViewModel @Inject constructor(
                     getEurcBalance(currentConn.publicKey)
                     getUsdcBalance(currentConn.publicKey)
 
+                    val successMessage = "✅ | Successfully connected to: \n" + currentConn.publicKey.base58() + "."
+                    Log.d(TAG, "🚨 DEBUG: Setting snackbar message: $successMessage")
                     _state.value.copy(
                         isLoading = false,
                         canTransact = true,
-                        snackbarMessage = "✅ | Successfully connected to: \n" + currentConn.publicKey.base58() + "."
+                        snackbarMessage = successMessage
                     ).updateViewState()
+                    Log.d(TAG, "🚨 DEBUG: Snackbar message set in state")
                 }
 
                 is TransactionResult.NoWalletFound -> {
+                    val noWalletMessage = "❌ | No wallet found."
+                    Log.d(TAG, "🚨 DEBUG: Setting no wallet snackbar: $noWalletMessage")
                     _state.value.copy(
-                        walletFound = false, snackbarMessage = "❌ | No wallet found."
+                        walletFound = false, snackbarMessage = noWalletMessage
                     ).updateViewState()
-
+                    Log.d(TAG, "🚨 DEBUG: No wallet snackbar set in state")
                 }
 
                 is TransactionResult.Failure -> {
@@ -166,6 +177,68 @@ class MainViewModel @Inject constructor(
                 _state.value.copy(
                     snackbarMessage = "❌ | Failed fetching account balance."
                 ).updateViewState()
+            }
+        }
+    }
+
+    /**
+     * Refresh balances after a successful transaction with proper timing and retry logic
+     */
+    private fun refreshBalancesAfterTransaction(account: SolanaPublicKey, signature: String) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "🔄 Refreshing balances after transaction: ${signature.take(8)}...")
+                
+                // Wait for transaction confirmation (Solana typically needs 1-3 seconds)
+                delay(2000) // 2 seconds initial delay
+                
+                // Refresh SOL balance immediately (usually faster to update)
+                getSolanaBalance(account)
+                
+                // Refresh token balances with retry logic (these can take longer)
+                refreshTokenBalanceWithRetry(account, "EURC")
+                refreshTokenBalanceWithRetry(account, "USDC")
+                
+                Log.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${e.message}")
+                // Don't update UI state on refresh failure - keep existing balances
+            }
+        }
+    }
+    
+    /**
+     * Refresh token balance with retry logic and graceful error handling
+     */
+    private fun refreshTokenBalanceWithRetry(account: SolanaPublicKey, tokenSymbol: String) {
+        viewModelScope.launch {
+            var attempts = 0
+            val maxAttempts = 3
+            
+            while (attempts < maxAttempts) {
+                try {
+                    delay(attempts * 1000L) // 0s, 1s, 2s delays
+                    
+                    Log.d(TAG, "🔍 Fetching $tokenSymbol balance (attempt ${attempts + 1}/$maxAttempts)...")
+                    
+                    when (tokenSymbol) {
+                        "EURC" -> getEurcBalanceRobust(account)
+                        "USDC" -> getUsdcBalanceRobust(account)
+                    }
+                    
+                    Log.d(TAG, "✅ $tokenSymbol balance refreshed successfully")
+                    return@launch // Success - exit retry loop
+                    
+                } catch (e: Exception) {
+                    attempts++
+                    Log.w(TAG, "⚠️ $tokenSymbol balance fetch attempt $attempts failed: ${e.message}")
+                    
+                    if (attempts >= maxAttempts) {
+                        Log.e(TAG, "❌ $tokenSymbol balance refresh failed after $maxAttempts attempts")
+                        // Don't reset balance to 0 - keep existing value
+                    }
+                }
             }
         }
     }
@@ -239,6 +312,82 @@ class MainViewModel @Inject constructor(
                     usdcBalance = 0.0
                 ).updateViewState()
             }
+        }
+    }
+    
+    /**
+     * Robust EURC balance fetching that preserves existing balance on errors
+     */
+    private suspend fun getEurcBalanceRobust(account: SolanaPublicKey) {
+        try {
+            val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
+            val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, eurcMint)
+
+            // Check if the ATA exists
+            val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, eurcAta)
+            if (!exists) {
+                // Only update if we're sure the account doesn't exist
+                _state.value.copy(
+                    eurcBalance = 0.0
+                ).updateViewState()
+                return
+            }
+
+            // Fetch the balance
+            val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
+            val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
+
+            _state.value.copy(
+                eurcBalance = humanReadableBalance
+            ).updateViewState()
+
+        } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
+            // Account doesn't exist - set to 0
+            _state.value.copy(
+                eurcBalance = 0.0
+            ).updateViewState()
+        } catch (e: Exception) {
+            // Temporary error - keep existing balance, don't reset to 0
+            Log.w(TAG, "EURC balance fetch failed (keeping existing): ${e.message}")
+            throw e // Re-throw for retry logic
+        }
+    }
+    
+    /**
+     * Robust USDC balance fetching that preserves existing balance on errors
+     */
+    private suspend fun getUsdcBalanceRobust(account: SolanaPublicKey) {
+        try {
+            val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
+            val usdcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, usdcMint)
+
+            // Check if the ATA exists
+            val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, usdcAta)
+            if (!exists) {
+                // Only update if we're sure the account doesn't exist
+                _state.value.copy(
+                    usdcBalance = 0.0
+                ).updateViewState()
+                return
+            }
+
+            // Fetch the balance
+            val tokenBalance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
+            val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
+
+            _state.value.copy(
+                usdcBalance = humanReadableBalance
+            ).updateViewState()
+
+        } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
+            // Account doesn't exist - set to 0
+            _state.value.copy(
+                usdcBalance = 0.0
+            ).updateViewState()
+        } catch (e: Exception) {
+            // Temporary error - keep existing balance, don't reset to 0
+            Log.w(TAG, "USDC balance fetch failed (keeping existing): ${e.message}")
+            throw e // Re-throw for retry logic
         }
     }
 
@@ -334,12 +483,10 @@ class MainViewModel @Inject constructor(
                         signatureBytes?.let {
                             val signature = Base58.encodeToString(signatureBytes)
 
-                            // Refresh balances after successful transfer
+                            // Refresh balances after successful transfer (with delay for blockchain confirmation)
                             val userAccount =
                                 SolanaPublicKey(Base58.decode(viewState.value.userAddress))
-                            getSolanaBalance(userAccount)
-                            getEurcBalance(userAccount)
-                            getUsdcBalance(userAccount)
+                            refreshBalancesAfterTransaction(userAccount, signature)
 
                             _state.value.copy(
                                 snackbarMessage = "✅ | Token transfer successful: $signature"
@@ -505,8 +652,10 @@ class MainViewModel @Inject constructor(
     }
 
     fun clearSnackBar() {
+        Log.d(TAG, "🚨 DEBUG: clearSnackBar() called")
         _state.value.copy(
             snackbarMessage = null
         ).updateViewState()
+        Log.d(TAG, "🚨 DEBUG: Snackbar message cleared from state")
     }
 }

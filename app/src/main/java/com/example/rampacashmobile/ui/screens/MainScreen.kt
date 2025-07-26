@@ -66,9 +66,15 @@ fun MainScreen(
         }
 
         LaunchedEffect(viewState.snackbarMessage) {
-            viewState.snackbarMessage?.let {
+            viewState.snackbarMessage?.let { message ->
+                println("🚨 DEBUG: UI LaunchedEffect triggered for message: $message")
+                println("🚨 DEBUG: About to show snackbar...")
+                // Show snackbar and wait for it to be displayed
+                snackbarHostState.showSnackbar(message)
+                println("🚨 DEBUG: Snackbar display completed")
+                // Clear message after snackbar is shown
                 viewModel.clearSnackBar()
-                snackbarHostState.showSnackbar(it)
+                println("🚨 DEBUG: UI triggered clearSnackBar()")
             }
         }
 
