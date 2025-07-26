@@ -396,6 +396,8 @@ class MainViewModel @Inject constructor(
         return
     }
 
+
+
     /**
      * Check token balance for debugging purposes
      */
