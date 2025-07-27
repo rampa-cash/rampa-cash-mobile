@@ -70,9 +70,13 @@ fun NavigationGraph(
                 TransfersScreen(navController = navController)
             }
 
-            composable("send") {
-                SendScreen(navController = navController)
-            }
+                composable("send") {
+                    SendScreen(
+                        navController = navController,
+                        intentSender = intentSender,
+                        viewModel = viewModel
+                    )
+                }
 
             composable("rewards") {
                 RewardsScreen(navController = navController)

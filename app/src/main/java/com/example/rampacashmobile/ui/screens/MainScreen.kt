@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.ui.components.Section
-import com.example.rampacashmobile.ui.components.TokenTransferSection
 import com.example.rampacashmobile.ui.components.WalletConnectionCard
 import com.example.rampacashmobile.ui.components.TokenSwitcher
 import com.example.rampacashmobile.viewmodel.MainViewModel
@@ -174,31 +173,7 @@ fun MainScreen(
                     )
                 }
 
-                // SPL Token Transfer Section (only show when connected)
-                if (viewState.canTransact && intentSender != null) {
-                    TokenTransferSection(
-                        onTransfer = { token, recipient, amount ->
-                            viewModel.sendSplToken(
-                                sender = intentSender,
-                                recipientAddress = recipient,
-                                amount = amount,
-                                tokenMintAddress = token.mintAddress,
-                                tokenDecimals = token.decimals
-                            )
-                        },
-                        onCheckBalance = { token ->
-                            viewModel.checkTokenBalance(
-                                tokenMintAddress = token.mintAddress,
-                                tokenDecimals = token.decimals
-                            )
-                        },
-                        eurcBalance = viewState.eurcBalance,
-                        usdcBalance = viewState.usdcBalance,
-                        onRecipientATA = { recipient, token ->
-                            viewModel.checkATA(recipient, token.mintAddress)
-                        }
-                    )
-                }
+
 
                 // Account Management Section
                 Section(
