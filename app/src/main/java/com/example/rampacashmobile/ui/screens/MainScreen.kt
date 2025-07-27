@@ -1,68 +1,50 @@
+// File: app/src/main/java/com/example/rampacashmobile/ui/screens/MainScreen.kt
 package com.example.rampacashmobile.ui.screens
 
-import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.example.rampacashmobile.ui.components.Section
 import com.example.rampacashmobile.ui.components.TokenTransferSection
 import com.example.rampacashmobile.ui.components.WalletConnectionCard
 import com.example.rampacashmobile.viewmodel.MainViewModel
-import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
-import com.web3auth.core.types.Provider
 import com.example.rampacashmobile.web3auth.Web3AuthManager
+import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    navController: NavController,
     intentSender: ActivityResultSender? = null,
-    viewModel: MainViewModel = hiltViewModel(),
+    viewModel: MainViewModel,
     web3AuthManager: Web3AuthManager? = null,
     web3AuthCallback: Web3AuthManager.Web3AuthCallback? = null
 ) {
     val viewState by viewModel.viewState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Redirect to login if not authenticated
+    LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn) {
+        if (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn) {
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Rampa Cash - Mobile",
+                        text = "Rampa Cash - Dashboard",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -86,7 +68,7 @@ fun MainScreen(
             }
         }
 
-        // Show transaction success screen or main screen
+        // Show transaction success screen or main dashboard
         if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
             Log.d("MainScreen", "🎯 Showing TransactionSuccessScreen - signature: ${viewState.transactionDetails!!.signature.take(8)}")
             TransactionSuccessScreen(
@@ -104,199 +86,46 @@ fun MainScreen(
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
-            // Wallet Connection Card
-            if (viewState.canTransact) {
-                WalletConnectionCard(
-                    walletName = viewState.userLabel,
-                    address = viewState.userAddress,
-                    solBalance = viewState.solBalance,
-                    eurcBalance = viewState.eurcBalance,
-                    usdcBalance = viewState.usdcBalance,
-                    fullAddressForCopy = viewState.fullAddressForCopy, // Pass full address for copying
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
-            // SPL Token Transfer Section with Token Selection
-            if (viewState.canTransact && intentSender != null) {
-                TokenTransferSection(
-                    onTransfer = { token, recipient, amount ->
-                        viewModel.sendSplToken(
-                            sender = intentSender,
-                            recipientAddress = recipient,
-                            amount = amount,
-                            tokenMintAddress = token.mintAddress,
-                            tokenDecimals = token.decimals
-                        )
-                    },
-                    onCheckBalance = { token ->
-                        viewModel.checkTokenBalance(
-                            tokenMintAddress = token.mintAddress,
-                            tokenDecimals = token.decimals
-                        )
-                    },
-                    eurcBalance = viewState.eurcBalance,
-                    usdcBalance = viewState.usdcBalance,
-                    onRecipientATA = { recipient, token ->
-                        viewModel.checkATA(recipient, token.mintAddress)
-                    }
-                )
-            }
-
-            // Authentication Options Section
-            if (!viewState.canTransact) {
-                Section(
-                    sectionTitle = "Login Options",
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    // Web3Auth Social Login
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "🌐 Social Login",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Login with your favorite social account",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            
-                            // Direct Social Login Buttons
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                // Google Login
-                                OutlinedButton(
-                                    onClick = { 
-                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
-                                            web3AuthManager.login(Provider.GOOGLE, web3AuthCallback)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !viewState.isWeb3AuthLoading
-                                ) {
-                                    if (viewState.isWeb3AuthLoading) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.width(16.dp).height(16.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Connecting...")
-                                    } else {
-                                        Text("🔍 Continue with Google")
-                                    }
-                                }
-                                
-                                // Facebook Login  
-                                OutlinedButton(
-                                    onClick = { 
-                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
-                                            web3AuthManager.login(Provider.FACEBOOK, web3AuthCallback)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !viewState.isWeb3AuthLoading
-                                ) {
-                                    Text("📘 Continue with Facebook")
-                                }
-                                
-                                // Twitter Login
-                                OutlinedButton(
-                                    onClick = { 
-                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
-                                            web3AuthManager.login(Provider.TWITTER, web3AuthCallback)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !viewState.isWeb3AuthLoading
-                                ) {
-                                    Text("🐦 Continue with Twitter")
-                                }
-                                
-                                // Discord Login
-                                OutlinedButton(
-                                    onClick = { 
-                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
-                                            web3AuthManager.login(Provider.DISCORD, web3AuthCallback)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !viewState.isWeb3AuthLoading
-                                ) {
-                                    Text("🎮 Continue with Discord")
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Mobile Wallet Connection
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "📱 Mobile Wallet",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Connect your Solana mobile wallet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            
-                            Button(
-                                onClick = {
-                                    if (intentSender != null) {
-                                        viewModel.connect(intentSender)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                ),
-                                enabled = intentSender != null
-                            ) {
-                                Text("Connect Wallet", color = Color.White)
-                            }
-
-                            if (!viewState.walletFound) {
-                                Text(
-                                    text = "⚠️ No compatible wallet found. Please install Solflare or Phantom.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-                            }
-                        }
-                    }
+                // Wallet Connection Card (only show when connected)
+                if (viewState.canTransact) {
+                    WalletConnectionCard(
+                        walletName = viewState.userLabel,
+                        address = viewState.userAddress,
+                        solBalance = viewState.solBalance,
+                        eurcBalance = viewState.eurcBalance,
+                        usdcBalance = viewState.usdcBalance,
+                        fullAddressForCopy = viewState.fullAddressForCopy,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
                 }
-            } else {
-                // Disconnect Section (when user is connected)
+
+                // SPL Token Transfer Section (only show when connected)
+                if (viewState.canTransact && intentSender != null) {
+                    TokenTransferSection(
+                        onTransfer = { token, recipient, amount ->
+                            viewModel.sendSplToken(
+                                sender = intentSender,
+                                recipientAddress = recipient,
+                                amount = amount,
+                                tokenMintAddress = token.mintAddress,
+                                tokenDecimals = token.decimals
+                            )
+                        },
+                        onCheckBalance = { token ->
+                            viewModel.checkTokenBalance(
+                                tokenMintAddress = token.mintAddress,
+                                tokenDecimals = token.decimals
+                            )
+                        },
+                        eurcBalance = viewState.eurcBalance,
+                        usdcBalance = viewState.usdcBalance,
+                        onRecipientATA = { recipient, token ->
+                            viewModel.checkATA(recipient, token.mintAddress)
+                        }
+                    )
+                }
+
+                // Account Management Section
                 Section(
                     sectionTitle = "Account Management",
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -304,7 +133,7 @@ fun MainScreen(
                     Row(modifier = Modifier.fillMaxWidth()) {
                         if (viewState.isWeb3AuthLoggedIn) {
                             Button(
-                                onClick = { 
+                                onClick = {
                                     if (web3AuthManager != null && web3AuthCallback != null) {
                                         web3AuthManager.logout(web3AuthCallback)
                                     }
@@ -316,7 +145,7 @@ fun MainScreen(
                             ) {
                                 Text("Logout", color = Color.White)
                             }
-                        } else {
+                        } else if (viewState.canTransact) {
                             Button(
                                 onClick = { viewModel.disconnect() },
                                 modifier = Modifier.weight(1f),
@@ -331,6 +160,5 @@ fun MainScreen(
                 }
             }
         }
-        }
     }
-} 
+}

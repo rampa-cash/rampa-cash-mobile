@@ -9,10 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.rampacashmobile.ui.screens.MainScreen
+import androidx.navigation.compose.rememberNavController
+import com.example.rampacashmobile.navigation.NavigationGraph
 import com.example.rampacashmobile.ui.theme.RampaCashMobileTheme
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
@@ -26,10 +28,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
     private val viewModel: MainViewModel by viewModels()
-    
+
     @Inject
     lateinit var web3AuthManager: Web3AuthManager
-    
+
     companion object {
         private const val TAG = "MainActivity"
     }
@@ -37,7 +39,7 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "🏁 MainActivity onCreate")
-        
+
         val sender = ActivityResultSender(this)
 
         // Initialize Web3Auth using the manager
@@ -50,13 +52,17 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         setContent {
             RampaCashMobileTheme {
                 Surface(
-                    modifier = Modifier,
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(
+                    val navController = rememberNavController()
+
+                    // Use NavigationGraph instead of single MainScreen
+                    NavigationGraph(
+                        navController = navController,
                         intentSender = sender,
                         web3AuthManager = web3AuthManager,
-                        web3AuthCallback = this
+                        web3AuthCallback = this@MainActivity
                     )
                 }
             }
@@ -74,7 +80,7 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         super.onNewIntent(intent)
         Log.d(TAG, "🔄 onNewIntent: ${intent.data}")
         setIntent(intent) // Important: update the intent
-        
+
         // Handle Web3Auth redirects
         web3AuthManager.handleRedirect(intent.data)
     }
@@ -82,13 +88,13 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "▶️ onResume")
-        
+
         // Handle Web3Auth custom tabs being closed
         if (web3AuthManager.handleCustomTabsClosed()) {
             Toast.makeText(this, "Authentication was cancelled.", Toast.LENGTH_SHORT).show()
             viewModel.onWeb3AuthCancelled()
         }
-        
+
         // Also check if we have any pending intent data
         intent?.data?.let { data ->
             Log.d(TAG, "📱 Checking intent data on resume: $data")
@@ -114,24 +120,31 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
     // Web3AuthManager.Web3AuthCallback implementations
     override fun onLoginSuccess(response: Web3AuthResponse, provider: Provider, solanaPublicKey: String, displayAddress: String) {
         runOnUiThread {
+            Log.d(TAG, "✅ Web3Auth login successful!")
+            Log.d(TAG, "🔑 Solana Public Key: $solanaPublicKey")
+            Log.d(TAG, "📍 Display Address: $displayAddress")
+
             viewModel.handleWeb3AuthSuccess(response, provider, solanaPublicKey, displayAddress)
         }
     }
 
     override fun onLoginError(message: String) {
         runOnUiThread {
+            Log.e(TAG, "❌ Web3Auth login error: $message")
             viewModel.setWeb3AuthError(message)
         }
     }
 
     override fun onLogoutSuccess() {
         runOnUiThread {
+            Log.d(TAG, "✅ Web3Auth logout successful!")
             viewModel.handleWeb3AuthLogout()
         }
     }
 
     override fun onLogoutError(message: String) {
         runOnUiThread {
+            Log.e(TAG, "❌ Web3Auth logout error: $message")
             viewModel.setWeb3AuthError(message)
         }
     }
