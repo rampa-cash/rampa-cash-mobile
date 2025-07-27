@@ -43,14 +43,15 @@ import com.example.rampacashmobile.ui.components.WalletConnectionCard
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.web3auth.core.types.Provider
+import com.example.rampacashmobile.web3auth.Web3AuthManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     intentSender: ActivityResultSender? = null,
     viewModel: MainViewModel = hiltViewModel(),
-    onWeb3AuthLogin: (Provider) -> Unit = {}, // Added callback
-    onWeb3AuthLogout: () -> Unit = {} // Add logout callback
+    web3AuthManager: Web3AuthManager? = null,
+    web3AuthCallback: Web3AuthManager.Web3AuthCallback? = null
 ) {
     val viewState by viewModel.viewState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -173,8 +174,8 @@ fun MainScreen(
                                 // Google Login
                                 OutlinedButton(
                                     onClick = { 
-                                        if (!viewState.isWeb3AuthLoading) {
-                                            onWeb3AuthLogin(Provider.GOOGLE)
+                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
+                                            web3AuthManager.login(Provider.GOOGLE, web3AuthCallback)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
@@ -195,8 +196,8 @@ fun MainScreen(
                                 // Facebook Login  
                                 OutlinedButton(
                                     onClick = { 
-                                        if (!viewState.isWeb3AuthLoading) {
-                                            onWeb3AuthLogin(Provider.FACEBOOK)
+                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
+                                            web3AuthManager.login(Provider.FACEBOOK, web3AuthCallback)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
@@ -208,8 +209,8 @@ fun MainScreen(
                                 // Twitter Login
                                 OutlinedButton(
                                     onClick = { 
-                                        if (!viewState.isWeb3AuthLoading) {
-                                            onWeb3AuthLogin(Provider.TWITTER)
+                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
+                                            web3AuthManager.login(Provider.TWITTER, web3AuthCallback)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
@@ -221,8 +222,8 @@ fun MainScreen(
                                 // Discord Login
                                 OutlinedButton(
                                     onClick = { 
-                                        if (!viewState.isWeb3AuthLoading) {
-                                            onWeb3AuthLogin(Provider.DISCORD)
+                                        if (!viewState.isWeb3AuthLoading && web3AuthManager != null && web3AuthCallback != null) {
+                                            web3AuthManager.login(Provider.DISCORD, web3AuthCallback)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
@@ -296,7 +297,11 @@ fun MainScreen(
                     Row(modifier = Modifier.fillMaxWidth()) {
                         if (viewState.isWeb3AuthLoggedIn) {
                             Button(
-                                onClick = { onWeb3AuthLogout() }, // Use callback to Activity
+                                onClick = { 
+                                    if (web3AuthManager != null && web3AuthCallback != null) {
+                                        web3AuthManager.logout(web3AuthCallback)
+                                    }
+                                },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.error

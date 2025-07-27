@@ -61,7 +61,8 @@ data class MainViewState(
     val isWeb3AuthLoading: Boolean = false,
     val isWeb3AuthLoggedIn: Boolean = false,
     val web3AuthUserInfo: String? = null,
-    val web3AuthPrivateKey: String? = null
+    val web3AuthPrivateKey: String? = null,
+    val web3AuthSolanaPublicKey: String? = null // Full Solana public key for transactions
 )
 
 @HiltViewModel
@@ -444,6 +445,14 @@ class MainViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
+                // Check if user is logged in via Web3Auth
+                if (viewState.value.isWeb3AuthLoggedIn) {
+                    _state.value.copy(
+                        snackbarMessage = "🚧 | SPL token transfers coming soon for Web3Auth users! Balance checking now works ✅"
+                    ).updateViewState()
+                    return@launch
+                }
+                
                 // Show which implementation is being used
                 if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
                     Log.d(TAG, "${TransferConfig.getImplementationEmoji()} Using ${TransferConfig.getImplementationName()}")
@@ -610,22 +619,36 @@ class MainViewModel @Inject constructor(
         recipientAddress: String,
         tokenMintAddress: String
     ) {
+        // Validate recipient address before proceeding
+        if (recipientAddress.isBlank()) {
+            Log.w(TAG, "checkATA: Recipient address is blank")
+            _state.value.copy(
+                snackbarMessage = "⚠️ | Please enter a valid recipient address"
+            ).updateViewState()
+            return
+        }
 
-        val tokenMint = SolanaPublicKey.from(tokenMintAddress)
-        val recipientPubkey = SolanaPublicKey.from(recipientAddress)
+        try {
+            val tokenMint = SolanaPublicKey.from(tokenMintAddress)
+            val recipientPubkey = SolanaPublicKey.from(recipientAddress)
 
-        val atAccount = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
-            recipientPubkey, tokenMint
-        )
+            val atAccount = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
+                recipientPubkey, tokenMint
+            )
 
-        val toStringATA = atAccount.toString()
-        Log.d(TAG, "checkTokenBalance: Deriving ATA $toStringATA")
+            val toStringATA = atAccount.toString()
+            Log.d(TAG, "checkATA: Deriving ATA $toStringATA for recipient: $recipientAddress")
 
-        _state.value.copy(
-            snackbarMessage = "⚠️ | Ata for recipient: $recipientAddress is $toStringATA"
-        ).updateViewState()
+            _state.value.copy(
+                snackbarMessage = "✅ | ATA for recipient: ${recipientAddress.take(8)}...${recipientAddress.takeLast(8)} is ${toStringATA.take(8)}...${toStringATA.takeLast(8)}"
+            ).updateViewState()
 
-        return
+        } catch (e: Exception) {
+            Log.e(TAG, "checkATA: Failed to derive ATA for recipient: $recipientAddress", e)
+            _state.value.copy(
+                snackbarMessage = "❌ | Invalid recipient address: ${e.message}"
+            ).updateViewState()
+        }
     }
 
 
@@ -636,21 +659,31 @@ class MainViewModel @Inject constructor(
     fun checkTokenBalance(tokenMintAddress: String, tokenDecimals: Int) {
         viewModelScope.launch {
             try {
-                val currentConnection = persistenceUseCase.getWalletConnection()
-                if (currentConnection !is Connected) {
+                // Get the user's Solana public key (either from Web3Auth or Mobile Wallet)
+                val userPublicKey = if (viewState.value.isWeb3AuthLoggedIn) {
+                    // Use Web3Auth derived Solana public key
+                    viewState.value.web3AuthSolanaPublicKey?.let { SolanaPublicKey.from(it) }
+                } else {
+                    // Use Mobile Wallet Adapter public key
+                    val currentConnection = persistenceUseCase.getWalletConnection()
+                    if (currentConnection is Connected) {
+                        currentConnection.publicKey
+                    } else null
+                }
+                
+                if (userPublicKey == null) {
                     _state.value.copy(
-                        snackbarMessage = "⚠️ | Connect wallet first to check balance"
+                        snackbarMessage = "⚠️ | Please connect a wallet or login with Web3Auth first"
                     ).updateViewState()
                     return@launch
                 }
 
-                val ownerAccount = SolanaPublicKey(Base58.decode(viewState.value.userAddress))
                 val tokenMint = SolanaPublicKey.from(tokenMintAddress)
 
                 // Derive ATA
-                Log.d(TAG, "checkTokenBalance: Deriving ATA")
+                Log.d(TAG, "checkTokenBalance: Deriving ATA for ${userPublicKey.base58()}")
                 val senderAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
-                    ownerAccount, tokenMint
+                    userPublicKey, tokenMint
                 )
                 Log.d(TAG, "Sender ATA: $senderAta")
 
@@ -732,7 +765,7 @@ class MainViewModel @Inject constructor(
         ).updateViewState()
     }
 
-    fun handleWeb3AuthSuccess(web3AuthResponse: Web3AuthResponse, provider: Provider, walletAddress: String) {
+    fun handleWeb3AuthSuccess(web3AuthResponse: Web3AuthResponse, provider: Provider, solanaPublicKey: String, displayAddress: String) {
         try {
             val privateKey = web3AuthResponse.privKey
             val userInfo = web3AuthResponse.userInfo
@@ -754,13 +787,25 @@ class MainViewModel @Inject constructor(
                     isWeb3AuthLoggedIn = true,
                     web3AuthUserInfo = displayName,
                     web3AuthPrivateKey = privateKey,
+                    web3AuthSolanaPublicKey = solanaPublicKey, // Store full public key for transactions
                     canTransact = true,
                     userLabel = "$displayName (via $providerName)",
-                    userAddress = walletAddress, // Use the actual wallet address from MainActivity
+                    userAddress = displayAddress, // Use the display-friendly address for Web3Auth users
                     snackbarMessage = "✅ | Successfully logged in with $providerName!"
                 ).updateViewState()
                 
-                Log.d(TAG, "Web3Auth login successful with $providerName - Address: $walletAddress")
+                Log.d(TAG, "Web3Auth login successful with $providerName - Solana address: $solanaPublicKey")
+                
+                // Load balances for Web3Auth user
+                try {
+                    val userPublicKey = SolanaPublicKey.from(solanaPublicKey)
+                    getSolanaBalance(userPublicKey)
+                    getEurcBalance(userPublicKey)
+                    getUsdcBalance(userPublicKey)
+                    Log.d(TAG, "Loading balances for Web3Auth user: $solanaPublicKey")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load balances for Web3Auth user: ${e.message}", e)
+                }
             } else {
                 throw Exception("No private key received from Web3Auth")
             }
@@ -786,6 +831,7 @@ class MainViewModel @Inject constructor(
             isWeb3AuthLoggedIn = false,
             web3AuthUserInfo = null,
             web3AuthPrivateKey = null,
+            web3AuthSolanaPublicKey = null, // Clear the Solana public key
             canTransact = false,
             userLabel = "",
             userAddress = "",
