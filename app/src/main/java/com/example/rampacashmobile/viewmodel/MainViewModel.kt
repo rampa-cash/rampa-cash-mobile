@@ -15,6 +15,7 @@ import com.example.rampacashmobile.usecase.Connected
 import com.example.rampacashmobile.usecase.PersistenceUseCase
 import com.example.rampacashmobile.usecase.SplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
+import com.example.rampacashmobile.usecase.Web3AuthSplTransferUseCase
 import com.example.rampacashmobile.usecase.TokenAccountBalanceUseCase
 import com.example.rampacashmobile.usecase.TransferConfig
 import com.example.rampacashmobile.ui.screens.TransactionDetails
@@ -225,18 +226,23 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 Log.d(TAG, "🔄 Refreshing balances after transaction: ${signature.take(8)}...")
+                Log.d(TAG, "🔄 Account for balance refresh: ${account.base58()}")
                 
-                // Wait for transaction confirmation (Solana typically needs 1-3 seconds)
-                delay(2000) // 2 seconds initial delay
+                // Wait longer for transaction confirmation (blockchain updates can be slow)
+                Log.d(TAG, "⏳ Waiting 4 seconds for blockchain confirmation...")
+                delay(4000) // 4 seconds initial delay (increased from 2)
                 
                 // Refresh SOL balance immediately (usually faster to update)
                 getSolanaBalance(account)
                 
                 // Refresh token balances with retry logic (these can take longer)
+                Log.d(TAG, "🔄 Starting token balance refresh with retries...")
                 refreshTokenBalanceWithRetry(account, "EURC")
                 refreshTokenBalanceWithRetry(account, "USDC")
                 
                 Log.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
+                Log.d(TAG, "🎯 Current state after balance refresh - showTransactionSuccess: ${viewState.value.showTransactionSuccess}")
+                Log.d(TAG, "💰 Final balances - EURC: ${viewState.value.eurcBalance}, USDC: ${viewState.value.usdcBalance}")
                 
             } catch (e: Exception) {
                 Log.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${e.message}")
@@ -251,13 +257,14 @@ class MainViewModel @Inject constructor(
     private fun refreshTokenBalanceWithRetry(account: SolanaPublicKey, tokenSymbol: String) {
         viewModelScope.launch {
             var attempts = 0
-            val maxAttempts = 3
+            val maxAttempts = 5 // Increased from 3 to 5 attempts
             
             while (attempts < maxAttempts) {
                 try {
-                    delay(attempts * 1000L) // 0s, 1s, 2s delays
+                    delay(attempts * 2000L) // 0s, 2s, 4s, 6s, 8s delays (longer delays)
                     
                     Log.d(TAG, "🔍 Fetching $tokenSymbol balance (attempt ${attempts + 1}/$maxAttempts)...")
+                    Log.d(TAG, "🔍 Account: ${account.base58()}")
                     
                     when (tokenSymbol) {
                         "EURC" -> getEurcBalanceRobust(account)
@@ -274,6 +281,8 @@ class MainViewModel @Inject constructor(
                     if (attempts >= maxAttempts) {
                         Log.e(TAG, "❌ $tokenSymbol balance refresh failed after $maxAttempts attempts")
                         // Don't reset balance to 0 - keep existing value
+                    } else {
+                        Log.d(TAG, "🔄 Will retry $tokenSymbol balance fetch in ${(attempts * 2)} seconds...")
                     }
                 }
             }
@@ -359,10 +368,14 @@ class MainViewModel @Inject constructor(
         try {
             val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
             val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, eurcMint)
+            
+            Log.d(TAG, "💰 Fetching EURC balance for account: ${account.base58()}")
+            Log.d(TAG, "💰 EURC ATA: ${eurcAta.base58()}")
 
             // Check if the ATA exists
             val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, eurcAta)
             if (!exists) {
+                Log.d(TAG, "💰 EURC ATA does not exist - setting balance to 0")
                 // Only update if we're sure the account doesn't exist
                 _state.value.copy(
                     eurcBalance = 0.0
@@ -373,19 +386,25 @@ class MainViewModel @Inject constructor(
             // Fetch the balance
             val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
             val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
+            
+            Log.d(TAG, "💰 EURC raw balance: $tokenBalance, human readable: $humanReadableBalance")
+            Log.d(TAG, "💰 Previous EURC balance: ${viewState.value.eurcBalance}")
 
             _state.value.copy(
                 eurcBalance = humanReadableBalance
             ).updateViewState()
+            
+            Log.d(TAG, "💰 EURC balance updated to: $humanReadableBalance")
 
         } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
+            Log.d(TAG, "💰 EURC account not found - setting balance to 0")
             // Account doesn't exist - set to 0
             _state.value.copy(
                 eurcBalance = 0.0
             ).updateViewState()
         } catch (e: Exception) {
             // Temporary error - keep existing balance, don't reset to 0
-            Log.w(TAG, "EURC balance fetch failed (keeping existing): ${e.message}")
+            Log.w(TAG, "💰 EURC balance fetch failed (keeping existing): ${e.message}")
             throw e // Re-throw for retry logic
         }
     }
@@ -451,9 +470,7 @@ class MainViewModel @Inject constructor(
             try {
                 // Check if user is logged in via Web3Auth
                 if (viewState.value.isWeb3AuthLoggedIn) {
-                    _state.value.copy(
-                        snackbarMessage = "🚧 | SPL token transfers coming soon for Web3Auth users! Balance checking now works ✅"
-                    ).updateViewState()
+                    handleWeb3AuthSplTransfer(recipientAddress, amount, tokenMintAddress, tokenDecimals)
                     return@launch
                 }
                 
@@ -529,8 +546,15 @@ class MainViewModel @Inject constructor(
                             val signature = Base58.encodeToString(signatureBytes)
 
                             // Refresh balances after successful transfer (with delay for blockchain confirmation)
-                            val userAccount =
+                            // Note: For regular wallet users, userAddress is the full Base58 address
+                            // For Web3Auth users, we should use web3AuthSolanaPublicKey instead
+                            val userAccount = if (viewState.value.isWeb3AuthLoggedIn) {
+                                // Use full public key for Web3Auth users
+                                SolanaPublicKey.from(viewState.value.web3AuthSolanaPublicKey!!)
+                            } else {
+                                // Use decoded address for regular wallet users
                                 SolanaPublicKey(Base58.decode(viewState.value.userAddress))
+                            }
                             refreshBalancesAfterTransaction(userAccount, signature)
 
                             // Determine token symbol
@@ -766,6 +790,7 @@ class MainViewModel @Inject constructor(
      * Navigate back from transaction success screen to main screen
      */
     fun onTransactionSuccessDone() {
+        Log.d(TAG, "🔙 User clicked Done - navigating back from success screen")
         _state.value.copy(
             showTransactionSuccess = false,
             transactionDetails = null
@@ -891,5 +916,107 @@ class MainViewModel @Inject constructor(
             isWeb3AuthLoading = false,
             snackbarMessage = "🚫 | Authentication cancelled"
         ).updateViewState()
+    }
+
+    /**
+     * Handle SPL token transfer for Web3Auth users
+     */
+    private fun handleWeb3AuthSplTransfer(
+        recipientAddress: String,
+        amount: String,
+        tokenMintAddress: String,
+        tokenDecimals: Int = 6
+    ) {
+        viewModelScope.launch {
+            try {
+                val currentState = viewState.value
+                
+                // Validate Web3Auth state
+                val web3AuthPrivateKey = currentState.web3AuthPrivateKey
+                val web3AuthPublicKey = currentState.web3AuthSolanaPublicKey
+                
+                if (web3AuthPrivateKey == null || web3AuthPublicKey == null) {
+                    _state.value.copy(
+                        snackbarMessage = "❌ | Web3Auth session invalid. Please login again."
+                    ).updateViewState()
+                    return@launch
+                }
+
+                // Show which implementation is being used
+                if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
+                    Log.d(TAG, "🔑 Using Web3Auth SPL Transfer (local signing)")
+                }
+
+                _state.value.copy(
+                    snackbarMessage = "🔄 | Processing Web3Auth SPL transfer..."
+                ).updateViewState()
+
+                // Parse and validate inputs
+                val fromWallet = SolanaPublicKey.from(web3AuthPublicKey)
+                val recipientPubkey = SolanaPublicKey.from(recipientAddress)
+                val tokenMint = SolanaPublicKey.from(tokenMintAddress)
+
+                // Convert amount based on token decimals
+                val amountDouble = amount.toDoubleOrNull()
+                    ?: throw IllegalArgumentException("Invalid amount: $amount")
+                val multiplier = 10.0.pow(tokenDecimals.toDouble())
+                val amountInTokenUnits = (amountDouble * multiplier).toLong()
+
+                Log.d(TAG, "Web3Auth SPL Transfer Details:")
+                Log.d(TAG, "From: ${fromWallet.base58()}")
+                Log.d(TAG, "To: ${recipientPubkey.base58()}")
+                Log.d(TAG, "Mint: ${tokenMint.base58()}")
+                Log.d(TAG, "Amount: $amountInTokenUnits ($amount tokens)")
+
+                // Execute Web3Auth transfer
+                val signature = Web3AuthSplTransferUseCase.transfer(
+                    rpcUri = rpcUri,
+                    web3AuthPrivateKey = web3AuthPrivateKey,
+                    fromWallet = fromWallet,
+                    toWallet = recipientPubkey,
+                    mint = tokenMint,
+                    amount = amountInTokenUnits
+                )
+
+                Log.d(TAG, "✅ Web3Auth SPL transfer successful: $signature")
+
+                // Determine token symbol
+                val tokenSymbol = when (tokenMintAddress) {
+                    TokenMints.EURC_DEVNET -> "EURC"
+                    TokenMints.USDC_DEVNET -> "USDC"
+                    else -> "Token"
+                }
+
+                // Create transaction details for success screen
+                val transactionDetails = TransactionDetails(
+                    signature = signature,
+                    amount = amount,
+                    tokenSymbol = tokenSymbol,
+                    recipientAddress = recipientAddress,
+                    timestamp = System.currentTimeMillis(),
+                    isDevnet = true // Update this based on your network configuration
+                )
+
+                // Navigate to success screen (same as MWA wallet flow)
+                Log.d(TAG, "🎯 Setting showTransactionSuccess = true for Web3Auth transfer")
+                Log.d(TAG, "Transaction details: signature=${signature.take(8)}, amount=$amount, token=$tokenSymbol")
+                
+                _state.value.copy(
+                    showTransactionSuccess = true,
+                    transactionDetails = transactionDetails
+                ).updateViewState()
+
+                // Refresh balances after successful transfer (with delay for blockchain confirmation)
+                refreshBalancesAfterTransaction(fromWallet, signature)
+                
+                Log.d(TAG, "🎯 Web3Auth SPL transfer completed successfully - showing success screen")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Web3Auth SPL transfer failed: ${e.message}", e)
+                _state.value.copy(
+                    snackbarMessage = "❌ | Transfer failed: ${e.message}"
+                ).updateViewState()
+            }
+        }
     }
 }

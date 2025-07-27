@@ -1,5 +1,6 @@
 package com.example.rampacashmobile.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -87,11 +88,16 @@ fun MainScreen(
 
         // Show transaction success screen or main screen
         if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
+            Log.d("MainScreen", "🎯 Showing TransactionSuccessScreen - signature: ${viewState.transactionDetails!!.signature.take(8)}")
             TransactionSuccessScreen(
                 transactionDetails = viewState.transactionDetails!!,
-                onDone = { viewModel.onTransactionSuccessDone() }
+                onDone = { 
+                    Log.d("MainScreen", "🔙 TransactionSuccessScreen onDone called")
+                    viewModel.onTransactionSuccessDone() 
+                }
             )
         } else {
+            Log.d("MainScreen", "📱 Showing main content - showTransactionSuccess: ${viewState.showTransactionSuccess}, hasDetails: ${viewState.transactionDetails != null}")
             Column(
                 modifier = Modifier
                     .fillMaxSize()
