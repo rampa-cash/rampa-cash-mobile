@@ -10,6 +10,7 @@ lifecycleViewModelCompose = "2.9.2"
 activityCompose = "1.10.1"
 composeBom = "2025.07.00"
 hiltNavigationCompose = "1.2.0"
+navigationCompose = "2.8.5"
 serialization = "1.7.3"
 ktor = "3.2.2"
 multimult = "0.2.4"
@@ -47,6 +48,7 @@ web3-solana = { module = "com.solanamobile:web3-solana", version.ref = "web3Sola
 sol4k = { module = "org.sol4k:sol4k", version.ref = "sol4k" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
