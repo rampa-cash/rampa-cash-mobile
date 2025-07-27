@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <application
         android:name=".RampaCashApp"
@@ -11,16 +13,25 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/rampa_cash_icon_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RampaCashMobile">
+        android:theme="@style/Theme.RampaCashMobile"
+        tools:replace="android:allowBackup,android:fullBackupContent">
         <activity
+            android:launchMode="singleTop"
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.RampaCashMobile">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            
+            <!-- Intent filter for Web3Auth redirects -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.example.rampacashmobile" 
+                      android:host="auth" />
             </intent-filter>
         </activity>
     </application>

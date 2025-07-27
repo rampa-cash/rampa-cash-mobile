@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.rampacashmobile"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.web3.solana)
     implementation(libs.rpc.core)
     implementation(libs.multimult)
+    implementation(libs.sol4k)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -72,5 +73,7 @@ dependencies {
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
     implementation(libs.dagger.hilt.android)
+    implementation(libs.web3auth.android.sdk)
+    implementation(libs.core)
     ksp(libs.dagger.hilt.compiler)
 }

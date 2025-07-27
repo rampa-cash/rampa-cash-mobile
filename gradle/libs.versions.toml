@@ -1,5 +1,6 @@
 [versions]
 agp = "8.11.1"
+core = "5.0.0"
 kotlin = "2.0.10"
 ksp = "2.0.10-1.0.24"
 composeCompiler = "1.5.3"
@@ -12,9 +13,11 @@ hiltNavigationCompose = "1.2.0"
 serialization = "1.7.3"
 ktor = "3.2.2"
 multimult = "0.2.4"
+web3authAndroidSdk = "9.0.4"
 web3Solana = "0.2.5"
 rpcCore = "0.2.8"
 mobileWalletAdapterClientlibKtx = "2.0.8"
+sol4k = "0.4.1"
 hilt = "2.57"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
@@ -23,6 +26,7 @@ junitVersion = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+core = { module = "org.web3j:core", version.ref = "core" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -40,6 +44,7 @@ mobile-wallet-adapter-clientlib-ktx = { module = "com.solanamobile:mobile-wallet
 multimult = { module = "io.github.funkatronics:multimult", version.ref = "multimult" }
 rpc-core = { module = "com.solanamobile:rpc-core", version.ref = "rpcCore" }
 web3-solana = { module = "com.solanamobile:web3-solana", version.ref = "web3Solana" }
+sol4k = { module = "org.sol4k:sol4k", version.ref = "sol4k" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
@@ -47,6 +52,7 @@ ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref =
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
 dagger-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 dagger-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+web3auth-android-sdk = { module = "com.github.Web3Auth:web3auth-android-sdk", version.ref = "web3authAndroidSdk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

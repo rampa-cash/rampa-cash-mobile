@@ -9,21 +9,24 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.android.components.ViewModelComponent
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 val solanaUri = Uri.parse("https://solana.com")
 val iconUri = Uri.parse("favicon.ico")
 val identityName = "Solana"
 
 @Module
-@InstallIn(ViewModelComponent::class)
+@InstallIn(SingletonComponent::class)
 object RampaCashMobileModule {
     @Provides
+    @Singleton
     fun providesSharedPrefs(@ApplicationContext ctx: Context): SharedPreferences {
         return ctx.getSharedPreferences("scaffold_prefs", Context.MODE_PRIVATE)
     }
 
     @Provides
+    @Singleton
     fun providesMobileWalletAdapter(): MobileWalletAdapter {
         return MobileWalletAdapter(connectionIdentity = ConnectionIdentity(
             identityUri = solanaUri,
@@ -31,4 +34,6 @@ object RampaCashMobileModule {
             identityName = identityName
         ))
     }
+
+    // Removed Web3Auth from DI - will be created lazily in ViewModel
 } 

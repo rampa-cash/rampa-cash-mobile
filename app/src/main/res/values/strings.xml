@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Rampa Cash Mobile</string>
+    <!-- // IMP START - Get your Web3Auth Client ID from Dashboard -->
+    <string name="web3auth_project_id">BGZCENYt38BEQaOy7RLMS9HnqNzZ72s0w15VXynzhqQSTy7a05Y5I5xja7QRzQ3DZGEN5gfx4wfkJlVopTu11yg</string>
+    <!-- // IMP END - Get your Web3Auth Client ID from Dashboard -->
 </resources>
