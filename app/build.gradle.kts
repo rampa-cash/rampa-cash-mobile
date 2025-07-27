@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.web3.solana)
     implementation(libs.rpc.core)
     implementation(libs.multimult)
+    implementation(libs.sol4k)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
