@@ -79,6 +79,9 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val TAG = "MainViewModel"
     }
+    
+    // Track if this is the first time loading connections (to show welcome snackbar)
+    private var isInitialLoad = true
 
     // Lazy Web3Auth initialization to prevent blocking during app startup
     private val web3AuthLazy: Web3Auth by lazy {
@@ -141,8 +144,8 @@ class MainViewModel @Inject constructor(
 
                 _state.value.copy(
                     isLoading = false,
-                    // TODO: Move all Snackbar message strings into resources
-                    snackbarMessage = "✅ | Successfully auto-connected to MWA wallet: ${persistedConnection.accountLabel}"
+                    // Only show welcome snackbar on initial app load, not on navigation
+                    snackbarMessage = if (isInitialLoad) "✅ | Successfully auto-connected to MWA wallet: ${persistedConnection.accountLabel}" else null
                 ).updateViewState()
 
                 // Set the auth token in walletAdapter
@@ -174,7 +177,8 @@ class MainViewModel @Inject constructor(
 
                 _state.value.copy(
                     isLoading = false,
-                    snackbarMessage = "✅ | Successfully auto-connected to Web3Auth: ${persistedConnection.accountLabel}"
+                    // Only show welcome snackbar on initial app load, not on navigation
+                    snackbarMessage = if (isInitialLoad) "✅ | Successfully auto-connected to Web3Auth: ${persistedConnection.accountLabel}" else null
                 ).updateViewState()
             }
             
@@ -184,6 +188,9 @@ class MainViewModel @Inject constructor(
                 // No persisted session - stay in login state
             }
         }
+        
+        // Mark initial load as complete
+        isInitialLoad = false
     }
 
     fun connect(sender: ActivityResultSender) {
