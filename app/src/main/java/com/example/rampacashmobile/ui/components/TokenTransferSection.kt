@@ -45,8 +45,10 @@ fun TokenTransferSection(
 
     // Test addresses for development (Devnet)
     val testAddresses = listOf(
-        "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc" to "Test Wallet 1", // solflare
-        "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG" to "Test Wallet 2", // phantomwallet
+        "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc" to "User 1 Solflare", // solflare
+        "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG" to "User 1 PW", // phantomwallet
+        "HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy" to "User 2 Solflare", // phantomwallet
+        "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn" to "User 2 PW", // phantomwallet
     )
 
     Section(sectionTitle = "Token Transfer", modifier = modifier) {
@@ -176,7 +178,7 @@ fun TokenTransferSection(
             )
         ) {
             Text(
-                text = "🔗 Check Recipient ATA (Debug)",
+                text = "🔗 Check ATA & Existence (Debug)",
                 style = MaterialTheme.typography.bodySmall
             )
         }

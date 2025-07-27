@@ -11,11 +11,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.add
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
+import org.sol4k.PublicKey
 import java.util.UUID
 
 object AssociatedTokenAccountUtils {
@@ -23,84 +19,14 @@ object AssociatedTokenAccountUtils {
         walletAddress: SolanaPublicKey,
         mintAddress: SolanaPublicKey
     ): SolanaPublicKey {
-        val seeds = listOf(
-            walletAddress.bytes,
-            SolanaPublicKey.from(ProgramIds.TOKEN_PROGRAM).bytes,
-            mintAddress.bytes
-        )
-
-        return findProgramAddress(seeds, SolanaPublicKey.from(ProgramIds.ASSOCIATED_TOKEN_PROGRAM))
-    }
-
-    // Custom PDA derivation function since SolanaPublicKey doesn't have findProgramAddress
-    fun findProgramAddress(
-        seeds: List<ByteArray>,
-        programId: SolanaPublicKey
-    ): SolanaPublicKey {
-        for (bump in 255 downTo 0) {
-            try {
-                val bumpedSeeds = seeds + listOf(byteArrayOf(bump.toByte()))
-                val hash = createProgramAddressHash(bumpedSeeds, programId)
-                if (!isOnCurve(hash)) {
-                    return SolanaPublicKey(hash)
-                }
-            } catch (_: Exception) {
-                // ignore
-            }
-        }
-        throw IllegalStateException("Unable to find valid PDA bump")
-    }
-
-    fun createProgramAddressHash(
-        seeds: List<ByteArray>,
-        programId: SolanaPublicKey
-    ): ByteArray {
-        val buffer = ByteArrayOutputStream()
-
-        for (seed in seeds) {
-            if (seed.size > 32) throw IllegalArgumentException("Seed too long")
-            buffer.write(seed)
-        }
-
-        buffer.write(programId.bytes)
-        buffer.write("ProgramDerivedAddress".toByteArray(StandardCharsets.UTF_8))
-
-        return MessageDigest.getInstance("SHA-256").digest(buffer.toByteArray())
-    }
-
-    fun isOnCurve(pubkeyBytes: ByteArray): Boolean {
-        // Ed25519 curve validation for Solana PDA derivation
-        // This matches the behavior of the official Solana implementation
+        // Use sol4k's built-in ATA derivation which is guaranteed to be correct
+        val sol4kWalletKey = PublicKey(walletAddress.base58())
+        val sol4kMintKey = PublicKey(mintAddress.base58())
         
-        if (pubkeyBytes.size != 32) return true
+        val (sol4kAta, _) = PublicKey.findProgramDerivedAddress(sol4kWalletKey, sol4kMintKey)
         
-        // Based on analysis of the JavaScript output, we can implement
-        // a curve check that matches Solana's actual behavior
-        val lastByte = pubkeyBytes[31].toInt() and 0xFF
-        
-        // Clear the sign bit to get the actual y-coordinate
-        val y = lastByte and 0x7F
-        
-        // Check if the y-coordinate represents a valid point on the Ed25519 curve
-        // A point is "on curve" if it could be a valid curve point
-        // This is a simplified implementation that matches observed behavior
-        
-        // The condition is based on whether the y-coordinate is in the valid range
-        // for the Ed25519 field (modulo the prime 2^255 - 19)
-        return when {
-            // Values close to the field prime are typically on curve
-            y >= 0x7C -> true
-            // High bit set in original indicates potential invalidity  
-            (lastByte and 0x80) != 0 -> {
-                // For high-bit values, check if it's in problematic ranges
-                (lastByte and 0x60) != 0
-            }
-            // For lower values, use more restrictive validation
-            else -> {
-                // Based on observed patterns: accept low values, reject certain mid-ranges
-                y >= 0x60 && y != 0x63 && y != 0x13
-            }
-        }
+        // Convert back to SolanaPublicKey for compatibility with the rest of the codebase
+        return SolanaPublicKey.from(sol4kAta.toBase58())
     }
 
     // 2. CHECK IF ATA EXISTS
@@ -146,7 +72,7 @@ object AssociatedTokenAccountUtils {
      * Format: [instruction_type: u8][amount: u64]
      */
     fun createSplTransferInstructionData(amount: Long): ByteArray {
-        val buffer = ByteBuffer.allocate(9).order(ByteOrder.LITTLE_ENDIAN)
+        val buffer = java.nio.ByteBuffer.allocate(9).order(java.nio.ByteOrder.LITTLE_ENDIAN)
         buffer.put(3.toByte())  // Transfer instruction type
         buffer.putLong(amount)   // Amount
         return buffer.array()

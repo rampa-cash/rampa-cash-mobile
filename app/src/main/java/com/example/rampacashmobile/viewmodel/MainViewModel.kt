@@ -632,26 +632,43 @@ class MainViewModel @Inject constructor(
             return
         }
 
-        try {
-            val tokenMint = SolanaPublicKey.from(tokenMintAddress)
-            val recipientPubkey = SolanaPublicKey.from(recipientAddress)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val tokenMint = SolanaPublicKey.from(tokenMintAddress)
+                val recipientPubkey = SolanaPublicKey.from(recipientAddress)
 
-            val atAccount = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
-                recipientPubkey, tokenMint
-            )
+                val atAccount = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
+                    recipientPubkey, tokenMint
+                )
 
-            val toStringATA = atAccount.toString()
-            Log.d(TAG, "checkATA: Deriving ATA $toStringATA for recipient: $recipientAddress")
+                val toStringATA = atAccount.toString()
+                Log.d(TAG, "checkATA: Deriving ATA $toStringATA for recipient: $recipientAddress")
 
-            _state.value.copy(
-                snackbarMessage = "✅ | ATA for recipient: ${recipientAddress.take(8)}...${recipientAddress.takeLast(8)} is ${toStringATA.take(8)}...${toStringATA.takeLast(8)}"
-            ).updateViewState()
+                // Check if the ATA exists on-chain
+                Log.d(TAG, "checkATA: Checking if ATA exists on-chain...")
+                val ataExists = try {
+                    AssociatedTokenAccountUtils.checkAccountExists(rpcUri, atAccount)
+                } catch (e: Exception) {
+                    Log.e(TAG, "checkATA: Failed to check ATA existence: ${e.message}", e)
+                    null
+                }
 
-        } catch (e: Exception) {
-            Log.e(TAG, "checkATA: Failed to derive ATA for recipient: $recipientAddress", e)
-            _state.value.copy(
-                snackbarMessage = "❌ | Invalid recipient address: ${e.message}"
-            ).updateViewState()
+                val existenceStatus = when (ataExists) {
+                    true -> "✅ EXISTS"
+                    false -> "❌ DOES NOT EXIST"
+                    null -> "⚠️ UNKNOWN (check failed)"
+                }
+
+                _state.value.copy(
+                    snackbarMessage = "🔗 ATA for ${recipientAddress.take(8)}...${recipientAddress.takeLast(8)}: ${toStringATA.take(8)}...${toStringATA.takeLast(8)} | $existenceStatus"
+                ).updateViewState()
+
+            } catch (e: Exception) {
+                Log.e(TAG, "checkATA: Failed to derive ATA for recipient: $recipientAddress", e)
+                _state.value.copy(
+                    snackbarMessage = "❌ | Invalid recipient address: ${e.message}"
+                ).updateViewState()
+            }
         }
     }
 
