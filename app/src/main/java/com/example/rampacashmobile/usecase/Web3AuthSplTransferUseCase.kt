@@ -2,7 +2,6 @@ package com.example.rampacashmobile.usecase
 
 import android.net.Uri
 import android.util.Log
-import com.example.rampacashmobile.solanautils.AssociatedTokenAccountUtils
 import com.solana.publickey.SolanaPublicKey
 import org.sol4k.Keypair
 import kotlinx.coroutines.Dispatchers
@@ -10,8 +9,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
  * Web3Auth SPL Token Transfer Use Case

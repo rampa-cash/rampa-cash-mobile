@@ -4,40 +4,29 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.rampacashmobile.ui.screens.Token
 
 @Composable
 fun WalletConnectionCard(
+    selectedToken: Token,
     walletName: String,
     address: String,
-    solBalance: Double,
-    eurcBalance: Double,
-    usdcBalance: Double,
-    fullAddressForCopy: String? = null, // Full address to copy to clipboard
+    fullAddressForCopy: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -55,69 +44,90 @@ fun WalletConnectionCard(
         ).show()
     }
     
-    Card(
-        shape = RoundedCornerShape(16.dp),
+    // Create gradient background based on selected token (similar to React Dashboard)
+    val cardGradient = Brush.linearGradient(
+        colors = listOf(
+            selectedToken.primaryColor,
+            selectedToken.secondaryColor
+        )
+    )
+    
+    Box(
         modifier = modifier
-            .padding(bottom = 8.dp)
             .fillMaxWidth()
-            .border(1.dp, Color.Black, RoundedCornerShape(16.dp))
+            .aspectRatio(1.586f) // Credit card aspect ratio
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(cardGradient)
+            .clickable { copyAddressToClipboard() } // Make entire card clickable
     ) {
+        // Token Icon (top right)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(12.dp)
+        ) {
+            TokenIcon(
+                tokenSymbol = selectedToken.symbol,
+                size = 40.dp
+            )
+        }
+        
+        // Main content
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Connected Wallet",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            
-            // Clickable address row with copy icon
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { copyAddressToClipboard() }
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Token info and balance (top section)
+            Column {
                 Text(
-                    text = "$walletName ($address)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
-                    modifier = Modifier.weight(1f)
+                    text = selectedToken.name,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Normal
                 )
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Copy address",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(18.dp)
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = when (selectedToken.symbol) {
+                        "SOL" -> selectedToken.balance.let { balance ->
+                            String.format("%.${if (balance < 1) 5 else 2}f", balance)
+                        }
+                        "USDC" -> String.format("$%.2f", selectedToken.balance)
+                        "EURC" -> String.format("€%.2f", selectedToken.balance)
+                        else -> String.format("%.2f", selectedToken.balance)
+                    },
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 0.5.sp
                 )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // SOL Balance
-            Text(
-                text = "%.3f SOL".format(solBalance),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            // EURC Balance
-            Text(
-                text = "%.2f EURC".format(eurcBalance),
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color(0xFF4CAF50) // Green color for EURC
-            )
-
-            // USDC Balance
-            Text(
-                text = "%.2f USDC".format(usdcBalance),
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color(0xFF2196F3) // Blue color for USDC
-            )
+            // Bottom section - Rampa branding (similar to React Dashboard)
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "CRYPTO",
+                    fontSize = 10.sp,
+                    color = Color.White.copy(alpha = 0.95f),
+                    letterSpacing = 1.sp,
+                    fontWeight = FontWeight.Normal
+                )
+                
+                Text(
+                    text = "rampa",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Light,
+                    color = Color.White,
+                    letterSpacing = 0.5.sp
+                )
+            }
         }
     }
 } 

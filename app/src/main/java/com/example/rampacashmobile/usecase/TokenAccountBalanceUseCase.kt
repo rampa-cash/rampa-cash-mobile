@@ -1,7 +1,6 @@
 package com.example.rampacashmobile.usecase
 
 import android.net.Uri
-import android.util.Log
 import com.example.rampacashmobile.networking.KtorHttpDriver
 import com.solana.networking.Rpc20Driver
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +11,6 @@ import kotlinx.serialization.json.buildJsonArray
 import com.solana.publickey.SolanaPublicKey
 import com.solana.rpccore.JsonRpc20Request
 import kotlinx.serialization.json.add
-import kotlinx.serialization.json.JsonPrimitive
 
 object TokenAccountBalanceUseCase {
     private val TAG = TokenAccountBalanceUseCase::class.simpleName

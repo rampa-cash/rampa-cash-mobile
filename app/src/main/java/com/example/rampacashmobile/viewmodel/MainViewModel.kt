@@ -12,6 +12,8 @@ import com.example.rampacashmobile.solanautils.AssociatedTokenAccountUtils
 import com.example.rampacashmobile.solanautils.TokenMints
 import com.example.rampacashmobile.usecase.AccountBalanceUseCase
 import com.example.rampacashmobile.usecase.Connected
+import com.example.rampacashmobile.usecase.Web3AuthConnected
+import com.example.rampacashmobile.usecase.NotConnected
 import com.example.rampacashmobile.usecase.PersistenceUseCase
 import com.example.rampacashmobile.usecase.SplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
@@ -26,7 +28,6 @@ import com.solana.mobilewalletadapter.clientlib.TransactionResult
 import com.solana.mobilewalletadapter.clientlib.successPayload
 import com.solana.publickey.SolanaPublicKey
 import com.web3auth.core.Web3Auth
-import com.web3auth.core.types.LoginParams
 import com.web3auth.core.types.Provider
 import com.web3auth.core.types.Web3AuthResponse
 import com.web3auth.core.types.Web3AuthOptions
@@ -40,8 +41,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import kotlin.math.pow
 
@@ -112,27 +111,64 @@ class MainViewModel @Inject constructor(
     fun loadConnection() {
         val persistedConnection = persistenceUseCase.getWalletConnection()
 
-        if (persistedConnection is Connected) {
-            _state.value.copy(
-                isLoading = true,
-                canTransact = true,
-                userAddress = persistedConnection.publicKey.base58(),
-                userLabel = persistedConnection.accountLabel,
-                fullAddressForCopy = persistedConnection.publicKey.base58(), // Full address for copy
-            ).updateViewState()
+        when (persistedConnection) {
+            is Connected -> {
+                Log.d(TAG, "🔄 Restoring MWA session: ${persistedConnection.accountLabel}")
+                _state.value.copy(
+                    isLoading = true,
+                    canTransact = true,
+                    userAddress = persistedConnection.publicKey.base58(),
+                    userLabel = persistedConnection.accountLabel,
+                    fullAddressForCopy = persistedConnection.publicKey.base58(), // Full address for copy
+                ).updateViewState()
 
-            getSolanaBalance(persistedConnection.publicKey)
-            getEurcBalance(persistedConnection.publicKey)
-            getUsdcBalance(persistedConnection.publicKey)
+                getSolanaBalance(persistedConnection.publicKey)
+                getEurcBalance(persistedConnection.publicKey)
+                getUsdcBalance(persistedConnection.publicKey)
 
-            _state.value.copy(
-                isLoading = false,
-                // TODO: Move all Snackbar message strings into resources
-                snackbarMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
-            ).updateViewState()
+                _state.value.copy(
+                    isLoading = false,
+                    // TODO: Move all Snackbar message strings into resources
+                    snackbarMessage = "✅ | Successfully auto-connected to MWA wallet: ${persistedConnection.accountLabel}"
+                ).updateViewState()
 
-            // Set the auth token in walletAdapter
-            walletAdapter.authToken = persistedConnection.authToken
+                // Set the auth token in walletAdapter
+                walletAdapter.authToken = persistedConnection.authToken
+            }
+            
+            is Web3AuthConnected -> {
+                Log.d(TAG, "🔄 Restoring Web3Auth session: ${persistedConnection.accountLabel}")
+                
+                // Create display-friendly address
+                val fullAddress = persistedConnection.publicKey.base58()
+                val displayAddress = "${fullAddress.take(8)}...${fullAddress.takeLast(8)}"
+                
+                _state.value.copy(
+                    isLoading = true,
+                    isWeb3AuthLoggedIn = true,
+                    web3AuthUserInfo = persistedConnection.accountLabel,
+                    web3AuthPrivateKey = persistedConnection.privateKey,
+                    web3AuthSolanaPublicKey = fullAddress,
+                    canTransact = true,
+                    userLabel = "${persistedConnection.accountLabel} (via ${persistedConnection.providerName})",
+                    userAddress = displayAddress,
+                    fullAddressForCopy = fullAddress,
+                ).updateViewState()
+
+                getSolanaBalance(persistedConnection.publicKey)
+                getEurcBalance(persistedConnection.publicKey)
+                getUsdcBalance(persistedConnection.publicKey)
+
+                _state.value.copy(
+                    isLoading = false,
+                    snackbarMessage = "✅ | Successfully auto-connected to Web3Auth: ${persistedConnection.accountLabel}"
+                ).updateViewState()
+            }
+            
+            is NotConnected -> {
+                Log.d(TAG, "🔄 No persisted session found")
+                // No persisted session - stay in login state
+            }
         }
     }
 
@@ -193,12 +229,25 @@ class MainViewModel @Inject constructor(
     fun disconnect() {
         viewModelScope.launch {
             val conn = persistenceUseCase.getWalletConnection()
-            if (conn is Connected) {
-                persistenceUseCase.clearConnection()
-
-                MainViewState().copy(
-                    snackbarMessage = "✅ | Disconnected from wallet."
-                ).updateViewState()
+            when (conn) {
+                is Connected -> {
+                    persistenceUseCase.clearConnection()
+                    MainViewState().copy(
+                        snackbarMessage = "✅ | Disconnected from MWA wallet."
+                    ).updateViewState()
+                }
+                is Web3AuthConnected -> {
+                    persistenceUseCase.clearConnection()
+                    MainViewState().copy(
+                        snackbarMessage = "✅ | Disconnected from Web3Auth."
+                    ).updateViewState()
+                }
+                is NotConnected -> {
+                    // Already disconnected
+                    MainViewState().copy(
+                        snackbarMessage = "ℹ️ | No active connection to disconnect."
+                    ).updateViewState()
+                }
             }
         }
     }
@@ -828,6 +877,21 @@ class MainViewModel @Inject constructor(
                 
                 val displayName = userInfo?.name ?: userInfo?.email ?: "Web3Auth User"
                 
+                // Persist Web3Auth session
+                try {
+                    persistenceUseCase.persistWeb3AuthConnection(
+                        pubKey = SolanaPublicKey.from(solanaPublicKey),
+                        accountLabel = displayName,
+                        privateKey = privateKey,
+                        providerName = providerName,
+                        userInfo = userInfo?.name ?: userInfo?.email ?: ""
+                    )
+                    Log.d(TAG, "✅ Web3Auth session persisted successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "⚠️ Failed to persist Web3Auth session: ${e.message}", e)
+                    // Continue anyway - session will work for this app session
+                }
+                
                 _state.value.copy(
                     isWeb3AuthLoading = false,
                     isWeb3AuthLoggedIn = true,
@@ -873,6 +937,9 @@ class MainViewModel @Inject constructor(
 
     // Handle successful logout from MainActivity
     fun handleWeb3AuthLogout() {
+        // Clear persisted session
+        persistenceUseCase.clearConnection()
+        
         _state.value.copy(
             isWeb3AuthLoading = false,
             isWeb3AuthLoggedIn = false,
@@ -890,6 +957,44 @@ class MainViewModel @Inject constructor(
         ).updateViewState()
         
         Log.d(TAG, "Web3Auth logout completed successfully")
+    }
+    
+    // Handle Web3Auth session restoration on app startup
+    fun handleWeb3AuthSessionRestore(privateKey: String, solanaPublicKey: String, displayAddress: String) {
+        try {
+            Log.d(TAG, "🔄 Restoring Web3Auth session from Web3Auth SDK")
+            
+            _state.value.copy(
+                isWeb3AuthLoading = false,
+                isWeb3AuthLoggedIn = true,
+                web3AuthUserInfo = "Restored User",
+                web3AuthPrivateKey = privateKey,
+                web3AuthSolanaPublicKey = solanaPublicKey,
+                canTransact = true,
+                userLabel = "Restored User (via Web3Auth)",
+                userAddress = displayAddress,
+                fullAddressForCopy = solanaPublicKey,
+                snackbarMessage = "✅ | Web3Auth session restored!"
+            ).updateViewState()
+            
+            // Load balances for restored Web3Auth user
+            try {
+                val userPublicKey = SolanaPublicKey.from(solanaPublicKey)
+                getSolanaBalance(userPublicKey)
+                getEurcBalance(userPublicKey)
+                getUsdcBalance(userPublicKey)
+                Log.d(TAG, "Loading balances for restored Web3Auth user: $solanaPublicKey")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load balances for restored Web3Auth user: ${e.message}", e)
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to handle Web3Auth session restoration", e)
+            _state.value.copy(
+                isWeb3AuthLoading = false,
+                snackbarMessage = "❌ | Failed to restore Web3Auth session: ${e.message}"
+            ).updateViewState()
+        }
     }
 
 

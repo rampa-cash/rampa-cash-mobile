@@ -9,15 +9,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.ui.components.Section
 import com.example.rampacashmobile.ui.components.TokenTransferSection
 import com.example.rampacashmobile.ui.components.WalletConnectionCard
+import com.example.rampacashmobile.ui.components.TokenSwitcher
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
+
+// Token data class
+data class Token(
+    val symbol: String,
+    val name: String,
+    val balance: Double,
+    val icon: String,
+    val primaryColor: Color,
+    val secondaryColor: Color,
+    val mintAddress: String? = null
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +41,50 @@ fun MainScreen(
 ) {
     val viewState by viewModel.viewState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Token switching state
+    var selectedTokenIndex by remember { mutableIntStateOf(0) }
+    
+    // Define tokens similar to React Dashboard
+    val tokens = listOf(
+        Token(
+            symbol = "USDC",
+            name = "USD Coin",
+            balance = viewState.usdcBalance,
+            icon = "usdc", // We'll handle this differently in Compose
+            primaryColor = Color(0xFF2DBCD6),
+            secondaryColor = Color(0xFF2775CA),
+            mintAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+        ),
+        Token(
+            symbol = "EURC",
+            name = "Euro Coin", 
+            balance = viewState.eurcBalance,
+            icon = "eurc",
+            primaryColor = Color(0xFF006BCF),
+            secondaryColor = Color(0xFF66A0D5),
+            mintAddress = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
+        ),
+        Token(
+            symbol = "SOL",
+            name = "Solana",
+            balance = viewState.solBalance,
+            icon = "sol",
+            primaryColor = Color(0xFF9945FF),
+            secondaryColor = Color(0xFF14F195)
+        )
+    )
+    
+    // Token switching functions
+    val nextToken = {
+        selectedTokenIndex = (selectedTokenIndex + 1) % tokens.size
+    }
+    
+    val prevToken = {
+        selectedTokenIndex = (selectedTokenIndex - 1 + tokens.size) % tokens.size
+    }
+    
+    val selectedToken = tokens[selectedTokenIndex]
 
     // Redirect to login if not authenticated
     LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn) {
@@ -43,24 +98,11 @@ fun MainScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        CenterAlignedTopAppBar(
-            title = {
-                Text(
-                    text = "Rampa Cash - Dashboard",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        )
-        
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.fillMaxWidth()
         )
+        
         LaunchedEffect(Unit) {
             viewModel.loadConnection()
         }
@@ -89,14 +131,21 @@ fun MainScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Wallet Connection Card (only show when connected)
+                // Token Switcher and Wallet Card (only show when connected)
                 if (viewState.canTransact) {
+                    // Token Switcher
+                    TokenSwitcher(
+                        selectedToken = selectedToken,
+                        onPrevious = prevToken,
+                        onNext = nextToken,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    
+                    // Updated Wallet Connection Card with selected token
                     WalletConnectionCard(
+                        selectedToken = selectedToken,
                         walletName = viewState.userLabel,
                         address = viewState.userAddress,
-                        solBalance = viewState.solBalance,
-                        eurcBalance = viewState.eurcBalance,
-                        usdcBalance = viewState.usdcBalance,
                         fullAddressForCopy = viewState.fullAddressForCopy,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )

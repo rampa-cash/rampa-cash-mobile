@@ -47,7 +47,8 @@ class Web3AuthManager @Inject constructor(
                     clientId = clientId,
                     network = Network.SAPPHIRE_DEVNET,
                     buildEnv = BuildEnv.PRODUCTION,
-                    redirectUrl = Uri.parse("com.example.rampacashmobile://auth")
+                    redirectUrl = Uri.parse("com.example.rampacashmobile://auth"),
+                    sessionTime = 86400 // 24 hours in seconds
                 ),
                 activity // Activity context - crucial for browser launching
             )
@@ -56,6 +57,49 @@ class Web3AuthManager @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "❌ Web3Auth initialization failed: ${e.message}", e)
             false
+        }
+    }
+    
+    /**
+     * Check if Web3Auth has an existing session
+     */
+    fun hasExistingSession(): Boolean {
+        return try {
+            val web3AuthInstance = web3Auth ?: return false
+            val privateKey = web3AuthInstance.getPrivkey()
+            val hasSession = privateKey.isNotEmpty()
+            Log.d(TAG, "🔍 Web3Auth session check: hasSession = $hasSession")
+            hasSession
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to check Web3Auth session: ${e.message}", e)
+            false
+        }
+    }
+    
+    /**
+     * Get Web3Auth session info if available
+     */
+    fun getSessionInfo(): Triple<String, String, String>? {
+        return try {
+            val web3AuthInstance = web3Auth ?: return null
+            val privateKey = web3AuthInstance.getPrivkey()
+            
+            if (privateKey.isEmpty()) {
+                Log.d(TAG, "🔍 No Web3Auth session available")
+                return null
+            }
+            
+            val ed25519PrivateKey = web3AuthInstance.getEd25519PrivKey()
+            val solanaKeyPair = org.sol4k.Keypair.fromSecretKey(ed25519PrivateKey.hexToByteArray())
+            val solanaPublicKey = solanaKeyPair.publicKey.toBase58()
+            val displayAddress = "${solanaPublicKey.take(8)}...${solanaPublicKey.takeLast(8)}"
+            
+            Log.d(TAG, "✅ Web3Auth session info retrieved")
+            Triple(privateKey, solanaPublicKey, displayAddress)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to get Web3Auth session info: ${e.message}", e)
+            null
         }
     }
     
@@ -243,6 +287,7 @@ class Web3AuthManager @Inject constructor(
     }
 }
 
+
 /**
  * Extension function to convert hex string to byte array
  * Required for Web3Auth Ed25519 private key conversion
@@ -251,4 +296,4 @@ private fun String.hexToByteArray(): ByteArray {
     return this.chunked(2)
         .map { it.toInt(16).toByte() }
         .toByteArray()
-} 
+}

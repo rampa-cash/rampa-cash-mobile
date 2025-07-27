@@ -1,7 +1,6 @@
 package com.example.rampacashmobile
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -18,7 +17,6 @@ import com.example.rampacashmobile.navigation.NavigationGraph
 import com.example.rampacashmobile.ui.theme.RampaCashMobileTheme
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
-import com.web3auth.core.Web3Auth
 import com.web3auth.core.types.Web3AuthResponse
 import com.web3auth.core.types.Provider
 import com.example.rampacashmobile.web3auth.Web3AuthManager
@@ -73,6 +71,39 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         val clientId = getString(R.string.web3auth_project_id)
         if (!web3AuthManager.initialize(clientId, this)) {
             Toast.makeText(this, "Web3Auth initialization failed", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        // Check for existing Web3Auth session after initialization
+        checkExistingWeb3AuthSession()
+    }
+    
+    private fun checkExistingWeb3AuthSession() {
+        try {
+            if (web3AuthManager.hasExistingSession()) {
+                Log.d(TAG, "🔍 Found existing Web3Auth session - attempting to restore")
+                
+                val sessionInfo = web3AuthManager.getSessionInfo()
+                if (sessionInfo != null) {
+                    val (privateKey, solanaPublicKey, displayAddress) = sessionInfo
+                    
+                    Log.d(TAG, "✅ Web3Auth session restored successfully")
+                    Log.d(TAG, "🔑 Solana Public Key: $solanaPublicKey")
+                    Log.d(TAG, "📍 Display Address: $displayAddress")
+                    
+                    // Note: We don't have provider info from the restored session,
+                    // but we can restore the session anyway
+                    runOnUiThread {
+                        viewModel.handleWeb3AuthSessionRestore(privateKey, solanaPublicKey, displayAddress)
+                    }
+                } else {
+                    Log.w(TAG, "⚠️ Web3Auth session exists but couldn't retrieve session info")
+                }
+            } else {
+                Log.d(TAG, "🔍 No existing Web3Auth session found")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error checking Web3Auth session: ${e.message}", e)
         }
     }
 
