@@ -7,9 +7,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.ui.components.Section
 import com.example.rampacashmobile.ui.components.TokenTransferSection
@@ -86,11 +90,25 @@ fun MainScreen(
     
     val selectedToken = tokens[selectedTokenIndex]
 
-    // Redirect to login if not authenticated
-    LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn) {
-        if (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn) {
-            navController.navigate("login") {
-                popUpTo(0) { inclusive = true }
+    // Redirect to login if not authenticated (with delay for session restoration)
+    LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn, viewState.isLoading, viewState.userAddress) {
+        // Check if we're in a disconnected state (regardless of loading flag)
+        val isDisconnected = !viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty()
+        
+        if (isDisconnected) {
+            // If loading, it could be session restoration or logout - wait a bit
+            if (viewState.isLoading) {
+                kotlinx.coroutines.delay(500) // Shorter delay for logout transitions
+            } else {
+                kotlinx.coroutines.delay(1000) // Normal delay for session restoration
+            }
+            
+            // Double-check we're still disconnected after delay
+            if (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn) {
+                Log.d("MainScreen", "🔄 No active session found - redirecting to login")
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true }
+                }
             }
         }
     }
@@ -104,6 +122,7 @@ fun MainScreen(
         )
         
         LaunchedEffect(Unit) {
+            Log.d("MainScreen", "🔄 Starting session restoration...")
             viewModel.loadConnection()
         }
 
@@ -114,17 +133,21 @@ fun MainScreen(
             }
         }
 
-        // Show transaction success screen or main dashboard
-        if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
-            Log.d("MainScreen", "🎯 Showing TransactionSuccessScreen - signature: ${viewState.transactionDetails!!.signature.take(8)}")
-            TransactionSuccessScreen(
-                transactionDetails = viewState.transactionDetails!!,
-                onDone = { 
-                    Log.d("MainScreen", "🔙 TransactionSuccessScreen onDone called")
-                    viewModel.onTransactionSuccessDone() 
-                }
-            )
-        } else {
+            // Show loading screen during session restoration or logout
+    if (viewState.isLoading || (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty())) {
+        LoadingScreen()
+    }
+    // Show transaction success screen or main dashboard
+    else if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
+        Log.d("MainScreen", "🎯 Showing TransactionSuccessScreen - signature: ${viewState.transactionDetails!!.signature.take(8)}")
+        TransactionSuccessScreen(
+            transactionDetails = viewState.transactionDetails!!,
+            onDone = { 
+                Log.d("MainScreen", "🔙 TransactionSuccessScreen onDone called")
+                viewModel.onTransactionSuccessDone() 
+            }
+        )
+    } else {
             Log.d("MainScreen", "📱 Showing main content - showTransactionSuccess: ${viewState.showTransactionSuccess}, hasDetails: ${viewState.transactionDetails != null}")
             Column(
                 modifier = Modifier
@@ -211,6 +234,42 @@ fun MainScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LoadingScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                strokeWidth = 4.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Text(
+                text = "Loading...",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            
+            Text(
+                text = "Checking for saved sessions",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

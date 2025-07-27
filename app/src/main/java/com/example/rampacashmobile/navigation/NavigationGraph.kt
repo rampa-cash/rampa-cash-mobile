@@ -31,8 +31,8 @@ fun NavigationGraph(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Only show bottom navigation when not on login screen
-    val showBottomBar = currentRoute != "login"
+    // Only show bottom navigation when not on login screen and not in loading state
+    val showBottomBar = currentRoute != "login" && !viewState.isLoading
 
     Scaffold(
         bottomBar = {
@@ -43,7 +43,7 @@ fun NavigationGraph(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = if (viewState.canTransact || viewState.isWeb3AuthLoggedIn) "dashboard" else "login",
+            startDestination = "dashboard", // Always start with dashboard to allow session restoration
             modifier = if (showBottomBar) Modifier.padding(paddingValues) else Modifier
         ) {
             composable("login") {

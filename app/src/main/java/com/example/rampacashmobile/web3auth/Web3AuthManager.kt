@@ -65,11 +65,30 @@ class Web3AuthManager @Inject constructor(
      */
     fun hasExistingSession(): Boolean {
         return try {
-            val web3AuthInstance = web3Auth ?: return false
-            val privateKey = web3AuthInstance.getPrivkey()
-            val hasSession = privateKey.isNotEmpty()
-            Log.d(TAG, "🔍 Web3Auth session check: hasSession = $hasSession")
-            hasSession
+            val web3AuthInstance = web3Auth
+            if (web3AuthInstance == null) {
+                Log.w(TAG, "⚠️ Web3Auth instance is null during session check")
+                return false
+            }
+            
+            // In Web3Auth Android SDK, getUserInfo() throws an exception if no session exists
+            // So we need to catch that exception to determine if there's a session
+            try {
+                val userInfo = web3AuthInstance.getUserInfo()
+                val hasSession = userInfo != null
+                Log.d(TAG, "🔍 Web3Auth session check: hasSession = $hasSession")
+                
+                if (hasSession && userInfo != null) {
+                    Log.d(TAG, "🔑 User session exists: ${userInfo.name ?: userInfo.email ?: "Unknown user"}")
+                }
+                
+                hasSession
+            } catch (e: Throwable) {
+                // getUserInfo() throws java.lang.Error when no user is found
+                // This is expected behavior when there's no active session
+                Log.d(TAG, "🔑 No user session found in Web3Auth SDK: ${e.message}")
+                false
+            }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to check Web3Auth session: ${e.message}", e)
             false
@@ -79,24 +98,37 @@ class Web3AuthManager @Inject constructor(
     /**
      * Get Web3Auth session info if available
      */
-    fun getSessionInfo(): Triple<String, String, String>? {
+        fun getSessionInfo(): Triple<String, String, String>? {
         return try {
             val web3AuthInstance = web3Auth ?: return null
-            val privateKey = web3AuthInstance.getPrivkey()
+
+            // Check if user info is available (indicates active session)
+            // getUserInfo() throws java.lang.Error when no session exists
+            val userInfo = try {
+                web3AuthInstance.getUserInfo()
+            } catch (e: Throwable) {
+                Log.d(TAG, "🔍 No Web3Auth session available: ${e.message}")
+                return null
+            }
             
-            if (privateKey.isEmpty()) {
+            if (userInfo == null) {
                 Log.d(TAG, "🔍 No Web3Auth session available")
                 return null
             }
             
+            // Get the Ed25519 private key using the correct method
             val ed25519PrivateKey = web3AuthInstance.getEd25519PrivKey()
+            if (ed25519PrivateKey.isEmpty()) {
+                Log.d(TAG, "🔍 Web3Auth session exists but no private key available")
+                return null
+            }
             val solanaKeyPair = org.sol4k.Keypair.fromSecretKey(ed25519PrivateKey.hexToByteArray())
             val solanaPublicKey = solanaKeyPair.publicKey.toBase58()
             val displayAddress = "${solanaPublicKey.take(8)}...${solanaPublicKey.takeLast(8)}"
             
             Log.d(TAG, "✅ Web3Auth session info retrieved")
-            Triple(privateKey, solanaPublicKey, displayAddress)
-            
+            Triple(ed25519PrivateKey, solanaPublicKey, displayAddress)
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to get Web3Auth session info: ${e.message}", e)
             null
@@ -169,15 +201,31 @@ class Web3AuthManager @Inject constructor(
                     Log.d(TAG, "✅ Web3Auth logout completed successfully!")
                     callback.onLogoutSuccess()
                 } else {
-                    Log.e(TAG, "❌ Web3Auth logout failed: ${error?.message}", error)
-                    callback.onLogoutError("Logout failed: ${error?.message ?: "Unknown error"}")
+                    // Check if this is the sessionId uninitialized error from restored sessions
+                    val errorMessage = error?.message ?: ""
+                    if (errorMessage.contains("sessionId has not been initialized", ignoreCase = true)) {
+                        Log.d(TAG, "ℹ️ Web3Auth logout skipped - no active SDK session (restored from storage)")
+                        // This is expected for restored sessions - treat as successful logout
+                        callback.onLogoutSuccess()
+                    } else {
+                        Log.e(TAG, "❌ Web3Auth logout failed: ${error?.message}", error)
+                        callback.onLogoutError("Logout failed: ${error?.message ?: "Unknown error"}")
+                    }
                 }
             }
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Web3Auth logout setup failed: ${e.message}", e)
             callback.onLoading(false)
-            callback.onLogoutError("Logout setup failed: ${e.message}")
+            
+            // Check if this is the sessionId error at the setup level too
+            val errorMessage = e.message ?: ""
+            if (errorMessage.contains("sessionId has not been initialized", ignoreCase = true)) {
+                Log.d(TAG, "ℹ️ Web3Auth logout skipped at setup - no active SDK session (restored from storage)")
+                callback.onLogoutSuccess()
+            } else {
+                callback.onLogoutError("Logout setup failed: ${e.message}")
+            }
         }
     }
     

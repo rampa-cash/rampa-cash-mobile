@@ -15,6 +15,7 @@ import com.example.rampacashmobile.usecase.Connected
 import com.example.rampacashmobile.usecase.Web3AuthConnected
 import com.example.rampacashmobile.usecase.NotConnected
 import com.example.rampacashmobile.usecase.PersistenceUseCase
+import com.example.rampacashmobile.DebugSessionHelper
 import com.example.rampacashmobile.usecase.SplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.Web3AuthSplTransferUseCase
@@ -45,7 +46,7 @@ import javax.inject.Inject
 import kotlin.math.pow
 
 data class MainViewState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,  // Start with loading=true to prevent premature navigation
     val canTransact: Boolean = false,
     val solBalance: Double = 0.0,
     val eurcBalance: Double = 0.0,
@@ -60,6 +61,7 @@ data class MainViewState(
     val transactionDetails: TransactionDetails? = null,
     // Web3Auth related state
     val isWeb3AuthLoading: Boolean = false,
+    val loadingProvider: Provider? = null, // Track which specific provider is loading
     val isWeb3AuthLoggedIn: Boolean = false,
     val web3AuthUserInfo: String? = null,
     val web3AuthPrivateKey: String? = null,
@@ -109,7 +111,18 @@ class MainViewModel @Inject constructor(
         get() = _state
 
     fun loadConnection() {
+        Log.d(TAG, "🔄 loadConnection() called - checking for persisted sessions...")
+        
+        // Debug current session storage state
+        DebugSessionHelper.debugAllStoredSessions(
+            context.getSharedPreferences("scaffold_prefs", android.content.Context.MODE_PRIVATE)
+        )
+        
+        // Set loading state while checking for sessions
+        _state.value.copy(isLoading = true).updateViewState()
+        
         val persistedConnection = persistenceUseCase.getWalletConnection()
+        Log.d(TAG, "🔍 Persistence check result: ${persistedConnection::class.simpleName}")
 
         when (persistedConnection) {
             is Connected -> {
@@ -166,7 +179,8 @@ class MainViewModel @Inject constructor(
             }
             
             is NotConnected -> {
-                Log.d(TAG, "🔄 No persisted session found")
+                Log.d(TAG, "🔄 No persisted session found - setting loading to false")
+                _state.value.copy(isLoading = false).updateViewState()
                 // No persisted session - stay in login state
             }
         }
@@ -182,9 +196,14 @@ class MainViewModel @Inject constructor(
                         result.authResult.authToken
                     )
 
+                    Log.d(TAG, "💾 About to persist MWA connection for: ${currentConn.accountLabel}")
                     persistenceUseCase.persistConnection(
                         currentConn.publicKey, currentConn.accountLabel, currentConn.authToken
                     )
+                    
+                    // Verify persistence worked
+                    val testConnection = persistenceUseCase.getWalletConnection()
+                    Log.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
 
                     // Set the auth token in walletAdapter
                     walletAdapter.authToken = currentConn.authToken
@@ -232,19 +251,45 @@ class MainViewModel @Inject constructor(
             when (conn) {
                 is Connected -> {
                     persistenceUseCase.clearConnection()
-                    MainViewState().copy(
+                    // Reset to clean disconnected state
+                    _state.value.copy(
+                        isLoading = true, // Keep loading during logout transition
+                        canTransact = false,
+                        isWeb3AuthLoggedIn = false,
+                        loadingProvider = null,
+                        userAddress = "",
+                        userLabel = "",
+                        fullAddressForCopy = "",
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
                         snackbarMessage = "✅ | Disconnected from MWA wallet."
                     ).updateViewState()
                 }
                 is Web3AuthConnected -> {
                     persistenceUseCase.clearConnection()
-                    MainViewState().copy(
+                    // Reset to clean disconnected state
+                    _state.value.copy(
+                        isLoading = true, // Keep loading during logout transition
+                        canTransact = false,
+                        isWeb3AuthLoggedIn = false,
+                        loadingProvider = null,
+                        userAddress = "",
+                        userLabel = "",
+                        fullAddressForCopy = "",
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
                         snackbarMessage = "✅ | Disconnected from Web3Auth."
                     ).updateViewState()
                 }
                 is NotConnected -> {
-                    // Already disconnected
-                    MainViewState().copy(
+                    // Already disconnected - ensure clean state
+                    _state.value.copy(
+                        isLoading = true, // Keep loading during logout transition
+                        canTransact = false,
+                        isWeb3AuthLoggedIn = false,
+                        loadingProvider = null,
                         snackbarMessage = "ℹ️ | No active connection to disconnect."
                     ).updateViewState()
                 }
@@ -849,13 +894,22 @@ class MainViewModel @Inject constructor(
     // Web3Auth methods
     fun setWeb3AuthLoading(loading: Boolean) {
         _state.value.copy(
-            isWeb3AuthLoading = loading
+            isWeb3AuthLoading = loading,
+            loadingProvider = if (loading) _state.value.loadingProvider else null
+        ).updateViewState()
+    }
+    
+    fun setWeb3AuthProviderLoading(provider: Provider) {
+        _state.value.copy(
+            isWeb3AuthLoading = true,
+            loadingProvider = provider
         ).updateViewState()
     }
 
     fun setWeb3AuthError(errorMessage: String) {
         _state.value.copy(
             isWeb3AuthLoading = false,
+            loadingProvider = null,
             snackbarMessage = "❌ | $errorMessage"
         ).updateViewState()
     }
@@ -879,6 +933,7 @@ class MainViewModel @Inject constructor(
                 
                 // Persist Web3Auth session
                 try {
+                    Log.d(TAG, "💾 About to persist Web3Auth session for: $displayName")
                     persistenceUseCase.persistWeb3AuthConnection(
                         pubKey = SolanaPublicKey.from(solanaPublicKey),
                         accountLabel = displayName,
@@ -887,6 +942,10 @@ class MainViewModel @Inject constructor(
                         userInfo = userInfo?.name ?: userInfo?.email ?: ""
                     )
                     Log.d(TAG, "✅ Web3Auth session persisted successfully")
+                    
+                    // Verify persistence worked
+                    val testConnection = persistenceUseCase.getWalletConnection()
+                    Log.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
                 } catch (e: Exception) {
                     Log.e(TAG, "⚠️ Failed to persist Web3Auth session: ${e.message}", e)
                     // Continue anyway - session will work for this app session
@@ -894,6 +953,7 @@ class MainViewModel @Inject constructor(
                 
                 _state.value.copy(
                     isWeb3AuthLoading = false,
+                    loadingProvider = null,
                     isWeb3AuthLoggedIn = true,
                     web3AuthUserInfo = displayName,
                     web3AuthPrivateKey = privateKey,
@@ -1019,6 +1079,7 @@ class MainViewModel @Inject constructor(
         Log.d(TAG, "🚫 Web3Auth cancelled by user")
         _state.value.copy(
             isWeb3AuthLoading = false,
+            loadingProvider = null,
             snackbarMessage = "🚫 | Authentication cancelled"
         ).updateViewState()
     }

@@ -80,14 +80,16 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
     
     private fun checkExistingWeb3AuthSession() {
         try {
+            Log.d(TAG, "🔍 Checking for existing Web3Auth session...")
+            
             if (web3AuthManager.hasExistingSession()) {
-                Log.d(TAG, "🔍 Found existing Web3Auth session - attempting to restore")
+                Log.d(TAG, "🔍 Found existing Web3Auth session in SDK - attempting to restore")
                 
                 val sessionInfo = web3AuthManager.getSessionInfo()
                 if (sessionInfo != null) {
                     val (privateKey, solanaPublicKey, displayAddress) = sessionInfo
                     
-                    Log.d(TAG, "✅ Web3Auth session restored successfully")
+                    Log.d(TAG, "✅ Web3Auth session restored from SDK successfully")
                     Log.d(TAG, "🔑 Solana Public Key: $solanaPublicKey")
                     Log.d(TAG, "📍 Display Address: $displayAddress")
                     
@@ -97,13 +99,15 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
                         viewModel.handleWeb3AuthSessionRestore(privateKey, solanaPublicKey, displayAddress)
                     }
                 } else {
-                    Log.w(TAG, "⚠️ Web3Auth session exists but couldn't retrieve session info")
+                    Log.w(TAG, "⚠️ Web3Auth session exists in SDK but couldn't retrieve session info")
                 }
             } else {
-                Log.d(TAG, "🔍 No existing Web3Auth session found")
+                Log.d(TAG, "🔍 No existing Web3Auth session found in SDK")
+                // The ViewModel will check SharedPreferences for stored sessions
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error checking Web3Auth session: ${e.message}", e)
+            // If Web3Auth SDK check fails, ViewModel will still check SharedPreferences
         }
     }
 

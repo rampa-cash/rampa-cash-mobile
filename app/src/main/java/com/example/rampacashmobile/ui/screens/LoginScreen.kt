@@ -133,9 +133,11 @@ fun LoginScreen(
                             text = "Continue with Google",
                             icon = "🔍",
                             backgroundColor = Color(0xFFDB4437),
-                            isLoading = viewState.isWeb3AuthLoading,
+                            isLoading = viewState.loadingProvider == Provider.GOOGLE,
+                            isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
                                 if (web3AuthManager != null && web3AuthCallback != null) {
+                                    viewModel.setWeb3AuthProviderLoading(Provider.GOOGLE)
                                     web3AuthManager.login(Provider.GOOGLE, web3AuthCallback)
                                 }
                             }
@@ -146,9 +148,11 @@ fun LoginScreen(
                             text = "Continue with Facebook",
                             icon = "📘",
                             backgroundColor = Color(0xFF4267B2),
-                            isLoading = viewState.isWeb3AuthLoading,
+                            isLoading = viewState.loadingProvider == Provider.FACEBOOK,
+                            isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
                                 if (web3AuthManager != null && web3AuthCallback != null) {
+                                    viewModel.setWeb3AuthProviderLoading(Provider.FACEBOOK)
                                     web3AuthManager.login(Provider.FACEBOOK, web3AuthCallback)
                                 }
                             }
@@ -159,9 +163,11 @@ fun LoginScreen(
                             text = "Continue with Twitter",
                             icon = "🐦",
                             backgroundColor = Color(0xFF1DA1F2),
-                            isLoading = viewState.isWeb3AuthLoading,
+                            isLoading = viewState.loadingProvider == Provider.TWITTER,
+                            isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
                                 if (web3AuthManager != null && web3AuthCallback != null) {
+                                    viewModel.setWeb3AuthProviderLoading(Provider.TWITTER)
                                     web3AuthManager.login(Provider.TWITTER, web3AuthCallback)
                                 }
                             }
@@ -172,9 +178,11 @@ fun LoginScreen(
                             text = "Continue with Discord",
                             icon = "🎮",
                             backgroundColor = Color(0xFF7289DA),
-                            isLoading = viewState.isWeb3AuthLoading,
+                            isLoading = viewState.loadingProvider == Provider.DISCORD,
+                            isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
                                 if (web3AuthManager != null && web3AuthCallback != null) {
+                                    viewModel.setWeb3AuthProviderLoading(Provider.DISCORD)
                                     web3AuthManager.login(Provider.DISCORD, web3AuthCallback)
                                 }
                             }
@@ -297,10 +305,13 @@ private fun SocialLoginButton(
     icon: String,
     backgroundColor: Color,
     isLoading: Boolean,
+    isAnyLoading: Boolean = false,
     onClick: () -> Unit
 ) {
+    val isDisabled = isLoading || isAnyLoading
+    
     Button(
-        onClick = { if (!isLoading) onClick() },
+        onClick = { if (!isDisabled) onClick() },
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp),
@@ -308,7 +319,7 @@ private fun SocialLoginButton(
             containerColor = backgroundColor
         ),
         shape = RoundedCornerShape(8.dp),
-        enabled = !isLoading
+        enabled = !isDisabled
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
