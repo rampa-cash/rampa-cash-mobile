@@ -52,6 +52,7 @@ data class MainViewState(
     val usdcBalance: Double = 0.0,
     val userAddress: String = "",
     val userLabel: String = "",
+    val fullAddressForCopy: String? = null, // Full address for clipboard copy
     val walletFound: Boolean = true,
     val memoTxSignature: String? = null,
     val snackbarMessage: String? = null,
@@ -116,6 +117,7 @@ class MainViewModel @Inject constructor(
                 canTransact = true,
                 userAddress = persistedConnection.publicKey.base58(),
                 userLabel = persistedConnection.accountLabel,
+                fullAddressForCopy = persistedConnection.publicKey.base58(), // Full address for copy
             ).updateViewState()
 
             getSolanaBalance(persistedConnection.publicKey)
@@ -152,7 +154,8 @@ class MainViewModel @Inject constructor(
                     _state.value.copy(
                         isLoading = true,
                         userAddress = currentConn.publicKey.base58(),
-                        userLabel = currentConn.accountLabel
+                        userLabel = currentConn.accountLabel,
+                        fullAddressForCopy = currentConn.publicKey.base58() // Full address for copy
                     ).updateViewState()
 
                     getSolanaBalance(currentConn.publicKey)
@@ -178,6 +181,7 @@ class MainViewModel @Inject constructor(
                         canTransact = false,
                         userAddress = "",
                         userLabel = "",
+                        fullAddressForCopy = null, // Clear the full address
                         snackbarMessage = "❌ | Failed connecting to wallet: " + result.e.message
                     ).updateViewState()
                 }
@@ -791,6 +795,7 @@ class MainViewModel @Inject constructor(
                     canTransact = true,
                     userLabel = "$displayName (via $providerName)",
                     userAddress = displayAddress, // Use the display-friendly address for Web3Auth users
+                    fullAddressForCopy = solanaPublicKey, // Full address for copy
                     snackbarMessage = "✅ | Successfully logged in with $providerName!"
                 ).updateViewState()
                 
@@ -835,6 +840,7 @@ class MainViewModel @Inject constructor(
             canTransact = false,
             userLabel = "",
             userAddress = "",
+            fullAddressForCopy = null, // Clear the full address
             solBalance = 0.0,
             eurcBalance = 0.0,
             usdcBalance = 0.0,

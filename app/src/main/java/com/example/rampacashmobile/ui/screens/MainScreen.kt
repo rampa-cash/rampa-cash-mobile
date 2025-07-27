@@ -106,6 +106,7 @@ fun MainScreen(
                     solBalance = viewState.solBalance,
                     eurcBalance = viewState.eurcBalance,
                     usdcBalance = viewState.usdcBalance,
+                    fullAddressForCopy = viewState.fullAddressForCopy, // Pass full address for copying
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }

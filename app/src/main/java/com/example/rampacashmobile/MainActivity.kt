@@ -70,8 +70,6 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         }
     }
 
-
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         Log.d(TAG, "🔄 onNewIntent: ${intent.data}")
