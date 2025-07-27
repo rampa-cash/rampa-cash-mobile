@@ -154,7 +154,7 @@ object Web3AuthSplTransferUseCase {
             System.arraycopy(signature, 0, signedTransaction, signatureStartOffset, 64)
             
             Log.d(TAG, "✅ Transaction signed successfully")
-            return signedTransaction
+            signedTransaction
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to sign transaction: ${e.message}", e)
