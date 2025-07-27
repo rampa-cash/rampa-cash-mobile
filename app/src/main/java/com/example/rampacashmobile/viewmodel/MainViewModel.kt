@@ -1,10 +1,13 @@
 package com.example.rampacashmobile.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rampacashmobile.BuildConfig
+import com.example.rampacashmobile.R
 import com.example.rampacashmobile.solanautils.AssociatedTokenAccountUtils
 import com.example.rampacashmobile.solanautils.TokenMints
 import com.example.rampacashmobile.usecase.AccountBalanceUseCase
@@ -14,19 +17,30 @@ import com.example.rampacashmobile.usecase.SplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.TokenAccountBalanceUseCase
 import com.example.rampacashmobile.usecase.TransferConfig
+import com.example.rampacashmobile.ui.screens.TransactionDetails
 import com.funkatronics.encoders.Base58
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
 import com.solana.mobilewalletadapter.clientlib.TransactionResult
 import com.solana.mobilewalletadapter.clientlib.successPayload
 import com.solana.publickey.SolanaPublicKey
+import com.web3auth.core.Web3Auth
+import com.web3auth.core.types.LoginParams
+import com.web3auth.core.types.Provider
+import com.web3auth.core.types.Web3AuthResponse
+import com.web3auth.core.types.Web3AuthOptions
+import com.web3auth.core.types.Network
+import com.web3auth.core.types.BuildEnv
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import kotlin.math.pow
 
@@ -40,13 +54,21 @@ data class MainViewState(
     val userLabel: String = "",
     val walletFound: Boolean = true,
     val memoTxSignature: String? = null,
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+    val showTransactionSuccess: Boolean = false,
+    val transactionDetails: TransactionDetails? = null,
+    // Web3Auth related state
+    val isWeb3AuthLoading: Boolean = false,
+    val isWeb3AuthLoggedIn: Boolean = false,
+    val web3AuthUserInfo: String? = null,
+    val web3AuthPrivateKey: String? = null
 )
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val walletAdapter: MobileWalletAdapter,
-    private val persistenceUseCase: PersistenceUseCase
+    private val persistenceUseCase: PersistenceUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val rpcUri = BuildConfig.RPC_URI.toUri()
 
@@ -54,10 +76,29 @@ class MainViewModel @Inject constructor(
         private const val TAG = "MainViewModel"
     }
 
+    // Lazy Web3Auth initialization to prevent blocking during app startup
+    private val web3AuthLazy: Web3Auth by lazy {
+        Log.d(TAG, "🔧 Creating Web3Auth instance...")
+        try {
+            Web3Auth(
+                Web3AuthOptions(
+                    clientId = context.getString(R.string.web3auth_project_id),
+                    network = Network.SAPPHIRE_DEVNET, // Changed to match your dashboard config
+                    buildEnv = BuildEnv.PRODUCTION,
+                    redirectUrl = Uri.parse("com.example.rampacashmobile://auth")
+                ),
+                context
+            ).also {
+                Log.d(TAG, "✅ Web3Auth instance created successfully")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to create Web3Auth instance: ${e.message}", e)
+            throw e
+        }
+    }
+
     private fun MainViewState.updateViewState() {
-        Log.d(TAG, "🚨 DEBUG: updateViewState() - snackbarMessage: '${this.snackbarMessage}'")
         _state.update { this }
-        Log.d(TAG, "🚨 DEBUG: State updated successfully")
     }
 
     private val _state = MutableStateFlow(MainViewState())
@@ -80,14 +121,11 @@ class MainViewModel @Inject constructor(
             getEurcBalance(persistedConnection.publicKey)
             getUsdcBalance(persistedConnection.publicKey)
 
-            val autoConnectMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
-            Log.d(TAG, "🚨 DEBUG: Setting auto-connect snackbar: $autoConnectMessage")
             _state.value.copy(
                 isLoading = false,
                 // TODO: Move all Snackbar message strings into resources
-                snackbarMessage = autoConnectMessage
+                snackbarMessage = "✅ | Successfully auto-connected to: \n" + persistedConnection.publicKey.base58() + "."
             ).updateViewState()
-            Log.d(TAG, "🚨 DEBUG: Auto-connect snackbar set in state")
 
             // Set the auth token in walletAdapter
             walletAdapter.authToken = persistedConnection.authToken
@@ -120,23 +158,17 @@ class MainViewModel @Inject constructor(
                     getEurcBalance(currentConn.publicKey)
                     getUsdcBalance(currentConn.publicKey)
 
-                    val successMessage = "✅ | Successfully connected to: \n" + currentConn.publicKey.base58() + "."
-                    Log.d(TAG, "🚨 DEBUG: Setting snackbar message: $successMessage")
                     _state.value.copy(
                         isLoading = false,
                         canTransact = true,
-                        snackbarMessage = successMessage
+                        snackbarMessage = "✅ | Successfully connected to: \n" + currentConn.publicKey.base58() + "."
                     ).updateViewState()
-                    Log.d(TAG, "🚨 DEBUG: Snackbar message set in state")
                 }
 
                 is TransactionResult.NoWalletFound -> {
-                    val noWalletMessage = "❌ | No wallet found."
-                    Log.d(TAG, "🚨 DEBUG: Setting no wallet snackbar: $noWalletMessage")
                     _state.value.copy(
-                        walletFound = false, snackbarMessage = noWalletMessage
+                        walletFound = false, snackbarMessage = "❌ | No wallet found."
                     ).updateViewState()
-                    Log.d(TAG, "🚨 DEBUG: No wallet snackbar set in state")
                 }
 
                 is TransactionResult.Failure -> {
@@ -488,8 +520,27 @@ class MainViewModel @Inject constructor(
                                 SolanaPublicKey(Base58.decode(viewState.value.userAddress))
                             refreshBalancesAfterTransaction(userAccount, signature)
 
+                            // Determine token symbol
+                            val tokenSymbol = when (tokenMintAddress) {
+                                TokenMints.EURC_DEVNET -> "EURC"
+                                TokenMints.USDC_DEVNET -> "USDC"
+                                else -> "Token"
+                            }
+
+                            // Create transaction details for success screen
+                            val transactionDetails = TransactionDetails(
+                                signature = signature,
+                                amount = amount,
+                                tokenSymbol = tokenSymbol,
+                                recipientAddress = recipientAddress,
+                                timestamp = System.currentTimeMillis(),
+                                isDevnet = true // Update this based on your network configuration
+                            )
+
+                            // Navigate to success screen instead of showing snackbar
                             _state.value.copy(
-                                snackbarMessage = "✅ | Token transfer successful: $signature"
+                                showTransactionSuccess = true,
+                                transactionDetails = transactionDetails
                             )
                         } ?: _state.value.copy(
                             snackbarMessage = "❌ | Incorrect payload returned"
@@ -652,10 +703,124 @@ class MainViewModel @Inject constructor(
     }
 
     fun clearSnackBar() {
-        Log.d(TAG, "🚨 DEBUG: clearSnackBar() called")
         _state.value.copy(
             snackbarMessage = null
         ).updateViewState()
-        Log.d(TAG, "🚨 DEBUG: Snackbar message cleared from state")
+    }
+
+    /**
+     * Navigate back from transaction success screen to main screen
+     */
+    fun onTransactionSuccessDone() {
+        _state.value.copy(
+            showTransactionSuccess = false,
+            transactionDetails = null
+        ).updateViewState()
+    }
+
+    // Web3Auth methods
+    fun setWeb3AuthLoading(loading: Boolean) {
+        _state.value.copy(
+            isWeb3AuthLoading = loading
+        ).updateViewState()
+    }
+
+    fun setWeb3AuthError(errorMessage: String) {
+        _state.value.copy(
+            isWeb3AuthLoading = false,
+            snackbarMessage = "❌ | $errorMessage"
+        ).updateViewState()
+    }
+
+    fun handleWeb3AuthSuccess(web3AuthResponse: Web3AuthResponse, provider: Provider, walletAddress: String) {
+        try {
+            val privateKey = web3AuthResponse.privKey
+            val userInfo = web3AuthResponse.userInfo
+            
+            if (privateKey != null) {
+                val providerName = when(provider) {
+                    Provider.GOOGLE -> "Google"
+                    Provider.FACEBOOK -> "Facebook"
+                    Provider.TWITTER -> "Twitter"
+                    Provider.DISCORD -> "Discord"
+                    Provider.APPLE -> "Apple"
+                    else -> provider.name
+                }
+                
+                val displayName = userInfo?.name ?: userInfo?.email ?: "Web3Auth User"
+                
+                _state.value.copy(
+                    isWeb3AuthLoading = false,
+                    isWeb3AuthLoggedIn = true,
+                    web3AuthUserInfo = displayName,
+                    web3AuthPrivateKey = privateKey,
+                    canTransact = true,
+                    userLabel = "$displayName (via $providerName)",
+                    userAddress = walletAddress, // Use the actual wallet address from MainActivity
+                    snackbarMessage = "✅ | Successfully logged in with $providerName!"
+                ).updateViewState()
+                
+                Log.d(TAG, "Web3Auth login successful with $providerName - Address: $walletAddress")
+            } else {
+                throw Exception("No private key received from Web3Auth")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to handle Web3Auth response", e)
+            _state.value.copy(
+                isWeb3AuthLoading = false,
+                snackbarMessage = "❌ | Failed to process login response: ${e.message}"
+            ).updateViewState()
+        }
+    }
+
+    // Login is now handled directly by MainActivity
+    fun loginWithWeb3Auth(provider: Provider) {
+        Log.d(TAG, "🚀 ViewModel: Web3Auth login request for provider: $provider (delegated to MainActivity)")
+        // The actual login call is now in MainActivity - this method primarily exists for logging
+    }
+
+    // Handle successful logout from MainActivity
+    fun handleWeb3AuthLogout() {
+        _state.value.copy(
+            isWeb3AuthLoading = false,
+            isWeb3AuthLoggedIn = false,
+            web3AuthUserInfo = null,
+            web3AuthPrivateKey = null,
+            canTransact = false,
+            userLabel = "",
+            userAddress = "",
+            solBalance = 0.0,
+            eurcBalance = 0.0,
+            usdcBalance = 0.0,
+            snackbarMessage = "✅ | Successfully logged out from Web3Auth"
+        ).updateViewState()
+        
+        Log.d(TAG, "Web3Auth logout completed successfully")
+    }
+
+
+
+    /**
+     * Handle Web3Auth redirect URLs from intent data
+     */
+    fun handleWeb3AuthRedirect(data: Uri) {
+        try {
+            // Handle the redirect data without blocking
+            web3AuthLazy.setResultUrl(data)
+            Log.d(TAG, "Web3Auth redirect handled: ${data}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to handle Web3Auth redirect: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Handle when user cancels Web3Auth by closing the browser
+     */
+    fun onWeb3AuthCancelled() {
+        Log.d(TAG, "🚫 Web3Auth cancelled by user")
+        _state.value.copy(
+            isWeb3AuthLoading = false,
+            snackbarMessage = "🚫 | Authentication cancelled"
+        ).updateViewState()
     }
 }
