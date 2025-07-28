@@ -1,6 +1,7 @@
 package com.example.rampacashmobile.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,7 @@ fun SendScreen(
 
     // Form state
     var amount by remember { mutableStateOf("") }
-    var selectedAddressIndex by remember { mutableIntStateOf(0) }
+    var recipientAddress by remember { mutableStateOf("") }
     var showDropdown by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -89,11 +90,22 @@ fun SendScreen(
     val nextToken = { selectedTokenIndex = (selectedTokenIndex + 1) % tokens.size }
     val prevToken = { selectedTokenIndex = (selectedTokenIndex - 1 + tokens.size) % tokens.size }
     val selectedToken = tokens[selectedTokenIndex]
-    val selectedAddress = testAddresses[selectedAddressIndex]
+    
+    // Filter test addresses based on input
+    val filteredAddresses = remember(recipientAddress) {
+        if (recipientAddress.isEmpty()) {
+            testAddresses
+        } else {
+            testAddresses.filter { address ->
+                address.label.contains(recipientAddress, ignoreCase = true) ||
+                address.address.contains(recipientAddress, ignoreCase = true)
+            }
+        }
+    }
 
     // Handle send transaction
     val handleSend = {
-        if (amount.isNotEmpty() && intentSender != null) {
+        if (amount.isNotEmpty() && recipientAddress.isNotEmpty() && intentSender != null) {
             isLoading = true
             error = null
 
@@ -108,7 +120,7 @@ fun SendScreen(
                     // Handle SPL token transfer
                     viewModel.sendSplToken(
                         sender = intentSender,
-                        recipientAddress = selectedAddress.address,
+                        recipientAddress = recipientAddress,
                         amount = amount,
                         tokenMintAddress = selectedToken.mintAddress,
                         tokenDecimals = if (selectedToken.symbol == "USDC" || selectedToken.symbol == "EURC") 6 else 9
@@ -235,87 +247,85 @@ fun SendScreen(
                         }
                     }
 
-                    // Recipient Dropdown
+                    // Recipient Input with Suggestions
                     Column {
                         Text(
-                            text = "Recipient",
+                            text = "Recipient Address",
                             fontSize = 14.sp,
                             color = Color(0xFF9CA3AF),
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
 
-                        ExposedDropdownMenuBox(
-                            expanded = showDropdown,
-                            onExpandedChange = { showDropdown = !showDropdown }
+                        // Input Field
+                        Card(
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF1F2937)
+                            )
                         ) {
+                            OutlinedTextField(
+                                value = recipientAddress,
+                                onValueChange = { input ->
+                                    recipientAddress = input
+                                    showDropdown = input.isNotEmpty()
+                                    error = null
+                                },
+                                placeholder = {
+                                    Text(
+                                        "Enter address or search contacts",
+                                        color = Color(0xFF6B7280)
+                                    )
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+
+                        // Suggestions Dropdown (separate from input)
+                        if (showDropdown && filteredAddresses.isNotEmpty() && recipientAddress.isNotEmpty()) {
                             Card(
                                 shape = RoundedCornerShape(8.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = Color(0xFF1F2937)
                                 ),
-                                modifier = Modifier.menuAnchor()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = selectedAddress.label,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = "${selectedAddress.address.take(4)}...${
-                                                selectedAddress.address.takeLast(
-                                                    4
-                                                )
-                                            }",
-                                            color = Color(0xFF9CA3AF),
-                                            fontSize = 12.sp
-                                        )
-                                    }
-
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = "Dropdown",
-                                        tint = Color(0xFF9CA3AF)
-                                    )
-                                }
-                            }
-
-                            ExposedDropdownMenu(
-                                expanded = showDropdown,
-                                onDismissRequest = { showDropdown = false }
-                            ) {
-                                testAddresses.forEachIndexed { index, address ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Column {
+                                Column {
+                                    filteredAddresses.forEach { address ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)
+                                                .clickable {
+                                                    recipientAddress = address.address
+                                                    showDropdown = false
+                                                    error = null
+                                                },
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = address.label,
+                                                    color = Color.White,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                                 Text(
-                                                    text = "${address.address.take(8)}...${
-                                                        address.address.takeLast(
-                                                            8
-                                                        )
-                                                    }",
-                                                    fontSize = 12.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    text = "${address.address.take(8)}...${address.address.takeLast(8)}",
+                                                    color = Color(0xFF9CA3AF),
+                                                    fontSize = 12.sp
                                                 )
                                             }
-                                        },
-                                        onClick = {
-                                            selectedAddressIndex = index
-                                            showDropdown = false
-                                            error = null
                                         }
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -341,7 +351,7 @@ fun SendScreen(
                     // Send Button
                     Button(
                         onClick = handleSend,
-                        enabled = amount.isNotEmpty() && !isLoading,
+                        enabled = amount.isNotEmpty() && recipientAddress.isNotEmpty() && !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 16.dp),
