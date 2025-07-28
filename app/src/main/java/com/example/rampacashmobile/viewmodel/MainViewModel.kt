@@ -21,7 +21,9 @@ import com.example.rampacashmobile.usecase.ManualSplTokenTransferUseCase
 import com.example.rampacashmobile.usecase.Web3AuthSplTransferUseCase
 import com.example.rampacashmobile.usecase.TokenAccountBalanceUseCase
 import com.example.rampacashmobile.usecase.TransferConfig
+import com.example.rampacashmobile.usecase.TransactionHistoryUseCase
 import com.example.rampacashmobile.ui.screens.TransactionDetails
+import com.example.rampacashmobile.ui.screens.Transaction
 import com.funkatronics.encoders.Base58
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
@@ -65,13 +67,17 @@ data class MainViewState(
     val isWeb3AuthLoggedIn: Boolean = false,
     val web3AuthUserInfo: String? = null,
     val web3AuthPrivateKey: String? = null,
-    val web3AuthSolanaPublicKey: String? = null // Full Solana public key for transactions
+    val web3AuthSolanaPublicKey: String? = null, // Full Solana public key for transactions
+    // Transaction history
+    val transactionHistory: List<Transaction> = emptyList(),
+    val isLoadingTransactions: Boolean = false
 )
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val walletAdapter: MobileWalletAdapter,
     private val persistenceUseCase: PersistenceUseCase,
+    private val transactionHistoryUseCase: TransactionHistoryUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val rpcUri = BuildConfig.RPC_URI.toUri()
@@ -192,6 +198,78 @@ class MainViewModel @Inject constructor(
         // Mark initial load as complete
         isInitialLoad = false
     }
+    
+    private var isLoadingTransactionHistory = false
+    
+    fun getTransactionHistory() {
+        if (isLoadingTransactionHistory) {
+            Log.d(TAG, "⏸️ Transaction history fetch already in progress, skipping...")
+            return
+        }
+        
+        viewModelScope.launch {
+            try {
+                isLoadingTransactionHistory = true
+                val currentState = _state.value
+                
+                // Debug current state
+                Log.d(TAG, "🔍 Transaction History Debug:")
+                Log.d(TAG, "- canTransact: ${currentState.canTransact}")
+                Log.d(TAG, "- isWeb3AuthLoggedIn: ${currentState.isWeb3AuthLoggedIn}")
+                Log.d(TAG, "- userAddress: ${currentState.userAddress}")
+                Log.d(TAG, "- fullAddressForCopy: ${currentState.fullAddressForCopy}")
+                Log.d(TAG, "- web3AuthSolanaPublicKey: ${currentState.web3AuthSolanaPublicKey}")
+                
+                // Determine wallet address based on connection type
+                val walletAddress = when {
+                    currentState.isWeb3AuthLoggedIn && !currentState.web3AuthSolanaPublicKey.isNullOrEmpty() -> {
+                        Log.d(TAG, "📱 Using Web3Auth address for transaction history")
+                        currentState.web3AuthSolanaPublicKey
+                    }
+                    currentState.canTransact && !currentState.fullAddressForCopy.isNullOrEmpty() -> {
+                        Log.d(TAG, "📱 Using MWA address for transaction history")
+                        currentState.fullAddressForCopy
+                    }
+                    !currentState.userAddress.isNullOrEmpty() -> {
+                        Log.d(TAG, "📱 Using userAddress for transaction history")
+                        currentState.userAddress
+                    }
+                    else -> {
+                        Log.w(TAG, "🔍 No wallet address available for transaction history")
+                        Log.w(TAG, "State dump: canTransact=${currentState.canTransact}, isWeb3Auth=${currentState.isWeb3AuthLoggedIn}")
+                        _state.update { it.copy(
+                            isLoadingTransactions = false,
+                            snackbarMessage = "❌ | No wallet connected"
+                        )}
+                        isLoadingTransactionHistory = false
+                        return@launch
+                    }
+                }
+                
+                Log.d(TAG, "🔍 Fetching transaction history for wallet: ${walletAddress.take(8)}...")
+                
+                _state.update { it.copy(isLoadingTransactions = true) }
+                
+                val transactions = transactionHistoryUseCase.getTransactionHistory(walletAddress)
+                
+                _state.update { it.copy(
+                    transactionHistory = transactions,
+                    isLoadingTransactions = false
+                )}
+                
+                Log.d(TAG, "✅ Transaction history loaded: ${transactions.size} transactions")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to load transaction history: ${e.message}", e)
+                _state.update { it.copy(
+                    isLoadingTransactions = false,
+                    snackbarMessage = "❌ | Failed to load transaction history"
+                )}
+            } finally {
+                isLoadingTransactionHistory = false
+            }
+        }
+    }
 
     fun connect(sender: ActivityResultSender) {
         viewModelScope.launch {
@@ -254,6 +332,9 @@ class MainViewModel @Inject constructor(
 
     fun disconnect() {
         viewModelScope.launch {
+            // Clear the loading flag to allow fresh transaction fetching on reconnect
+            isLoadingTransactionHistory = false
+            
             val conn = persistenceUseCase.getWalletConnection()
             when (conn) {
                 is Connected -> {
@@ -270,6 +351,12 @@ class MainViewModel @Inject constructor(
                         web3AuthUserInfo = null,
                         web3AuthPrivateKey = null,
                         web3AuthSolanaPublicKey = null,
+                        // Clear transaction history and balances
+                        transactionHistory = emptyList(),
+                        isLoadingTransactions = false,
+                        solBalance = 0.0,
+                        usdcBalance = 0.0,
+                        eurcBalance = 0.0,
                         snackbarMessage = "✅ | Disconnected from MWA wallet."
                     ).updateViewState()
                 }
@@ -287,6 +374,12 @@ class MainViewModel @Inject constructor(
                         web3AuthUserInfo = null,
                         web3AuthPrivateKey = null,
                         web3AuthSolanaPublicKey = null,
+                        // Clear transaction history and balances
+                        transactionHistory = emptyList(),
+                        isLoadingTransactions = false,
+                        solBalance = 0.0,
+                        usdcBalance = 0.0,
+                        eurcBalance = 0.0,
                         snackbarMessage = "✅ | Disconnected from Web3Auth."
                     ).updateViewState()
                 }
@@ -297,6 +390,18 @@ class MainViewModel @Inject constructor(
                         canTransact = false,
                         isWeb3AuthLoggedIn = false,
                         loadingProvider = null,
+                        userAddress = "",
+                        userLabel = "",
+                        fullAddressForCopy = "",
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
+                        // Clear transaction history and balances
+                        transactionHistory = emptyList(),
+                        isLoadingTransactions = false,
+                        solBalance = 0.0,
+                        usdcBalance = 0.0,
+                        eurcBalance = 0.0,
                         snackbarMessage = "ℹ️ | No active connection to disconnect."
                     ).updateViewState()
                 }

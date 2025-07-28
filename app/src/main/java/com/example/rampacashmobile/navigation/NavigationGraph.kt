@@ -67,7 +67,10 @@ fun NavigationGraph(
             }
 
             composable("transfers") {
-                TransfersScreen(navController = navController)
+                TransfersScreen(
+                    navController = navController,
+                    viewModel = viewModel
+                )
             }
 
                 composable("send") {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -154,10 +155,22 @@ fun MainScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            LaunchedEffect(Unit) {
-                Log.d("MainScreen", "🔄 Starting session restoration...")
-                viewModel.loadConnection()
+                            LaunchedEffect(Unit) {
+            Log.d("MainScreen", "🔄 Starting session restoration...")
+            viewModel.loadConnection()
+        }
+        
+        // Fetch transaction history once when wallet is connected
+        LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn, viewState.userAddress) {
+            if ((viewState.canTransact || viewState.isWeb3AuthLoggedIn) && 
+                !viewState.userAddress.isNullOrEmpty() && 
+                viewState.transactionHistory.isEmpty() &&
+                !viewState.isLoadingTransactions) {
+                Log.d("MainScreen", "🔄 Fetching transaction history (one-time)...")
+                delay(1500) // Reasonable delay to ensure connection is established
+                viewModel.getTransactionHistory()
             }
+        }
 
             LaunchedEffect(viewState.snackbarMessage) {
                 viewState.snackbarMessage?.let { message ->
@@ -190,12 +203,15 @@ fun MainScreen(
                     "MainScreen",
                     "📱 Showing main content - showTransactionSuccess: ${viewState.showTransactionSuccess}, hasDetails: ${viewState.transactionDetails != null}"
                 )
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
+                                Box(
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
+                    ) {
                     // Token Switcher and Wallet Card (only show when connected)
                     if (viewState.canTransact) {
                         // Token Switcher
@@ -285,7 +301,7 @@ fun MainScreen(
                         }
 
                         // Recent Transfers Section
-                        RecentTransfersSection()
+                        RecentTransfersSection(viewModel = viewModel)
                     }
 
 
@@ -321,6 +337,7 @@ fun MainScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }
@@ -372,8 +389,29 @@ private fun LoadingScreen() {
 }
 
 @Composable
-private fun RecentTransfersSection() {
-    val recentTransactions = remember { getRecentTransactions() }
+private fun RecentTransfersSection(viewModel: MainViewModel) {
+    val viewState by viewModel.viewState.collectAsState()
+    
+    // Convert Transaction objects to MainTransaction and take last 3
+    val recentTransactions = remember(viewState.transactionHistory) {
+        viewState.transactionHistory.take(3).map { transaction ->
+            MainTransaction(
+                id = transaction.id,
+                recipient = transaction.recipient,
+                sender = transaction.sender,
+                amount = transaction.amount,
+                date = transaction.date,
+                description = transaction.description,
+                currency = transaction.currency,
+                transactionType = when (transaction.transactionType) {
+                    com.example.rampacashmobile.ui.screens.TransactionType.SENT -> MainTransactionType.SENT
+                    com.example.rampacashmobile.ui.screens.TransactionType.RECEIVED -> MainTransactionType.RECEIVED
+                },
+                tokenSymbol = transaction.tokenSymbol,
+                tokenIcon = transaction.tokenIcon
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -389,34 +427,66 @@ private fun RecentTransfersSection() {
         )
 
         if (recentTransactions.isEmpty()) {
-            // No transactions card (fallback)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1F2937)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp, 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            if (viewState.isLoadingTransactions) {
+                // Loading card when fetching transactions
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF1F2937)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(
-                        text = "No transaction history found",
-                        color = Color(0xFF9CA3AF),
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Transactions will appear here once you send or receive funds",
-                        color = Color(0xFF9CA3AF),
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 20.sp
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF9945FF)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Loading transaction history...",
+                            color = Color(0xFF9CA3AF),
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                // No transactions card when not loading
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF1F2937)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp, 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No transaction history found",
+                            color = Color(0xFF9CA3AF),
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Transactions will appear here once you send or receive funds",
+                            color = Color(0xFF9CA3AF),
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
+                        )
+                    }
                 }
             }
         } else {
@@ -504,46 +574,4 @@ private fun truncateAddress(address: String): String {
     else "${address.take(4)}...${address.takeLast(4)}"
 }
 
-// Generate mock transaction data for recent transfers (last 3)
-private fun getRecentTransactions(): List<MainTransaction> {
-    val calendar = Calendar.getInstance()
-
-    return listOf(
-        MainTransaction(
-            id = "tx1",
-            recipient = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
-            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            amount = 25.50,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -1) }.time,
-            description = "Received",
-            currency = "USDC",
-            transactionType = MainTransactionType.RECEIVED,
-            tokenSymbol = "USDC",
-            tokenIcon = R.drawable.usdc_logo
-        ),
-        MainTransaction(
-            id = "tx2",
-            recipient = "HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy",
-            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            amount = 100.00,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, 0) }.time, // Reset to yesterday
-            description = "Sent",
-            currency = "EURC",
-            transactionType = MainTransactionType.SENT,
-            tokenSymbol = "EURC",
-            tokenIcon = R.drawable.eurc_logo
-        ),
-        MainTransaction(
-            id = "tx3",
-            recipient = "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn",
-            sender = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
-            amount = 0.05,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -1) }.time, // Day before yesterday
-            description = "Received",
-            currency = "SOL",
-            transactionType = MainTransactionType.RECEIVED,
-            tokenSymbol = "SOL",
-            tokenIcon = R.drawable.solana_logo
-        )
-    )
-}
+// Note: Using real transaction data from ViewModel instead of mock data

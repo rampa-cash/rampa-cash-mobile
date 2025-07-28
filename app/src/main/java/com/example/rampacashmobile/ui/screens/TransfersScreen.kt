@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.R
+import com.example.rampacashmobile.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,30 +52,67 @@ data class GroupedTransactions(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TransfersScreen(navController: NavController) {
-    var loading by remember { mutableStateOf(true) }
-    var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
+fun TransfersScreen(
+    navController: NavController,
+    viewModel: MainViewModel
+) {
+    val viewState by viewModel.viewState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Simulate loading and fetch mock data
-    LaunchedEffect(Unit) {
-        delay(1500) // Simulate network delay
-        transactions = generateMockTransactions()
-        loading = false
-    }
+    // Note: Transaction history is fetched once in MainScreen on wallet connection
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF111827))
     ) {
-        // Content
-        if (loading) {
-            LoadingContent()
-        } else if (transactions.isEmpty()) {
-            EmptyContent()
-        } else {
-            TransactionsList(transactions = transactions)
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Handle snackbar messages
+            LaunchedEffect(viewState.snackbarMessage) {
+                viewState.snackbarMessage?.let { message ->
+                    snackbarHostState.showSnackbar(message)
+                    viewModel.clearSnackBar()
+                }
+            }
+
+            // Content
+            when {
+                !viewState.canTransact && !viewState.isWeb3AuthLoggedIn -> {
+                    NoWalletContent()
+                }
+                viewState.transactionHistory.isEmpty() -> {
+                    EmptyContent()
+                }
+                else -> {
+                    // Show transactions with simple header
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Simple header
+                        Text(
+                            text = "Transaction History",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        
+                        TransactionsList(
+                            transactions = viewState.transactionHistory,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
         }
+
+        // Snackbar positioned above navigation bar
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+        )
     }
 }
 
@@ -95,6 +133,51 @@ private fun LoadingContent() {
 }
 
 @Composable
+private fun NoWalletContent() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF1F2937)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "🔗",
+                    fontSize = 48.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Text(
+                    text = "Connect Your Wallet",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Connect your wallet to view transaction history",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun EmptyContent() {
     Box(
         modifier = Modifier
@@ -109,29 +192,49 @@ private fun EmptyContent() {
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                text = "No transaction history found",
-                color = Color(0xFF9CA3AF),
-                fontSize = 16.sp,
-                textAlign = TextAlign.Center,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(32.dp)
-            )
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "📄",
+                    fontSize = 48.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Text(
+                    text = "No Transactions Yet",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Your transaction history will appear here once you make your first transfer",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun TransactionsList(transactions: List<Transaction>) {
+private fun TransactionsList(
+    transactions: List<Transaction>,
+    modifier: Modifier = Modifier
+) {
     val groupedTransactions = remember(transactions) {
         groupTransactionsByDate(transactions)
     }
 
     LazyColumn(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 80.dp) // Space for bottom nav
     ) {
@@ -209,7 +312,7 @@ private fun TransactionItem(transaction: Transaction) {
 
                     Text(
                         text = "${if (transaction.transactionType == TransactionType.RECEIVED) "+" else "-"}${
-                            String.format("%.5f", transaction.amount)
+                            String.format("%.2f", transaction.amount)
                         } ${transaction.tokenSymbol}",
                         color = if (transaction.transactionType == TransactionType.RECEIVED)
                             Color(0xFF10B981) else Color(0xFFEF4444),
@@ -254,82 +357,4 @@ private fun groupTransactionsByDate(transactions: List<Transaction>): List<Group
     return grouped
 }
 
-// Generate mock transaction data
-private fun generateMockTransactions(): List<Transaction> {
-    val calendar = Calendar.getInstance()
-
-    return listOf(
-        Transaction(
-            id = "tx1",
-            recipient = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
-            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            amount = 25.50,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -1) }.time,
-            description = "Received",
-            currency = "USDC",
-            transactionType = TransactionType.RECEIVED,
-            tokenSymbol = "USDC",
-            tokenIcon = R.drawable.usdc_logo
-        ),
-        Transaction(
-            id = "tx2",
-            recipient = "HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy",
-            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            amount = 100.00,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -1) }.time,
-            description = "Sent",
-            currency = "EURC",
-            transactionType = TransactionType.SENT,
-            tokenSymbol = "EURC",
-            tokenIcon = R.drawable.eurc_logo
-        ),
-        Transaction(
-            id = "tx3",
-            recipient = "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn",
-            sender = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
-            amount = 0.05,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -2) }.time,
-            description = "Received",
-            currency = "SOL",
-            transactionType = TransactionType.RECEIVED,
-            tokenSymbol = "SOL",
-            tokenIcon = R.drawable.solana_logo
-        ),
-        Transaction(
-            id = "tx4",
-            recipient = "HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy",
-            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            amount = 50.00,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -3) }.time,
-            description = "Sent",
-            currency = "USDC",
-            transactionType = TransactionType.SENT,
-            tokenSymbol = "USDC",
-            tokenIcon = R.drawable.usdc_logo
-        ),
-        Transaction(
-            id = "tx5",
-            recipient = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            sender = "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn",
-            amount = 250.75,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -4) }.time,
-            description = "Received",
-            currency = "EURC",
-            transactionType = TransactionType.RECEIVED,
-            tokenSymbol = "EURC",
-            tokenIcon = R.drawable.eurc_logo
-        ),
-        Transaction(
-            id = "tx6",
-            recipient = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
-            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
-            amount = 0.10,
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -5) }.time,
-            description = "Sent",
-            currency = "SOL",
-            transactionType = TransactionType.SENT,
-            tokenSymbol = "SOL",
-            tokenIcon = R.drawable.solana_logo
-        )
-    )
-} 
+// Note: Mock transaction generation removed - now using real transaction data from RPC 
