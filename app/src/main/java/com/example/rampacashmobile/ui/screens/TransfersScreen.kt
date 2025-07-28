@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.R
+import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -69,6 +70,15 @@ fun TransfersScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
+            // Top Navigation with Profile Button
+            TopNavBar(
+                title = "Transfers",
+                navController = navController,
+                showBackButton = false,
+                showProfileButton = true,
+                showChatButton = false
+            )
+            
             // Handle snackbar messages
             LaunchedEffect(viewState.snackbarMessage) {
                 viewState.snackbarMessage?.let { message ->

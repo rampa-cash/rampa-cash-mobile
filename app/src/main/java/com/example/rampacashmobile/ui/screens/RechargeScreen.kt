@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.viewmodel.MainViewModel
+import com.example.rampacashmobile.ui.components.TopNavBar
 import kotlinx.coroutines.delay
 
 // Recharge method enum
@@ -81,6 +82,15 @@ fun RechargeScreen(
             .fillMaxSize()
             .background(Color(0xFF111827))
     ) {
+        // Top Navigation Bar
+        TopNavBar(
+            title = "Recharge Account",
+            navController = navController,
+            showBackButton = true,
+            showProfileButton = true,
+            showChatButton = false
+        )
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()

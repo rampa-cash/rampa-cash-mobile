@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.viewmodel.MainViewModel
+import com.example.rampacashmobile.ui.components.TopNavBar
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.WriterException
 import com.google.zxing.qrcode.QRCodeWriter
@@ -79,6 +80,15 @@ fun ReceiveScreen(
             .fillMaxSize()
             .background(Color(0xFF111827))
     ) {
+        // Top Navigation with Profile Button
+        TopNavBar(
+            title = "Receive Stablecoin",
+            navController = navController,
+            showBackButton = false,
+            showProfileButton = true,
+            showChatButton = false
+        )
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()

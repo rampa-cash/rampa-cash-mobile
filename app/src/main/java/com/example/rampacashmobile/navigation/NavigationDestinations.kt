@@ -17,9 +17,10 @@ sealed class NavigationDestination(
     object Home : NavigationDestination("dashboard", "Home", Icons.Default.Home)
     object Transfers : NavigationDestination("transfers", "Transfers", Icons.AutoMirrored.Filled.List)
     object Send : NavigationDestination("send", "Send", Icons.AutoMirrored.Filled.Send)
-    object Rewards : NavigationDestination("rewards", "Rewards", Icons.Default.Star)
+    object Rewards : NavigationDestination("rewards", "Investment", Icons.Default.Star)
     object Card : NavigationDestination("card", "Card", Icons.Default.AccountBox)
     object Recharge : NavigationDestination("recharge", "Recharge", Icons.Default.Add)
+    object Profile : NavigationDestination("profile", "Profile", Icons.Default.AccountBox)
 }
 
 val bottomNavigationItems = listOf(

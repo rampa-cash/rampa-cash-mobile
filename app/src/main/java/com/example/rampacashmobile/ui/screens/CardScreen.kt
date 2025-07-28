@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.rampacashmobile.ui.components.TopNavBar
 import kotlinx.coroutines.delay
 
 data class CardDetails(
@@ -65,10 +66,23 @@ fun CardScreen(navController: NavController) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF111827))
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Top Navigation with Profile Button
+        TopNavBar(
+            title = "Card",
+            navController = navController,
+            showBackButton = false,
+            showProfileButton = true,
+            showChatButton = false
+        )
+        
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         if (loading) {
             LoadingCard()
         } else if (cardDetails != null) {
@@ -88,6 +102,7 @@ fun CardScreen(navController: NavController) {
             )
         } else {
             NoCardAvailable()
+        }
         }
     }
 }

@@ -24,10 +24,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.rampacashmobile.R
 import com.example.rampacashmobile.ui.components.Section
 import com.example.rampacashmobile.ui.components.WalletConnectionCard
 import com.example.rampacashmobile.ui.components.TokenSwitcher
+import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
@@ -155,22 +155,37 @@ fun MainScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-                            LaunchedEffect(Unit) {
-            Log.d("MainScreen", "🔄 Starting session restoration...")
-            viewModel.loadConnection()
-        }
-        
-        // Fetch transaction history once when wallet is connected
-        LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn, viewState.userAddress) {
-            if ((viewState.canTransact || viewState.isWeb3AuthLoggedIn) && 
-                !viewState.userAddress.isNullOrEmpty() && 
-                viewState.transactionHistory.isEmpty() &&
-                !viewState.isLoadingTransactions) {
-                Log.d("MainScreen", "🔄 Fetching transaction history (one-time)...")
-                delay(1500) // Reasonable delay to ensure connection is established
-                viewModel.getTransactionHistory()
+            // Top Navigation with Profile Button (only show when connected)
+            if (viewState.canTransact) {
+                TopNavBar(
+                    title = "Dashboard",
+                    navController = navController,
+                    showBackButton = false,
+                    showProfileButton = true,
+                    showChatButton = false
+                )
             }
-        }
+            LaunchedEffect(Unit) {
+                Log.d("MainScreen", "🔄 Starting session restoration...")
+                viewModel.loadConnection()
+            }
+
+            // Fetch transaction history once when wallet is connected
+            LaunchedEffect(
+                viewState.canTransact,
+                viewState.isWeb3AuthLoggedIn,
+                viewState.userAddress
+            ) {
+                if ((viewState.canTransact || viewState.isWeb3AuthLoggedIn) &&
+                    !viewState.userAddress.isNullOrEmpty() &&
+                    viewState.transactionHistory.isEmpty() &&
+                    !viewState.isLoadingTransactions
+                ) {
+                    Log.d("MainScreen", "🔄 Fetching transaction history (one-time)...")
+                    delay(1500) // Reasonable delay to ensure connection is established
+                    viewModel.getTransactionHistory()
+                }
+            }
 
             LaunchedEffect(viewState.snackbarMessage) {
                 viewState.snackbarMessage?.let { message ->
@@ -203,7 +218,7 @@ fun MainScreen(
                     "MainScreen",
                     "📱 Showing main content - showTransactionSuccess: ${viewState.showTransactionSuccess}, hasDetails: ${viewState.transactionDetails != null}"
                 )
-                                Box(
+                Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Column(
@@ -212,132 +227,98 @@ fun MainScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
-                    // Token Switcher and Wallet Card (only show when connected)
-                    if (viewState.canTransact) {
-                        // Token Switcher
-                        TokenSwitcher(
-                            selectedToken = selectedToken,
-                            onPrevious = prevToken,
-                            onNext = nextToken,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
+                        // Token Switcher and Wallet Card (only show when connected)
+                        if (viewState.canTransact) {
+                                                         // Token Switcher
+                             TokenSwitcher(
+                                 selectedToken = selectedToken,
+                                 onPrevious = prevToken,
+                                 onNext = nextToken,
+                                 modifier = Modifier.padding(top = 0.dp, bottom = 16.dp)
+                             )
 
-                        // Updated Wallet Connection Card with selected token
-                        WalletConnectionCard(
-                            selectedToken = selectedToken,
-                            walletName = viewState.userLabel,
-                            address = viewState.userAddress,
-                            fullAddressForCopy = viewState.fullAddressForCopy,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-
-                        // Action buttons (Recharge and Receive)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(
-                                16.dp,
-                                Alignment.CenterHorizontally
+                            // Updated Wallet Connection Card with selected token
+                            WalletConnectionCard(
+                                selectedToken = selectedToken,
+                                walletName = viewState.userLabel,
+                                address = viewState.userAddress,
+                                fullAddressForCopy = viewState.fullAddressForCopy,
+                                modifier = Modifier.padding(vertical = 8.dp)
                             )
-                        ) {
-                            // Recharge Button
-                            Button(
-                                onClick = { navController.navigate("recharge") },
-                                modifier = Modifier.width(120.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF4B5563)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(vertical = 8.dp)
+
+                            // Action buttons (Recharge and Receive)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    16.dp,
+                                    Alignment.CenterHorizontally
+                                )
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Recharge",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "Recharge",
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-
-                            // Receive Button
-                            Button(
-                                onClick = { navController.navigate("receive") },
-                                modifier = Modifier.width(120.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF4B5563)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(vertical = 8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Receive",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "Receive",
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
-
-                        // Recent Transfers Section
-                        RecentTransfersSection(viewModel = viewModel)
-                    }
-
-
-                    // Account Management Section
-                    Section(
-                        sectionTitle = "Account Management"
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (viewState.isWeb3AuthLoggedIn) {
+                                // Recharge Button
                                 Button(
-                                    onClick = {
-                                        if (web3AuthManager != null && web3AuthCallback != null) {
-                                            web3AuthManager.logout(web3AuthCallback)
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
+                                    onClick = { /* Mock - no navigation */ },
+                                    modifier = Modifier.width(120.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
-                                    )
+                                        containerColor = Color(0xFF4B5563)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(vertical = 8.dp)
                                 ) {
-                                    Text("Logout", color = Color.White)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Recharge",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Recharge",
+                                            color = Color.White,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
-                            } else if (viewState.canTransact) {
+
+                                // Receive Button
                                 Button(
-                                    onClick = { viewModel.disconnect() },
-                                    modifier = Modifier.weight(1f),
+                                    onClick = { navController.navigate("receive") },
+                                    modifier = Modifier.width(120.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
-                                    )
+                                        containerColor = Color(0xFF4B5563)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(vertical = 8.dp)
                                 ) {
-                                    Text("Disconnect Wallet", color = Color.White)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Receive",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Receive",
+                                            color = Color.White,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
+
+                            // Recent Transfers Section
+                            RecentTransfersSection(viewModel = viewModel)
                         }
                     }
-                }
                 }
             }
         }
@@ -391,7 +372,7 @@ private fun LoadingScreen() {
 @Composable
 private fun RecentTransfersSection(viewModel: MainViewModel) {
     val viewState by viewModel.viewState.collectAsState()
-    
+
     // Convert Transaction objects to MainTransaction and take last 3
     val recentTransactions = remember(viewState.transactionHistory) {
         viewState.transactionHistory.take(3).map { transaction ->
@@ -568,10 +549,7 @@ private fun RecentTransactionItem(transaction: MainTransaction) {
     }
 }
 
-// Helper function to truncate addresses
 private fun truncateAddress(address: String): String {
     return if (address.length < 12) address
     else "${address.take(4)}...${address.takeLast(4)}"
 }
-
-// Note: Using real transaction data from ViewModel instead of mock data

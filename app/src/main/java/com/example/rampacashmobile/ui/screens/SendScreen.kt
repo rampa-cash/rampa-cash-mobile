@@ -7,9 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.ui.components.TokenSwitcher
+import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
@@ -153,6 +151,15 @@ fun SendScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
+            // Top Navigation with Profile Button
+            TopNavBar(
+                title = "Send Funds",
+                navController = navController,
+                showBackButton = false,
+                showProfileButton = true,
+                showChatButton = false
+            )
+            
             // Handle snackbar messages
             LaunchedEffect(viewState.snackbarMessage) {
                 viewState.snackbarMessage?.let { message ->
@@ -184,7 +191,7 @@ fun SendScreen(
                     selectedToken = selectedToken,
                     onPrevious = prevToken,
                     onNext = nextToken,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(top = 0.dp, bottom = 16.dp)
                 )
 
                 // Send Form

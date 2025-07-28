@@ -101,6 +101,14 @@ fun NavigationGraph(
                     viewModel = viewModel
                 )
             }
+            composable("profile") { 
+                ProfileScreen(
+                    navController = navController,
+                    viewModel = viewModel,
+                    web3AuthManager = web3AuthManager,
+                    web3AuthCallback = web3AuthCallback
+                )
+            }
         }
     }
 }
