@@ -95,6 +95,12 @@ fun NavigationGraph(
                     viewModel = viewModel
                 )
             }
+            composable("recharge") { 
+                RechargeScreen(
+                    navController = navController,
+                    viewModel = viewModel
+                )
+            }
         }
     }
 }

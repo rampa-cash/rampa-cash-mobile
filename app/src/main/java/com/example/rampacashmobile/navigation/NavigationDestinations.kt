@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class NavigationDestination(
@@ -18,6 +19,7 @@ sealed class NavigationDestination(
     object Send : NavigationDestination("send", "Send", Icons.AutoMirrored.Filled.Send)
     object Rewards : NavigationDestination("rewards", "Rewards", Icons.Default.Star)
     object Card : NavigationDestination("card", "Card", Icons.Default.AccountBox)
+    object Recharge : NavigationDestination("recharge", "Recharge", Icons.Default.Add)
 }
 
 val bottomNavigationItems = listOf(
