@@ -1,10 +1,11 @@
-// File: app/src/main/java/com/example/rampacashmobile/ui/screens/MainScreen.kt
 package com.example.rampacashmobile.ui.screens
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -13,18 +14,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.rampacashmobile.R
 import com.example.rampacashmobile.ui.components.Section
 import com.example.rampacashmobile.ui.components.WalletConnectionCard
 import com.example.rampacashmobile.ui.components.TokenSwitcher
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
+import java.util.*
 
 // Token data class
 data class Token(
@@ -36,6 +42,24 @@ data class Token(
     val secondaryColor: Color,
     val mintAddress: String? = null
 )
+
+// Transaction data classes (shared with TransfersScreen)
+data class MainTransaction(
+    val id: String,
+    val recipient: String,
+    val sender: String,
+    val amount: Double,
+    val date: Date,
+    val description: String,
+    val currency: String,
+    val transactionType: MainTransactionType,
+    val tokenSymbol: String,
+    val tokenIcon: Int
+)
+
+enum class MainTransactionType {
+    SENT, RECEIVED
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -196,7 +220,10 @@ fun MainScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                            horizontalArrangement = Arrangement.spacedBy(
+                                16.dp,
+                                Alignment.CenterHorizontally
+                            )
                         ) {
                             // Recharge Button
                             Button(
@@ -258,50 +285,7 @@ fun MainScreen(
                         }
 
                         // Recent Transfers Section
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Recent Transfers",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-
-                            // No transactions card (mock)
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFF1F2937)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp, 16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = "No transaction history found",
-                                        color = Color(0xFF9CA3AF),
-                                        fontSize = 16.sp,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Transactions will appear here once you send or receive funds",
-                                        color = Color(0xFF9CA3AF),
-                                        fontSize = 14.sp,
-                                        textAlign = TextAlign.Center,
-                                        lineHeight = 20.sp
-                                    )
-                                }
-                            }
-                        }
+                        RecentTransfersSection()
                     }
 
 
@@ -385,4 +369,181 @@ private fun LoadingScreen() {
             )
         }
     }
+}
+
+@Composable
+private fun RecentTransfersSection() {
+    val recentTransactions = remember { getRecentTransactions() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = "Recent Transfers",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        if (recentTransactions.isEmpty()) {
+            // No transactions card (fallback)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1F2937)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp, 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No transaction history found",
+                        color = Color(0xFF9CA3AF),
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Transactions will appear here once you send or receive funds",
+                        color = Color(0xFF9CA3AF),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        } else {
+            // Show recent transactions
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                recentTransactions.forEach { transaction ->
+                    RecentTransactionItem(transaction = transaction)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentTransactionItem(transaction: MainTransaction) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1F2937)
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Token Icon
+            Image(
+                painter = painterResource(id = transaction.tokenIcon),
+                contentDescription = "${transaction.tokenSymbol} logo",
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Fit
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Transaction Details
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (transaction.transactionType == MainTransactionType.RECEIVED) "Received" else "Sent",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Text(
+                        text = "${if (transaction.transactionType == MainTransactionType.RECEIVED) "+" else "-"}${
+                            String.format("%.2f", transaction.amount)
+                        } ${transaction.tokenSymbol}",
+                        color = if (transaction.transactionType == MainTransactionType.RECEIVED)
+                            Color(0xFF10B981) else Color(0xFFEF4444),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "From ${truncateAddress(transaction.sender)}",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+// Helper function to truncate addresses
+private fun truncateAddress(address: String): String {
+    return if (address.length < 12) address
+    else "${address.take(4)}...${address.takeLast(4)}"
+}
+
+// Generate mock transaction data for recent transfers (last 3)
+private fun getRecentTransactions(): List<MainTransaction> {
+    val calendar = Calendar.getInstance()
+
+    return listOf(
+        MainTransaction(
+            id = "tx1",
+            recipient = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
+            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
+            amount = 25.50,
+            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -1) }.time,
+            description = "Received",
+            currency = "USDC",
+            transactionType = MainTransactionType.RECEIVED,
+            tokenSymbol = "USDC",
+            tokenIcon = R.drawable.usdc_logo
+        ),
+        MainTransaction(
+            id = "tx2",
+            recipient = "HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy",
+            sender = "2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc",
+            amount = 100.00,
+            date = calendar.apply { add(Calendar.DAY_OF_MONTH, 0) }.time, // Reset to yesterday
+            description = "Sent",
+            currency = "EURC",
+            transactionType = MainTransactionType.SENT,
+            tokenSymbol = "EURC",
+            tokenIcon = R.drawable.eurc_logo
+        ),
+        MainTransaction(
+            id = "tx3",
+            recipient = "2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn",
+            sender = "DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG",
+            amount = 0.05,
+            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -1) }.time, // Day before yesterday
+            description = "Received",
+            currency = "SOL",
+            transactionType = MainTransactionType.RECEIVED,
+            tokenSymbol = "SOL",
+            tokenIcon = R.drawable.solana_logo
+        )
+    )
 }
