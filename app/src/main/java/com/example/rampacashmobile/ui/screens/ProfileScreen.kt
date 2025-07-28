@@ -190,23 +190,12 @@ private fun ActionButtonsSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // App Settings Button
-        ActionButton(
-            icon = Icons.Default.Settings,
-            text = "App Settings",
-            onClick = {
-                // Navigate to settings screen when implemented
-                // navController.navigate("settings")
-            }
-        )
-        
         // About Button
         ActionButton(
             icon = Icons.Default.Info,
             text = "About rampa",
             onClick = {
-                // Navigate to about screen when implemented  
-                // navController.navigate("about")
+                navController.navigate("about")
             }
         )
         

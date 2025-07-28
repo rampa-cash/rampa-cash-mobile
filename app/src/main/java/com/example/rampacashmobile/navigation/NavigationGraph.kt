@@ -109,6 +109,10 @@ fun NavigationGraph(
                     web3AuthCallback = web3AuthCallback
                 )
             }
+            
+            composable("about") { 
+                AboutScreen(navController = navController)
+            }
         }
     }
 }
