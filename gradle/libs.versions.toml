@@ -1,6 +1,7 @@
 [versions]
 agp = "8.11.1"
 core = "5.0.0"
+coreVersion = "3.5.3"
 kotlin = "2.0.10"
 ksp = "2.0.10-1.0.24"
 composeCompiler = "1.5.3"
@@ -55,6 +56,7 @@ ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version
 dagger-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 dagger-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 web3auth-android-sdk = { module = "com.github.Web3Auth:web3auth-android-sdk", version.ref = "web3authAndroidSdk" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "coreVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

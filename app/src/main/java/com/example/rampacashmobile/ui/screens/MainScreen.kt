@@ -272,7 +272,7 @@ fun MainScreen(
 
                             // Receive Button
                             Button(
-                                onClick = { /* Mock - no navigation */ },
+                                onClick = { navController.navigate("receive") },
                                 modifier = Modifier.width(120.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFF4B5563)

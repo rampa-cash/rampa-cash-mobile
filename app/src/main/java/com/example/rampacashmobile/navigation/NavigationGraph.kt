@@ -88,6 +88,13 @@ fun NavigationGraph(
             composable("card") {
                 CardScreen(navController = navController)
             }
+            
+            composable("receive") { 
+                ReceiveScreen(
+                    navController = navController,
+                    viewModel = viewModel
+                )
+            }
         }
     }
 }
