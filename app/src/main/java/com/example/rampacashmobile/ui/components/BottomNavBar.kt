@@ -44,12 +44,19 @@ fun BottomNavBar(navController: NavController) {
                     NavigationBarItem(
                         selected = currentRoute == destination.route,
                         onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
+                            if (destination.route == "dashboard") {
+                                // Navigate to dashboard and clear the entire back stack
+                                navController.navigate("dashboard") {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            } else {
+                                // For other destinations, navigate normally
+                                navController.navigate(destination.route) {
+                                    popUpTo("dashboard") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         },
                         icon = {
