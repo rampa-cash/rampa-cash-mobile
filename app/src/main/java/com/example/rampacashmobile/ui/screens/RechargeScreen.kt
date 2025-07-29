@@ -86,7 +86,7 @@ fun RechargeScreen(
         TopNavBar(
             title = "Recharge Account",
             navController = navController,
-            showBackButton = true,
+            showBackButton = false,
             showProfileButton = true,
             showChatButton = false
         )

@@ -258,7 +258,7 @@ fun MainScreen(
                             ) {
                                 // Recharge Button
                                 Button(
-                                    onClick = { /* Mock - no navigation */ },
+                                    onClick = { navController.navigate("recharge") },
                                     modifier = Modifier.width(120.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFF4B5563)
