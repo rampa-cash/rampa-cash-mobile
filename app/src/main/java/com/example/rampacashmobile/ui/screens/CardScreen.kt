@@ -127,7 +127,7 @@ private fun LoadingCard() {
             Text(
                 text = "Loading your card...",
                 color = Color.White,
-                fontSize = 16.sp
+                fontSize = 20.sp
             )
         }
     }
@@ -221,7 +221,7 @@ private fun CardVisual(
                 Text(
                     text = "R",
                     color = Color.White,
-                    fontSize = 24.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -236,7 +236,7 @@ private fun CardVisual(
                 Text(
                     text = if (showDetails) cardDetails.cardNumber else "•••• •••• •••• ${cardDetails.cardNumber.takeLast(4)}",
                     color = Color.White,
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 0.8.sp
                 )
@@ -252,13 +252,13 @@ private fun CardVisual(
                         Text(
                             text = "VALID THRU",
                             color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 10.sp,
+                            fontSize = 14.sp,
                             letterSpacing = 1.sp
                         )
                         Text(
                             text = if (showDetails) cardDetails.expiryDate else "••/••",
                             color = Color.White,
-                            fontSize = 14.sp,
+                            fontSize = 22.sp,
                             fontFamily = FontFamily.Monospace
                         )
                     }
@@ -267,13 +267,13 @@ private fun CardVisual(
                         Text(
                             text = "CVV",
                             color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 10.sp,
+                            fontSize = 14.sp,
                             letterSpacing = 1.sp
                         )
                         Text(
                             text = if (showDetails && showCVV) cardDetails.cvv else "•••",
                             color = Color.White,
-                            fontSize = 14.sp,
+                            fontSize = 22.sp,
                             fontFamily = FontFamily.Monospace
                         )
                     }
@@ -289,7 +289,7 @@ private fun CardVisual(
                     Text(
                         text = cardDetails.cardholderName,
                         color = Color.White.copy(alpha = 0.95f),
-                        fontSize = 14.sp,
+                        fontSize = 22.sp,
                         fontFamily = FontFamily.Monospace,
                         letterSpacing = 0.8.sp
                     )
@@ -299,13 +299,13 @@ private fun CardVisual(
                         Text(
                             text = "DEBIT",
                             color = Color.White.copy(alpha = 0.95f),
-                            fontSize = 10.sp,
+                            fontSize = 14.sp,
                             letterSpacing = 0.8.sp
                         )
                         Text(
                             text = "VISA",
                             color = Color.White,
-                            fontSize = 19.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                         )
@@ -342,12 +342,12 @@ private fun CardControls(
                     imageVector = if (showCardDetails) Icons.Default.Lock else Icons.Default.Info,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(28.dp)
                 )
                 Text(
                     text = if (showCardDetails) "Hide Card Details" else "Show Card Details",
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = 18.sp
                 )
             }
         }
@@ -363,7 +363,7 @@ private fun CardControls(
                 Text(
                     text = if (showCVV) "Hide CVV" else "Show CVV",
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = 18.sp
                 )
             }
         }
@@ -392,7 +392,7 @@ private fun CardDetailsSection(
             Text(
                 text = "Card Details",
                 color = Color.White,
-                fontSize = 16.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Medium
             )
             
@@ -449,12 +449,12 @@ private fun CardDetailsSection(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
                             tint = Color(0xFF10B981),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                         Text(
                             text = message,
                             color = Color(0xFF10B981),
-                            fontSize = 14.sp
+                            fontSize = 18.sp
                         )
                     }
                 }
@@ -473,7 +473,7 @@ private fun CardDetailRow(
         Text(
             text = label,
             color = Color(0xFF9CA3AF),
-            fontSize = 12.sp
+            fontSize = 16.sp
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
@@ -484,7 +484,7 @@ private fun CardDetailRow(
             Text(
                 text = value,
                 color = Color.White,
-                fontSize = 14.sp,
+                fontSize = 22.sp,
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier.weight(1f)
             )
@@ -492,13 +492,13 @@ private fun CardDetailRow(
             if (onCopy != null) {
                 IconButton(
                     onClick = onCopy,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 ) {
                                             Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Copy",
                             tint = Color(0xFF9CA3AF),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                 }
             }
@@ -523,7 +523,7 @@ private fun CardStatusSection(cardDetails: CardDetails) {
             Text(
                 text = "Card Status",
                 color = Color.White,
-                fontSize = 16.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Medium
             )
             
@@ -538,7 +538,7 @@ private fun CardStatusSection(cardDetails: CardDetails) {
                 Text(
                     text = "Status",
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = 18.sp
                 )
                 
                 Row(
@@ -556,7 +556,7 @@ private fun CardStatusSection(cardDetails: CardDetails) {
                     Text(
                         text = if (cardDetails.isActive) "Active" else "Inactive",
                         color = if (cardDetails.isActive) Color(0xFF10B981) else Color(0xFFEF4444),
-                        fontSize = 14.sp
+                        fontSize = 18.sp
                     )
                 }
             }
@@ -572,12 +572,12 @@ private fun CardStatusSection(cardDetails: CardDetails) {
                 Text(
                     text = "Balance",
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = 18.sp
                 )
                 Text(
                     text = "$${String.format("%.2f", cardDetails.balance)}",
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -605,12 +605,12 @@ private fun CardStatusSection(cardDetails: CardDetails) {
                             imageVector = if (cardDetails.isActive) Icons.Default.Lock else Icons.Default.Star,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                         Text(
                             text = if (cardDetails.isActive) "Freeze Card" else "Activate Card",
                             color = Color.White,
-                            fontSize = 12.sp,
+                            fontSize = 16.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -632,12 +632,12 @@ private fun CardStatusSection(cardDetails: CardDetails) {
                             imageVector = Icons.Default.Settings,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                         Text(
                             text = "Card Settings",
                             color = Color.White,
-                            fontSize = 12.sp,
+                            fontSize = 16.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -655,7 +655,7 @@ private fun RecentTransactionsSection() {
         Text(
             text = "Recent Transactions",
             color = Color.White,
-            fontSize = 16.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
         
@@ -721,7 +721,7 @@ private fun TransactionItem(
                         },
                         contentDescription = null,
                         tint = Color(0xFF9CA3AF),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
                 
@@ -729,13 +729,13 @@ private fun TransactionItem(
                     Text(
                         text = merchant,
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = date,
                         color = Color(0xFF94A3B8),
-                        fontSize = 12.sp
+                        fontSize = 16.sp
                     )
                 }
             }
@@ -743,7 +743,7 @@ private fun TransactionItem(
             Text(
                 text = amount,
                 color = if (amount.startsWith("+")) Color(0xFF10B981) else Color(0xFFEF4444),
-                fontSize = 14.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -777,7 +777,7 @@ private fun NoCardAvailable() {
             Text(
                 text = "No Card Available",
                 color = Color.White,
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Medium
             )
             
@@ -786,7 +786,7 @@ private fun NoCardAvailable() {
             Text(
                 text = "You don't have a virtual card yet. Apply for one to start making payments.",
                 color = Color(0xFF9CA3AF),
-                fontSize = 14.sp,
+                fontSize = 22.sp,
                 textAlign = TextAlign.Center
             )
             

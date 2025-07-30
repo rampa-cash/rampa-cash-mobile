@@ -81,8 +81,12 @@ fun NavigationGraph(
                 )
             }
 
-            composable("rewards") {
-                RewardsScreen(navController = navController)
+            composable("investment") {
+                InvestmentScreen(navController = navController)
+            }
+
+            composable("learn") {
+                LearnScreen(navController = navController)
             }
 
             composable("card") {

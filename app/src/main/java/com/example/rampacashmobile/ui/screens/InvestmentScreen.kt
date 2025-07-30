@@ -12,12 +12,23 @@ import com.example.rampacashmobile.ui.components.TopNavBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RewardsScreen(navController: NavController) {
-    Scaffold { paddingValues ->
+fun InvestmentScreen(navController: NavController) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Top Navigation with Profile Button
+        TopNavBar(
+            title = "Investment",
+            navController = navController,
+            showBackButton = false,
+            showProfileButton = true,
+            showChatButton = false
+        )
+        
+        // Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally

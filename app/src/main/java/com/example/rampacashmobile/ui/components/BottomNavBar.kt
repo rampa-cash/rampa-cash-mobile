@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,7 +30,7 @@ fun BottomNavBar(navController: NavController) {
         NavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .height(90.dp),
             containerColor = Color(0xFF1F2937), // Dark background matching React version
             contentColor = Color(0xFFD1D5DB), // Light content color
             tonalElevation = 8.dp
@@ -62,17 +63,27 @@ fun BottomNavBar(navController: NavController) {
                         icon = {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                                verticalArrangement = Arrangement.Bottom,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                             ) {
-                                Icon(
-                                    imageVector = destination.icon,
-                                    contentDescription = destination.title,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                if (destination.customIconRes != null) {
+                                    Icon(
+                                        painter = painterResource(id = destination.customIconRes),
+                                        contentDescription = destination.title,
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = destination.icon!!,
+                                        contentDescription = destination.title,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = destination.title,
-                                    fontSize = 12.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
@@ -93,7 +104,7 @@ fun BottomNavBar(navController: NavController) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-20).dp), // Match React version's top: '-20px'
+                .offset(y = (-25).dp), // Adjusted for taller navigation bar
             contentAlignment = Alignment.Center
         ) {
             FloatingActionButton(
@@ -106,7 +117,7 @@ fun BottomNavBar(navController: NavController) {
                         restoreState = true
                     }
                 },
-                modifier = Modifier.size(60.dp), // Match React version's 60px
+                modifier = Modifier.size(72.dp), // Increased from 60px for better touch target
                 containerColor = Color(0xFF10B981), // Green color matching React version
                 contentColor = Color.White,
                 elevation = FloatingActionButtonDefaults.elevation(
@@ -121,11 +132,11 @@ fun BottomNavBar(navController: NavController) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send",
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                     Text(
                         text = "Send",
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }

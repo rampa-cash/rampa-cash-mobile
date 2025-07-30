@@ -42,9 +42,9 @@ fun ProfileScreen(
     // Mock user data - replace with actual user data from auth context/state
     val userInfo = remember {
         UserInfo(
-            name = "John Doe",
-            email = "john.doe@example.com",
-            phone = "+1 (555) 123-4567"
+            name = "James Rodriguez",
+            email = "jrod@rampa.cash",
+            phone = "+49 (123) 456-6789"
         )
     }
 
@@ -57,9 +57,9 @@ fun ProfileScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = "My rampa Account",
+                    text = "My Rampa Account",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             },
@@ -74,7 +74,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp)
-                .padding(bottom = 80.dp), // Add bottom padding for navigation bar
+                .padding(bottom = 90.dp), // Add bottom padding for navigation bar
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // User Information Section
@@ -154,7 +154,7 @@ private fun UserInfoItem(
                 imageVector = icon,
                 contentDescription = label,
                 tint = Color(0xFF94A3B8),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
         
@@ -165,14 +165,14 @@ private fun UserInfoItem(
             Text(
                 text = label,
                 color = Color(0xFF94A3B8),
-                fontSize = 12.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value,
                 color = Color.White,
-                fontSize = 15.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Normal
             )
         }
@@ -246,14 +246,14 @@ private fun ActionButton(
         ) {
             // Icon container
             Box(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = text,
                     tint = iconTint,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
             
@@ -263,7 +263,7 @@ private fun ActionButton(
             Text(
                 text = text,
                 color = textColor,
-                fontSize = 15.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.weight(1f)
             )

@@ -94,7 +94,7 @@ fun ReceiveScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
-                .padding(bottom = 80.dp), // Add bottom padding for navigation bar
+                .padding(bottom = 90.dp), // Add bottom padding for navigation bar
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Stablecoin Selection
@@ -151,13 +151,13 @@ fun ReceiveScreen(
                         Text(
                             text = "✓",
                             color = Color(0xFF10B981),
-                            fontSize = 16.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = message,
                             color = Color(0xFF10B981),
-                            fontSize = 14.sp
+                            fontSize = 22.sp
                         )
                     }
                 }
@@ -177,7 +177,7 @@ private fun StablecoinSelector(
     Column {
         Text(
             text = "STABLECOIN",
-            fontSize = 12.sp,
+            fontSize = 16.sp,
             color = Color(0xFF9CA3AF),
             letterSpacing = 1.sp,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -215,7 +215,7 @@ private fun StablecoinSelector(
                         Text(
                             text = selectedToken.symbol,
                             color = Color.White,
-                            fontSize = 20.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -260,7 +260,7 @@ private fun StablecoinSelector(
                                 Text(
                                     text = "${token.symbol} - ${token.name}",
                                     color = Color.White,
-                                    fontSize = 18.sp
+                                    fontSize = 22.sp
                                 )
                             }
                             if (token != tokens.last()) {
@@ -282,7 +282,7 @@ private fun NetworkSelector() {
     Column {
         Text(
             text = "NETWORK",
-            fontSize = 12.sp,
+            fontSize = 16.sp,
             color = Color(0xFF9CA3AF),
             letterSpacing = 1.sp,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -298,7 +298,7 @@ private fun NetworkSelector() {
             Text(
                 text = "Solana",
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 modifier = Modifier.padding(12.dp)
             )
         }
@@ -345,7 +345,7 @@ private fun QRCodeSection(
                         Text(
                             text = "Connect your wallet to generate a QR code",
                             color = Color(0xFF666666),
-                            fontSize = 14.sp,
+                            fontSize = 22.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -378,7 +378,7 @@ private fun WalletAddressSection(walletAddress: String) {
     Column {
         Text(
             text = "WALLET ADDRESS",
-            fontSize = 12.sp,
+            fontSize = 16.sp,
             color = Color(0xFF9CA3AF),
             letterSpacing = 1.sp,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -387,7 +387,7 @@ private fun WalletAddressSection(walletAddress: String) {
         Text(
             text = walletAddress,
             color = Color.White,
-            fontSize = 16.sp,
+            fontSize = 24.sp,
             fontFamily = FontFamily.Monospace,
             lineHeight = 24.sp
         )
@@ -411,7 +411,7 @@ private fun WarningSection() {
             Text(
                 text = "Check Before You Deposit",
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
@@ -438,13 +438,13 @@ private fun WarningItem(text: String) {
         Text(
             text = "•",
             color = Color(0xFF9CA3AF),
-            fontSize = 14.sp,
+            fontSize = 22.sp,
             modifier = Modifier.padding(top = 2.dp)
         )
         Text(
             text = text,
             color = Color(0xFF9CA3AF),
-            fontSize = 14.sp,
+            fontSize = 22.sp,
             lineHeight = 20.sp
         )
     }
@@ -475,12 +475,12 @@ private fun CopyAddressButton(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Copy",
                 tint = if (isConnected) Color(0xFF111827) else Color(0xFF9CA3AF),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
             Text(
                 text = "Copy Address",
                 color = if (isConnected) Color(0xFF111827) else Color(0xFF9CA3AF),
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
         }

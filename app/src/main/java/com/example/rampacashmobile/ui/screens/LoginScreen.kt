@@ -83,14 +83,6 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            Text(
-                text = "Choose your preferred login method",
-                fontSize = 16.sp,
-                color = Color(0xFF9CA3AF),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
-
             // Web3Auth Social Login Section
             Card(
                 modifier = Modifier
@@ -324,7 +316,7 @@ private fun SocialLoginButton(
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(22.dp),
                     strokeWidth = 2.dp,
                     color = Color.White
                 )

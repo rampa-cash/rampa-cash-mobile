@@ -78,10 +78,10 @@ fun SendScreen(
 
     // Test addresses (from TokenTransferSection)
     val testAddresses = listOf(
-        TestAddress("2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc", "Henry Cavil"),
-        TestAddress("DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG", "Ozzy Osbourne"),
-        TestAddress("HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy", "Sydney Sweeney"),
-        TestAddress("2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn", "Thomas Müller")
+        TestAddress("2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc", "Mamá"),
+        TestAddress("DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG", "Pedro"),
+        TestAddress("HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy", "Shakira"),
+        TestAddress("2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn", "Tio Luis")
     )
 
     // Token switching functions
@@ -205,7 +205,7 @@ fun SendScreen(
                     Column {
                         Text(
                             text = "Amount",
-                            fontSize = 14.sp,
+                            fontSize = 18.sp,
                             color = Color(0xFF9CA3AF),
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
@@ -258,7 +258,7 @@ fun SendScreen(
                     Column {
                         Text(
                             text = "Recipient Address",
-                            fontSize = 14.sp,
+                            fontSize = 18.sp,
                             color = Color(0xFF9CA3AF),
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
@@ -328,7 +328,7 @@ fun SendScreen(
                                                 Text(
                                                     text = "${address.address.take(8)}...${address.address.takeLast(8)}",
                                                     color = Color(0xFF9CA3AF),
-                                                    fontSize = 12.sp
+                                                    fontSize = 16.sp
                                                 )
                                             }
                                         }
@@ -349,7 +349,7 @@ fun SendScreen(
                             Text(
                                 text = errorMessage,
                                 color = Color(0xFFEF4444),
-                                fontSize = 14.sp,
+                                fontSize = 18.sp,
                                 modifier = Modifier.padding(12.dp)
                             )
                         }
@@ -370,7 +370,7 @@ fun SendScreen(
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.dp,
                                 color = Color.White
                             )
@@ -392,7 +392,7 @@ fun SendScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = 90.dp, start = 16.dp, end = 16.dp)
         )
     }
 }

@@ -274,12 +274,12 @@ fun MainScreen(
                                             imageVector = Icons.Default.Add,
                                             contentDescription = "Recharge",
                                             tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                         Text(
                                             text = "Recharge",
                                             color = Color.White,
-                                            fontSize = 14.sp,
+                                            fontSize = 18.sp,
                                             fontWeight = FontWeight.Medium
                                         )
                                     }
@@ -303,12 +303,12 @@ fun MainScreen(
                                             imageVector = Icons.Default.KeyboardArrowDown,
                                             contentDescription = "Receive",
                                             tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                         Text(
                                             text = "Receive",
                                             color = Color.White,
-                                            fontSize = 14.sp,
+                                            fontSize = 18.sp,
                                             fontWeight = FontWeight.Medium
                                         )
                                     }
@@ -328,7 +328,7 @@ fun MainScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = 90.dp, start = 16.dp, end = 16.dp)
         )
     }
 }
@@ -346,14 +346,14 @@ private fun LoadingScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(64.dp),
                 strokeWidth = 4.dp,
                 color = MaterialTheme.colorScheme.primary
             )
 
             Text(
                 text = "Loading...",
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
@@ -361,7 +361,7 @@ private fun LoadingScreen() {
 
             Text(
                 text = "Checking for saved sessions",
-                fontSize = 14.sp,
+                fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
@@ -401,7 +401,7 @@ private fun RecentTransfersSection(viewModel: MainViewModel) {
     ) {
         Text(
             text = "Recent Transfers",
-            fontSize = 16.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Medium,
             color = Color.White,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -425,7 +425,7 @@ private fun RecentTransfersSection(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.Center
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp,
                             color = Color(0xFF9945FF)
                         )
@@ -433,7 +433,7 @@ private fun RecentTransfersSection(viewModel: MainViewModel) {
                         Text(
                             text = "Loading transaction history...",
                             color = Color(0xFF9CA3AF),
-                            fontSize = 14.sp,
+                            fontSize = 18.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -456,14 +456,14 @@ private fun RecentTransfersSection(viewModel: MainViewModel) {
                         Text(
                             text = "No transaction history found",
                             color = Color(0xFF9CA3AF),
-                            fontSize = 16.sp,
+                            fontSize = 20.sp,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Transactions will appear here once you send or receive funds",
                             color = Color(0xFF9CA3AF),
-                            fontSize = 14.sp,
+                            fontSize = 18.sp,
                             textAlign = TextAlign.Center,
                             lineHeight = 20.sp
                         )
@@ -522,7 +522,7 @@ private fun RecentTransactionItem(transaction: MainTransaction) {
                     Text(
                         text = if (transaction.transactionType == MainTransactionType.RECEIVED) "Received" else "Sent",
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Medium
                     )
 
@@ -532,7 +532,7 @@ private fun RecentTransactionItem(transaction: MainTransaction) {
                         } ${transaction.tokenSymbol}",
                         color = if (transaction.transactionType == MainTransactionType.RECEIVED)
                             Color(0xFF10B981) else Color(0xFFEF4444),
-                        fontSize = 14.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -542,7 +542,7 @@ private fun RecentTransactionItem(transaction: MainTransaction) {
                 Text(
                     text = "From ${truncateAddress(transaction.sender)}",
                     color = Color(0xFF9CA3AF),
-                    fontSize = 12.sp
+                    fontSize = 16.sp
                 )
             }
         }

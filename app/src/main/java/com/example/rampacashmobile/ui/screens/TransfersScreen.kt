@@ -121,7 +121,7 @@ fun TransfersScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = 90.dp, start = 16.dp, end = 16.dp)
         )
     }
 }
@@ -135,7 +135,7 @@ private fun LoadingContent() {
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator(
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(56.dp),
             strokeWidth = 4.dp,
             color = Color(0xFF9945FF)
         )
@@ -246,7 +246,7 @@ private fun TransactionsList(
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 80.dp) // Space for bottom nav
+        contentPadding = PaddingValues(bottom = 90.dp) // Space for bottom nav
     ) {
         items(groupedTransactions) { group ->
             TransactionGroup(group = group)

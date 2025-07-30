@@ -105,7 +105,7 @@ fun TransactionSuccessScreen(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Success",
-                    modifier = Modifier.size(80.dp),
+                    modifier = Modifier.size(96.dp),
                     tint = Color(0xFF4CAF50)
                 )
             }

@@ -37,7 +37,7 @@ fun AboutScreen(navController: NavController) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp)
-                .padding(bottom = 80.dp), // Add bottom padding for navigation bar
+                .padding(bottom = 90.dp), // Add bottom padding for navigation bar
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // About rampa Section
@@ -65,21 +65,21 @@ private fun AboutSection() {
             Text(
                 text = "About rampa",
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold
             )
             
             Text(
                 text = "rampa is a decentralized remittance application built on the Solana blockchain that enables fast, secure and low-cost money transfers across borders.",
                 color = Color(0xFFD1D5DB),
-                fontSize = 15.sp,
+                fontSize = 22.sp,
                 lineHeight = 22.sp
             )
             
             Text(
                 text = "Our mission is to make international money transfers accessible to everyone, eliminating the high fees and delays associated with traditional remittance services.",
                 color = Color(0xFFD1D5DB),
-                fontSize = 15.sp,
+                fontSize = 22.sp,
                 lineHeight = 22.sp
             )
             
@@ -88,13 +88,13 @@ private fun AboutSection() {
                 Text(
                     text = "Version",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "1.0.0",
                     color = Color(0xFFD1D5DB),
-                    fontSize = 15.sp
+                    fontSize = 18.sp
                 )
             }
             
@@ -103,13 +103,13 @@ private fun AboutSection() {
                 Text(
                     text = "Contact",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "team@rampa.cash",
                     color = Color(0xFFD1D5DB),
-                    fontSize = 15.sp
+                    fontSize = 18.sp
                 )
             }
         }
@@ -132,7 +132,7 @@ private fun LegalInformationSection() {
             Text(
                 text = "Legal Information",
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold
             )
             
@@ -141,13 +141,13 @@ private fun LegalInformationSection() {
                 Text(
                     text = "Terms of Service",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "By using rampa, you agree to our terms of service, which can be found on our website.",
                     color = Color(0xFFD1D5DB),
-                    fontSize = 15.sp,
+                    fontSize = 22.sp,
                     lineHeight = 22.sp
                 )
             }
@@ -157,13 +157,13 @@ private fun LegalInformationSection() {
                 Text(
                     text = "Privacy Policy",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "We value your privacy. Please review our privacy policy to understand how we collect, use and protect your personal information.",
                     color = Color(0xFFD1D5DB),
-                    fontSize = 15.sp,
+                    fontSize = 22.sp,
                     lineHeight = 22.sp
                 )
             }
@@ -173,13 +173,13 @@ private fun LegalInformationSection() {
                 Text(
                     text = "Licenses",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "rampa uses open-source libraries and components under various licenses, including MIT, Apache 2.0 and BSD.",
                     color = Color(0xFFD1D5DB),
-                    fontSize = 15.sp,
+                    fontSize = 22.sp,
                     lineHeight = 22.sp
                 )
             }

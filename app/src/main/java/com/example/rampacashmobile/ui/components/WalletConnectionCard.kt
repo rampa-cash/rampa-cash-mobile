@@ -84,7 +84,7 @@ fun WalletConnectionCard(
             Column {
                 Text(
                     text = selectedToken.name,
-                    fontSize = 14.sp,
+                    fontSize = 18.sp,
                     color = Color.White.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Normal
                 )
@@ -100,7 +100,7 @@ fun WalletConnectionCard(
                         "EURC" -> String.format("€%.2f", selectedToken.balance)
                         else -> String.format("%.2f", selectedToken.balance)
                     },
-                    fontSize = 32.sp,
+                    fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     letterSpacing = 0.5.sp
@@ -114,7 +114,7 @@ fun WalletConnectionCard(
             ) {
                 Text(
                     text = "CRYPTO",
-                    fontSize = 10.sp,
+                    fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.95f),
                     letterSpacing = 1.sp,
                     fontWeight = FontWeight.Normal
@@ -122,7 +122,7 @@ fun WalletConnectionCard(
                 
                 Text(
                     text = "rampa",
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Light,
                     color = Color.White,
                     letterSpacing = 0.5.sp

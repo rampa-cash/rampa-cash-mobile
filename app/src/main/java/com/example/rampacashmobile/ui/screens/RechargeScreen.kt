@@ -96,7 +96,7 @@ fun RechargeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
-                .padding(bottom = 80.dp), // Add bottom padding for navigation bar
+                .padding(bottom = 90.dp), // Add bottom padding for navigation bar
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             if (!showAmountInput) {
@@ -149,7 +149,7 @@ private fun MethodSelectionSection(
     Column {
         Text(
             text = "Select Recharge Method",
-            fontSize = 18.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Medium,
             color = Color.White,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -188,7 +188,7 @@ private fun MethodSelectionSection(
                                 imageVector = methodOption.icon,
                                 contentDescription = methodOption.method.displayName,
                                 tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(28.dp)
                             )
                         }
 
@@ -200,14 +200,14 @@ private fun MethodSelectionSection(
                             Text(
                                 text = methodOption.method.displayName,
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = methodOption.method.description,
                                 color = Color(0xFF9CA3AF),
-                                fontSize = 14.sp,
+                                fontSize = 18.sp,
                                 lineHeight = 18.sp
                             )
                         }
@@ -237,7 +237,7 @@ private fun AmountInputSection(
         Column {
             Text(
                 text = "Enter Amount",
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -257,7 +257,7 @@ private fun AmountInputSection(
                     Text(
                         text = "$",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Medium
                     )
                 },
@@ -272,7 +272,7 @@ private fun AmountInputSection(
                 ),
                 shape = RoundedCornerShape(8.dp),
                 textStyle = androidx.compose.ui.text.TextStyle(
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Medium
                 )
             )
@@ -282,7 +282,7 @@ private fun AmountInputSection(
             // Quick amounts
             Text(
                 text = "Quick Amounts",
-                fontSize = 14.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -304,7 +304,7 @@ private fun AmountInputSection(
                     ) {
                         Text(
                             text = "$${amt}",
-                            fontSize = 14.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -317,7 +317,7 @@ private fun AmountInputSection(
             Column {
                 Text(
                     text = "Selected Method",
-                    fontSize = 16.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color.White,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -349,7 +349,7 @@ private fun AmountInputSection(
                                 imageVector = rechargeMethods.find { it.method == method }?.icon ?: Icons.Default.Info,
                                 contentDescription = method.displayName,
                                 tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
@@ -358,7 +358,7 @@ private fun AmountInputSection(
                         Text(
                             text = method.displayName,
                             color = Color.White,
-                            fontSize = 16.sp,
+                            fontSize = 24.sp,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -392,14 +392,14 @@ private fun AmountInputSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),
                         strokeWidth = 2.dp,
                         color = Color.White
                     )
                     Text(
                         text = "Processing...",
                         color = Color.White,
-                        fontSize = 16.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -407,7 +407,7 @@ private fun AmountInputSection(
                 Text(
                     text = "Add Funds - $${amount.ifEmpty { "0.00" }}",
                     color = Color.White,
-                    fontSize = 16.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -437,13 +437,13 @@ private fun InformationSection(walletAddress: String) {
                     imageVector = Icons.Default.Info,
                     contentDescription = "Information",
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Information",
                     color = Color.White,
-                    fontSize = 16.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -457,7 +457,7 @@ private fun InformationSection(walletAddress: String) {
             Text(
                 text = "Funds will be added to your wallet at $displayAddress. Depending on the method, processing times may vary.",
                 color = Color(0xFF9CA3AF),
-                fontSize = 14.sp,
+                fontSize = 18.sp,
                 lineHeight = 20.sp
             )
         }
