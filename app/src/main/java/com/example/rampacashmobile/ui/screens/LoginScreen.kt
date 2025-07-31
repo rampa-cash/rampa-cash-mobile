@@ -66,16 +66,16 @@ fun LoginScreen(
 
             // Logo
             Image(
-                painter = painterResource(id = R.drawable.logo_new),
-                contentDescription = "Rampa.cash Logo",
+                painter = painterResource(id = R.mipmap.rampa_bonk),
+                contentDescription = "Rampa BONK Logo",
                 modifier = Modifier
-                    .width(224.dp)
-                    .padding(bottom = 24.dp)
+                    .size(250.dp)
+                    .padding(bottom = 10.dp)
             )
 
             // Welcome Text
             Text(
-                text = "Welcome to Rampa Cash",
+                text = "Welcome to Rampa",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -85,7 +85,7 @@ fun LoginScreen(
             
             // Subtitle
             Text(
-                text = "BONK! edition",
+                text = "ft. BONK!",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFFFF6B35), // Orange color for BONK branding
@@ -127,7 +127,6 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Google Login
                         SocialLoginButton(
                             text = "Continue with Google",
                             icon = "🔍",
@@ -142,7 +141,6 @@ fun LoginScreen(
                             }
                         )
 
-                        // Facebook Login
                         SocialLoginButton(
                             text = "Continue with Facebook",
                             icon = "📘",
@@ -157,7 +155,6 @@ fun LoginScreen(
                             }
                         )
 
-                        // Twitter Login
                         SocialLoginButton(
                             text = "Continue with Twitter",
                             icon = "🐦",
@@ -168,21 +165,6 @@ fun LoginScreen(
                                 if (web3AuthManager != null && web3AuthCallback != null) {
                                     viewModel.setWeb3AuthProviderLoading(Provider.TWITTER)
                                     web3AuthManager.login(Provider.TWITTER, web3AuthCallback)
-                                }
-                            }
-                        )
-
-                        // Discord Login
-                        SocialLoginButton(
-                            text = "Continue with Discord",
-                            icon = "🎮",
-                            backgroundColor = Color(0xFF7289DA),
-                            isLoading = viewState.loadingProvider == Provider.DISCORD,
-                            isAnyLoading = viewState.isWeb3AuthLoading,
-                            onClick = {
-                                if (web3AuthManager != null && web3AuthCallback != null) {
-                                    viewModel.setWeb3AuthProviderLoading(Provider.DISCORD)
-                                    web3AuthManager.login(Provider.DISCORD, web3AuthCallback)
                                 }
                             }
                         )
@@ -237,7 +219,7 @@ fun LoginScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "Connect your Solana mobile wallet (Phantom, Solflare)",
+                        text = "Connect your Solana mobile wallet",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF9CA3AF),
                         textAlign = TextAlign.Center,

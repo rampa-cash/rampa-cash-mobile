@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -50,6 +52,13 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         web3AuthManager.handleRedirect(intent?.data)
 
         enableEdgeToEdge()
+        
+        // Configure system UI for dark theme (light icons)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.isAppearanceLightStatusBars = false  // Light icons on status bar
+        controller.isAppearanceLightNavigationBars = false  // Light icons on navigation bar
+        
         setContent {
             RampaCashMobileTheme {
                 Surface(
