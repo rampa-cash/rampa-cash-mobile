@@ -1,6 +1,7 @@
 // File: app/src/main/java/com/example/rampacashmobile/navigation/NavigationGraph.kt
 package com.example.rampacashmobile.navigation
 
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
@@ -23,16 +24,16 @@ fun NavigationGraph(
     web3AuthManager: Web3AuthManager,
     web3AuthCallback: Web3AuthManager.Web3AuthCallback
 ) {
-    // Single shared ViewModel
-    val viewModel: MainViewModel = hiltViewModel()
-    val viewState by viewModel.viewState.collectAsState()
+    // Single shared ViewModel for the entire navigation graph
+    val sharedViewModel: MainViewModel = hiltViewModel()
+    val sharedViewState by sharedViewModel.viewState.collectAsState()
 
     // Properly observe navigation state changes
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
     // Only show bottom navigation when not on login screen and not in loading state
-    val showBottomBar = currentRoute != "login" && !viewState.isLoading
+    val showBottomBar = currentRoute != "login" && !sharedViewState.isLoading
 
     Scaffold(
         bottomBar = {
@@ -43,14 +44,14 @@ fun NavigationGraph(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "dashboard", // Always start with dashboard to allow session restoration
+            startDestination = "login", // Start with login, let LoginScreen handle session restoration
             modifier = if (showBottomBar) Modifier.padding(paddingValues) else Modifier
         ) {
             composable("login") {
                 LoginScreen(
                     navController = navController,
                     intentSender = intentSender,
-                    viewModel = viewModel,
+                    viewModel = sharedViewModel,
                     web3AuthManager = web3AuthManager,
                     web3AuthCallback = web3AuthCallback
                 )
@@ -60,7 +61,7 @@ fun NavigationGraph(
                 MainScreen(
                     navController = navController,
                     intentSender = intentSender,
-                    viewModel = viewModel,
+                    viewModel = sharedViewModel,
                     web3AuthManager = web3AuthManager,
                     web3AuthCallback = web3AuthCallback
                 )
@@ -69,7 +70,7 @@ fun NavigationGraph(
             composable("transfers") {
                 TransfersScreen(
                     navController = navController,
-                    viewModel = viewModel
+                    viewModel = sharedViewModel
                 )
             }
 
@@ -77,7 +78,7 @@ fun NavigationGraph(
                 SendScreen(
                     navController = navController,
                     intentSender = intentSender,
-                    viewModel = viewModel
+                    viewModel = sharedViewModel
                 )
             }
 
@@ -96,19 +97,19 @@ fun NavigationGraph(
             composable("receive") { 
                 ReceiveScreen(
                     navController = navController,
-                    viewModel = viewModel
+                    viewModel = sharedViewModel
                 )
             }
             composable("recharge") { 
                 RechargeScreen(
                     navController = navController,
-                    viewModel = viewModel
+                    viewModel = sharedViewModel
                 )
             }
             composable("profile") { 
                 ProfileScreen(
                     navController = navController,
-                    viewModel = viewModel,
+                    viewModel = sharedViewModel,
                     web3AuthManager = web3AuthManager,
                     web3AuthCallback = web3AuthCallback
                 )
@@ -116,6 +117,38 @@ fun NavigationGraph(
             
             composable("about") { 
                 AboutScreen(navController = navController)
+            }
+            
+            composable("transaction_success") {
+                // Use the already shared ViewModel instance - NO MORE hiltViewModel()!
+                Log.d("NavigationGraph", "📱 Transaction success route reached - hasDetails: ${sharedViewState.transactionDetails != null}, showSuccess: ${sharedViewState.showTransactionSuccess}")
+                
+                // Check if we have transaction details to show
+                when {
+                    sharedViewState.transactionDetails != null -> {
+                        Log.d("NavigationGraph", "✅ Showing TransactionSuccessScreen")
+                        TransactionSuccessScreen(
+                            transactionDetails = sharedViewState.transactionDetails!!,
+                            navController = navController,
+                            onDone = {
+                                sharedViewModel.onTransactionSuccessDone()
+                                navController.navigate("dashboard") {
+                                    popUpTo("dashboard") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                    else -> {
+                        Log.d("NavigationGraph", "❌ No transaction details, redirecting to dashboard")
+                        // If no transaction details after a short wait, go back to dashboard
+                        LaunchedEffect(Unit) {
+                            kotlinx.coroutines.delay(500) // Short delay to allow state to propagate
+                            navController.navigate("dashboard") {
+                                popUpTo("dashboard") { inclusive = true }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

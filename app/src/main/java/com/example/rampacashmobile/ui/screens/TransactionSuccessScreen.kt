@@ -23,14 +23,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,13 +37,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.example.rampacashmobile.ui.components.TopNavBar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,6 +55,7 @@ data class TransactionDetails(
     val amount: String,
     val tokenSymbol: String,
     val recipientAddress: String,
+    val recipientName: String? = null, // Contact name if selected from contacts
     val timestamp: Long = System.currentTimeMillis(),
     val isDevnet: Boolean = true
 )
@@ -64,10 +64,11 @@ data class TransactionDetails(
 @Composable
 fun TransactionSuccessScreen(
     transactionDetails: TransactionDetails,
+    navController: NavController? = null,
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
     var showCopiedMessage by remember { mutableStateOf(false) }
     
@@ -82,15 +83,32 @@ fun TransactionSuccessScreen(
         "https://solscan.io/tx/${transactionDetails.signature}"
     }
 
-    Scaffold { padding ->
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF111827)) // Dark background to match app theme
+    ) {
         Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxSize()
         ) {
+            // Top Navigation Bar
+            if (navController != null) {
+                TopNavBar(
+                    title = "Transaction Success",
+                    navController = navController,
+                    showBackButton = false,
+                    showProfileButton = true,  // Show avatar and card buttons
+                    showChatButton = false
+                )
+            }
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             
             // Success Icon
             Box(
@@ -178,13 +196,37 @@ fun TransactionSuccessScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            text = "${transactionDetails.recipientAddress.take(8)}...${transactionDetails.recipientAddress.takeLast(8)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = FontFamily.Monospace,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            if (transactionDetails.recipientName != null) {
+                                // Show contact name
+                                Text(
+                                    text = transactionDetails.recipientName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.End,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                // Show truncated address below the name
+                                Text(
+                                    text = "${transactionDetails.recipientAddress.take(8)}...${transactionDetails.recipientAddress.takeLast(8)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    textAlign = TextAlign.End,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                // Show only truncated address if no contact name
+                                Text(
+                                    text = "${transactionDetails.recipientAddress.take(8)}...${transactionDetails.recipientAddress.takeLast(8)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontFamily = FontFamily.Monospace,
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
@@ -305,12 +347,8 @@ fun TransactionSuccessScreen(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(
-                        text = "🔗",
-                        style = MaterialTheme.typography.titleMedium
-                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("View on Solscan")
+                    Text("Check on Solscan")
                 }
                 
                 // Done Button
@@ -330,6 +368,7 @@ fun TransactionSuccessScreen(
             }
             
             Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 } 

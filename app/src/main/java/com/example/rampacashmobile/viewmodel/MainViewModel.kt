@@ -670,13 +670,14 @@ class MainViewModel @Inject constructor(
         recipientAddress: String,
         amount: String,
         tokenMintAddress: String,
-        tokenDecimals: Int = 6
+        tokenDecimals: Int = 6,
+        recipientName: String? = null
     ) {
         viewModelScope.launch {
             try {
                 // Check if user is logged in via Web3Auth
                 if (viewState.value.isWeb3AuthLoggedIn) {
-                    handleWeb3AuthSplTransfer(recipientAddress, amount, tokenMintAddress, tokenDecimals)
+                    handleWeb3AuthSplTransfer(recipientAddress, amount, tokenMintAddress, tokenDecimals, recipientName)
                     return@launch
                 }
                 
@@ -776,6 +777,7 @@ class MainViewModel @Inject constructor(
                                 amount = amount,
                                 tokenSymbol = tokenSymbol,
                                 recipientAddress = recipientAddress,
+                                recipientName = recipientName,
                                 timestamp = System.currentTimeMillis(),
                                 isDevnet = true // Update this based on your network configuration
                             )
@@ -1203,7 +1205,8 @@ class MainViewModel @Inject constructor(
         recipientAddress: String,
         amount: String,
         tokenMintAddress: String,
-        tokenDecimals: Int = 6
+        tokenDecimals: Int = 6,
+        recipientName: String? = null
     ) {
         viewModelScope.launch {
             try {
@@ -1271,6 +1274,7 @@ class MainViewModel @Inject constructor(
                     amount = amount,
                     tokenSymbol = tokenSymbol,
                     recipientAddress = recipientAddress,
+                    recipientName = recipientName,
                     timestamp = System.currentTimeMillis(),
                     isDevnet = true // Update this based on your network configuration
                 )

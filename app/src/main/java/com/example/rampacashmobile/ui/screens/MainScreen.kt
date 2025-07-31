@@ -165,10 +165,6 @@ fun MainScreen(
                     showChatButton = false
                 )
             }
-            LaunchedEffect(Unit) {
-                Log.d("MainScreen", "🔄 Starting session restoration...")
-                viewModel.loadConnection()
-            }
 
             // Fetch transaction history once when wallet is connected
             LaunchedEffect(
@@ -198,22 +194,12 @@ fun MainScreen(
             if (viewState.isLoading || (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty())) {
                 LoadingScreen()
             }
-            // Show transaction success screen or main dashboard
-            else if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
-                Log.d(
-                    "MainScreen",
-                    "🎯 Showing TransactionSuccessScreen - signature: ${
-                        viewState.transactionDetails!!.signature.take(8)
-                    }"
-                )
-                TransactionSuccessScreen(
-                    transactionDetails = viewState.transactionDetails!!,
-                    onDone = {
-                        Log.d("MainScreen", "🔙 TransactionSuccessScreen onDone called")
-                        viewModel.onTransactionSuccessDone()
-                    }
-                )
-            } else {
+            // Don't handle transaction success navigation here - let SendScreen handle it
+            
+            // Show main dashboard content (but not when showing transaction success)
+            if (!viewState.isLoading && 
+                !(!viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty()) &&
+                !viewState.showTransactionSuccess) {
                 Log.d(
                     "MainScreen",
                     "📱 Showing main content - showTransactionSuccess: ${viewState.showTransactionSuccess}, hasDetails: ${viewState.transactionDetails != null}"

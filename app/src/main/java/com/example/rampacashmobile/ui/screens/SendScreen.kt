@@ -1,5 +1,6 @@
 package com.example.rampacashmobile.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,10 +44,14 @@ fun SendScreen(
     // Form state
     var amount by remember { mutableStateOf("") }
     var recipientAddress by remember { mutableStateOf("") }
+    var recipientName by remember { mutableStateOf<String?>(null) } // Track selected contact name
     var showDropdown by remember { mutableStateOf(false) }
     var isInputFocused by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    
+    // Track the last processed transaction to prevent repeated navigation
+    var lastProcessedTransactionSignature by remember { mutableStateOf<String?>(null) }
 
     // Define tokens (same as MainScreen)
     val tokens = listOf(
@@ -80,9 +85,9 @@ fun SendScreen(
 
     // Test addresses (from TokenTransferSection)
     val testAddresses = listOf(
-        TestAddress("2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc", "Mamá"),
-        TestAddress("DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG", "Pedro"),
-        TestAddress("HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy", "Shakira"),
+        TestAddress("2HbczxxnXRUNWF5ASJxxXac9aNhywdfNkS6HukJbYsAc", "Pedro"),
+        TestAddress("DLCvDmn2t294CseF87Q3YscSNritr7szsYraMp16oEEG", "Mamá"),
+        TestAddress("HP4GTtev4T3ifApvC88P3iydqm8Yhme4tvvzcazG7iEy", "Shakira <3"),
         TestAddress("2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn", "Tio Luis")
     )
 
@@ -123,7 +128,8 @@ fun SendScreen(
                         recipientAddress = recipientAddress,
                         amount = amount,
                         tokenMintAddress = selectedToken.mintAddress,
-                        tokenDecimals = if (selectedToken.symbol == "USDC" || selectedToken.symbol == "EURC") 6 else 9
+                        tokenDecimals = if (selectedToken.symbol == "USDC" || selectedToken.symbol == "EURC") 6 else 9,
+                        recipientName = recipientName
                     )
                     // Don't set loading to false here - let the viewModel handle it
                     // isLoading will be managed by observing viewModel state
@@ -170,13 +176,18 @@ fun SendScreen(
                 }
             }
 
-            // Handle transaction success - navigate back to dashboard to show success screen
-            LaunchedEffect(viewState.showTransactionSuccess, viewState.transactionDetails) {
-                if (viewState.showTransactionSuccess && viewState.transactionDetails != null) {
-                    // Navigate back to dashboard which will show the TransactionSuccessScreen
-                    navController.navigate("dashboard") {
-                        popUpTo("dashboard") { inclusive = true }
-                    }
+            // Handle transaction success - navigate to success screen
+            LaunchedEffect(viewState.showTransactionSuccess, viewState.transactionDetails?.signature) {
+                val transactionDetails = viewState.transactionDetails
+                if (viewState.showTransactionSuccess && 
+                    transactionDetails != null &&
+                    transactionDetails.signature != lastProcessedTransactionSignature) {
+                    
+                    Log.d("SendScreen", "🎯 Navigating to TransactionSuccessScreen for ${transactionDetails.signature.take(8)}")
+                    lastProcessedTransactionSignature = transactionDetails.signature
+                    
+                    // Navigate to dedicated transaction success screen
+                    navController.navigate("transaction_success")
                 }
             }
 
@@ -276,6 +287,11 @@ fun SendScreen(
                                 value = recipientAddress,
                                 onValueChange = { input ->
                                     recipientAddress = input
+                                    // Clear contact name when manually typing (unless it matches a contact)
+                                    if (recipientName != null) {
+                                        val matchingContact = testAddresses.find { it.address == input }
+                                        recipientName = matchingContact?.label
+                                    }
                                     error = null
                                 },
                                 placeholder = {
@@ -330,6 +346,7 @@ fun SendScreen(
                                                 .padding(16.dp, 8.dp)
                                                 .clickable {
                                                     recipientAddress = address.address
+                                                    recipientName = address.label // Set the contact name
                                                     showDropdown = false
                                                     isInputFocused = false
                                                     error = null

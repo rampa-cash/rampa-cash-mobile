@@ -33,6 +33,11 @@ fun LoginScreen(
 ) {
     val viewState by viewModel.viewState.collectAsState()
 
+    // Check for existing session on app startup
+    LaunchedEffect(Unit) {
+        viewModel.loadConnection()
+    }
+    
     // Navigate to dashboard when authenticated
     LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn) {
         if (viewState.canTransact || viewState.isWeb3AuthLoggedIn) {
@@ -55,13 +60,24 @@ fun LoginScreen(
             .fillMaxSize()
             .background(Color(0xFF111827))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        // Show loading during session restoration
+        if (viewState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = Color(0xFF9945FF)
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Spacer(modifier = Modifier.height(32.dp))
 
             // Logo
@@ -276,6 +292,7 @@ fun LoginScreen(
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
+            }
         }
     }
 }
