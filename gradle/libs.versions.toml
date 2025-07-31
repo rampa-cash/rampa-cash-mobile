@@ -1,6 +1,7 @@
 [versions]
 agp = "8.11.1"
 core = "5.0.0"
+coreSplashscreen = "1.2.0-rc01"
 coreVersion = "3.5.3"
 kotlin = "2.0.10"
 ksp = "2.0.10-1.0.24"
@@ -28,6 +29,7 @@ junitVersion = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 core = { module = "org.web3j:core", version.ref = "core" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

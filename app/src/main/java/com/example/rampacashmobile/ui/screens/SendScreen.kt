@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,6 +44,7 @@ fun SendScreen(
     var amount by remember { mutableStateOf("") }
     var recipientAddress by remember { mutableStateOf("") }
     var showDropdown by remember { mutableStateOf(false) }
+    var isInputFocused by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -89,10 +91,10 @@ fun SendScreen(
     val prevToken = { selectedTokenIndex = (selectedTokenIndex - 1 + tokens.size) % tokens.size }
     val selectedToken = tokens[selectedTokenIndex]
     
-    // Filter test addresses based on input
-    val filteredAddresses = remember(recipientAddress) {
+    // Filter test addresses based on input and focus state
+    val filteredAddresses = remember(recipientAddress, isInputFocused) {
         if (recipientAddress.isEmpty()) {
-            testAddresses
+            if (isInputFocused) testAddresses else emptyList()
         } else {
             testAddresses.filter { address ->
                 address.label.contains(recipientAddress, ignoreCase = true) ||
@@ -274,7 +276,6 @@ fun SendScreen(
                                 value = recipientAddress,
                                 onValueChange = { input ->
                                     recipientAddress = input
-                                    showDropdown = input.isNotEmpty()
                                     error = null
                                 },
                                 placeholder = {
@@ -289,13 +290,18 @@ fun SendScreen(
                                     focusedBorderColor = Color.Transparent,
                                     unfocusedBorderColor = Color.Transparent
                                 ),
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { focusState ->
+                                        isInputFocused = focusState.isFocused
+                                        showDropdown = focusState.isFocused
+                                    },
                                 singleLine = true
                             )
                         }
 
                         // Suggestions Dropdown (separate from input)
-                        if (showDropdown && filteredAddresses.isNotEmpty() && recipientAddress.isNotEmpty()) {
+                        if (showDropdown && filteredAddresses.isNotEmpty()) {
                             Card(
                                 shape = RoundedCornerShape(8.dp),
                                 colors = CardDefaults.cardColors(
@@ -306,14 +312,26 @@ fun SendScreen(
                                     .padding(top = 4.dp)
                             ) {
                                 Column {
+                                    // Header when showing all addresses (empty input but focused)
+                                    if (recipientAddress.isEmpty()) {
+                                        Text(
+                                            text = "Saved Contacts",
+                                            color = Color(0xFF9CA3AF),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.padding(16.dp, 12.dp, 16.dp, 8.dp)
+                                        )
+                                    }
+                                    
                                     filteredAddresses.forEach { address ->
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(16.dp, 8.dp)
                                                 .clickable {
                                                     recipientAddress = address.address
                                                     showDropdown = false
+                                                    isInputFocused = false
                                                     error = null
                                                 },
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -323,14 +341,24 @@ fun SendScreen(
                                                 Text(
                                                     text = address.label,
                                                     color = Color.White,
-                                                    fontWeight = FontWeight.Medium
+                                                    fontWeight = FontWeight.Medium,
+                                                    fontSize = 16.sp
                                                 )
                                                 Text(
                                                     text = "${address.address.take(8)}...${address.address.takeLast(8)}",
                                                     color = Color(0xFF9CA3AF),
-                                                    fontSize = 16.sp
+                                                    fontSize = 14.sp
                                                 )
                                             }
+                                        }
+                                        
+                                        // Add divider between items (except last one)
+                                        if (address != filteredAddresses.last()) {
+                                            HorizontalDivider(
+                                                color = Color(0xFF374151),
+                                                thickness = 1.dp,
+                                                modifier = Modifier.padding(horizontal = 16.dp)
+                                            )
                                         }
                                     }
                                 }

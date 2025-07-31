@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.RampaCashMobile" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.RampaCashMobile" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- AndroidX Splash Screen (works on all versions) -->
+        <item name="android:windowSplashScreenBackground">@color/rampa_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/rampa_cash_icon</item>
+        <item name="android:windowSplashScreenAnimationDuration">1000</item>
+    </style>
 </resources>

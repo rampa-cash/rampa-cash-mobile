@@ -80,6 +80,16 @@ fun LoginScreen(
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            
+            // Subtitle
+            Text(
+                text = "BONK! edition",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFFFF6B35), // Orange color for BONK branding
+                textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 

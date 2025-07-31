@@ -70,7 +70,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.navigation.compose)
-    
+    // Splash Screen
+    implementation(libs.androidx.core.splashscreen)
     // QR Code generation
     implementation(libs.zxing.core)
     implementation(libs.kotlinx.serialization.json)
