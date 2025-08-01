@@ -16,7 +16,7 @@ sealed class NavigationDestination(
     val icon: ImageVector? = null,
     val customIconRes: Int? = null
 ) {
-    object Home : NavigationDestination("dashboard", "Home", customIconRes = R.drawable.rampa_logo_translucid)
+    object Home : NavigationDestination("dashboard", "Home", customIconRes = R.drawable.rampa_white_translucid)
     object Transfers : NavigationDestination("transfers", "Transfers", Icons.AutoMirrored.Filled.List)
     object Send : NavigationDestination("send", "Send", Icons.AutoMirrored.Filled.Send)
     object Investment : NavigationDestination("investment", "Invest", customIconRes = R.drawable.chart_icon)
