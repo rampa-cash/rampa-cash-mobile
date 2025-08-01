@@ -20,16 +20,16 @@ class InvestmentDataUseCase @Inject constructor() {
     
     companion object {
         private const val TAG = "InvestmentDataUseCase"
-        // Using current free tier endpoints (no API key required)
-        private const val JUPITER_TOKEN_API_BASE = "https://lite-api.jup.ag/token/v2/search"
-        private const val JUPITER_PRICE_API_BASE = "https://lite-api.jup.ag/price/v2/price"
+        // Using current free tier endpoints (no API key required) - V3 format
+        private const val JUPITER_TOKEN_API_BASE = "https://lite-api.jup.ag/tokens/v2/search"
+        private const val JUPITER_PRICE_API_BASE = "https://lite-api.jup.ag/price/v3"
         
         // Tokenized stocks addresses
         val TOKENIZED_STOCKS = mapOf(
             "AMZN" to TokenizedStock("AMZNx", "Amazon xStock", "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg"),
             "AAPL" to TokenizedStock("AAPLx", "Apple xStock", "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp"),
             "GOOGL" to TokenizedStock("GOOGLx", "Alphabet xStock", "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN"),
-            "META" to TokenizedStock("METAx", "Meta xStock", ""), // Address not provided, will be fetched via search
+            "META" to TokenizedStock("METAx", "Meta xStock", "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu"),
             "NVDA" to TokenizedStock("NVDAx", "NVIDIA xStock", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh"),
             "TSLA" to TokenizedStock("TSLAx", "Tesla xStock", "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB"),
             "SPY" to TokenizedStock("SPYx", "S&P 500 xStock", "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W")
@@ -43,31 +43,28 @@ class InvestmentDataUseCase @Inject constructor() {
     )
     
     @Serializable
-    data class TokenSearchResponse(
-        val results: List<TokenSearchResult>? = null
-    )
-    
-    @Serializable
     data class TokenSearchResult(
+        val id: String,
         val symbol: String? = null,
         val name: String? = null,
-        val mint: String? = null,
-        val verified: Boolean? = false
+        val icon: String? = null,
+        val decimals: Int? = null,
+        val isVerified: Boolean? = false,
+        val usdPrice: Double? = null,
+        val stats24h: TokenStats24h? = null
     )
     
     @Serializable
-    data class PriceResponseV6(
-        val data: Map<String, PriceDataV6>? = null,
-        val timeTaken: Double? = null
+    data class TokenStats24h(
+        val priceChange: Double? = null
     )
     
     @Serializable
-    data class PriceDataV6(
-        val id: String,
-        val mintSymbol: String? = null,
-        val vsToken: String? = null,
-        val vsTokenSymbol: String? = null,
-        val price: Double
+    data class PriceDataV3(
+        val usdPrice: Double,
+        val blockId: Long? = null,
+        val decimals: Int? = null,
+        val priceChange24h: Double? = null
     )
     
     data class InvestmentTokenInfo(
@@ -104,59 +101,36 @@ class InvestmentDataUseCase @Inject constructor() {
     
     private suspend fun tryFetchRealData(): List<InvestmentTokenInfo> = withContext(Dispatchers.IO) {
         try {
-            // Get all addresses (excluding META which needs to be searched)
-            val knownAddresses = TOKENIZED_STOCKS.values
-                .filter { it.address.isNotEmpty() }
-                .map { it.address }
+            // Get all addresses - all are now known including META
+            val allAddresses = TOKENIZED_STOCKS.values.map { it.address }
             
-            // Fetch price data for known addresses
-            val priceDataJob = async { fetchPriceData(knownAddresses) }
-            
-            // Search for META address if needed
-            val metaSearchJob = async { searchTokenAddress("META") }
-            
-            val priceData = priceDataJob.await()
-            val metaAddress = metaSearchJob.await()
-            
-            // If META was found, fetch its price data too
-            val metaPriceData = if (metaAddress.isNotEmpty()) {
-                fetchPriceData(listOf(metaAddress))
-            } else {
-                emptyMap()
-            }
-            
-            // Combine all price data
-            val allPriceData = priceData + metaPriceData
+            // Fetch price data for all addresses in one batch call
+            val allPriceData = fetchPriceData(allAddresses)
             
             // Build result list
             val results = mutableListOf<InvestmentTokenInfo>()
             
-            TOKENIZED_STOCKS.forEach { (key, stock) ->
-                val address = if (key == "META" && metaAddress.isNotEmpty()) metaAddress else stock.address
-                
-                if (address.isNotEmpty()) {
-                    val priceInfo = allPriceData[address]
-                    if (priceInfo != null) {
-                        // Generate mock 24h change data for demo purposes
-                        // In a real app, you'd get this from a separate API call
-                        val mockChange24h = Random.nextDouble(-5.0, 5.0)
-                        val mockChangePercent = (mockChange24h / priceInfo.price) * 100.0
-                        
-                        results.add(
-                            InvestmentTokenInfo(
-                                symbol = stock.symbol,
-                                name = stock.name,
-                                address = address,
-                                price = priceInfo.price,
-                                priceChange24h = mockChange24h,
-                                priceChangePercentage24h = mockChangePercent
-                            )
+            TOKENIZED_STOCKS.forEach { (_, stock) ->
+                val priceInfo = allPriceData[stock.address]
+                if (priceInfo != null) {
+                    // V3 API provides real 24h change data!
+                    val priceChange24h = priceInfo.priceChange24h ?: 0.0
+                    val priceChangePercent = if (priceInfo.usdPrice > 0) {
+                        (priceChange24h / priceInfo.usdPrice) * 100.0
+                    } else 0.0
+                    
+                    results.add(
+                        InvestmentTokenInfo(
+                            symbol = stock.symbol,
+                            name = stock.name,
+                            address = stock.address,
+                            price = priceInfo.usdPrice,
+                            priceChange24h = priceChange24h,
+                            priceChangePercentage24h = priceChangePercent
                         )
-                    } else {
-                        Log.w(TAG, "⚠️ No price data found for ${stock.symbol} (${address})")
-                    }
+                    )
                 } else {
-                    Log.w(TAG, "⚠️ No address found for ${stock.symbol}")
+                    Log.w(TAG, "⚠️ No price data found for ${stock.symbol} (${stock.address})")
                 }
             }
             
@@ -201,45 +175,9 @@ class InvestmentDataUseCase @Inject constructor() {
         }
     }
     
-    private suspend fun searchTokenAddress(symbol: String): String = withContext(Dispatchers.IO) {
-        try {
-            Log.d(TAG, "🔍 Searching for $symbol address...")
-            
-            val url = URL("$JUPITER_TOKEN_API_BASE?query=$symbol")
-            val connection = url.openConnection() as HttpURLConnection
-            
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Accept", "application/json")
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                val response = connection.inputStream.use { 
-                    BufferedReader(InputStreamReader(it)).readText() 
-                }
-                
-                val searchResponse = Json { ignoreUnknownKeys = true }.decodeFromString<TokenSearchResponse>(response)
-                
-                // Look for verified META token
-                val metaToken = searchResponse.results?.find { result ->
-                    result.symbol?.equals("META", ignoreCase = true) == true &&
-                    result.verified == true
-                }
-                
-                metaToken?.mint ?: ""
-            } else {
-                Log.e(TAG, "❌ Search API returned code: $responseCode")
-                ""
-            }
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error searching for $symbol: ${e.message}", e)
-            ""
-        }
-    }
+    // Search function removed - all addresses are now hardcoded
     
-    private suspend fun fetchPriceData(addresses: List<String>): Map<String, PriceDataV6> = withContext(Dispatchers.IO) {
+    private suspend fun fetchPriceData(addresses: List<String>): Map<String, PriceDataV3> = withContext(Dispatchers.IO) {
         try {
             if (addresses.isEmpty()) return@withContext emptyMap()
             
@@ -262,8 +200,8 @@ class InvestmentDataUseCase @Inject constructor() {
                 
                 Log.d(TAG, "📊 Price API response: ${response.take(200)}...")
                 
-                val priceResponse = Json { ignoreUnknownKeys = true }.decodeFromString<PriceResponseV6>(response)
-                priceResponse.data ?: emptyMap()
+                // V3 API returns the data directly as a Map<String, PriceDataV3>
+                Json { ignoreUnknownKeys = true }.decodeFromString<Map<String, PriceDataV3>>(response)
             } else {
                 Log.e(TAG, "❌ Price API returned code: $responseCode")
                 emptyMap()

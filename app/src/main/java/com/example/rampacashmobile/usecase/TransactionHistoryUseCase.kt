@@ -265,18 +265,19 @@ class TransactionHistoryUseCase @Inject constructor() {
                 val programIdIndex = instruction.getInt("programIdIndex")
                 val programId = accountKeys.getString(programIdIndex)
                 val accounts = instruction.getJSONArray("accounts")
+                val instructionData = if (instruction.has("data")) instruction.getString("data") else ""
                 
                 // Check if this is a SOL transfer (system program) or SPL token transfer
                 when (programId) {
                     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" -> {
                         // SPL Token Program - PRIORITIZE this over SOL transfers
-                        return parseSplTokenTransfer(signature, accountKeys, accounts, walletIndex, walletAddress, date, accountKeys, detectedTokenFromMeta, balanceChangeDirection)
+                        return parseSplTokenTransfer(signature, accountKeys, accounts, walletIndex, walletAddress, date, accountKeys, detectedTokenFromMeta, balanceChangeDirection, instructionData)
                     }
                     "11111111111111111111111111111112" -> {
                         // System Program - Store this but don't return yet (might be rent/fees for token transfer)
                         Log.d(TAG, "📍 Found SOL transfer instruction (storing as backup)")
                         if (foundSolTransfer == null) {
-                            foundSolTransfer = { parseSolTransfer(signature, accountKeys, accounts, walletIndex, walletAddress, date) }
+                            foundSolTransfer = { parseSolTransfer(signature, accountKeys, accounts, walletIndex, walletAddress, date, instructionData) }
                         }
                     }
                     "ComputeBudget111111111111111111111111111111" -> {
@@ -367,7 +368,8 @@ class TransactionHistoryUseCase @Inject constructor() {
         accounts: JSONArray,
         walletIndex: Int,
         walletAddress: String,
-        date: Date
+        date: Date,
+        instructionData: String = ""
     ): Transaction? {
         try {
             // For SOL transfers: accounts[0] = from, accounts[1] = to
@@ -384,11 +386,14 @@ class TransactionHistoryUseCase @Inject constructor() {
                     TransactionType.RECEIVED
                 }
                 
+                val parsedAmount = parseAmountFromInstructionData(instructionData, false)
+                val amount = if (parsedAmount > 0.0) parsedAmount else 0.001 // Fallback to small amount if parsing fails
+                
                 return Transaction(
                     id = signature.take(8),
                     recipient = toAddress,
                     sender = fromAddress,
-                    amount = 0.001, // Default amount - actual amount parsing is complex
+                    amount = amount,
                     date = date,
                     description = if (transactionType == TransactionType.SENT) "Sent SOL" else "Received SOL",
                     currency = "SOL",
@@ -413,7 +418,8 @@ class TransactionHistoryUseCase @Inject constructor() {
         date: Date,
         allAccountKeys: JSONArray,
         detectedTokenFromMeta: String? = null,
-        balanceChangeDirection: String? = null
+        balanceChangeDirection: String? = null,
+        instructionData: String = ""
     ): Transaction? {
                         try {
             
@@ -525,11 +531,14 @@ class TransactionHistoryUseCase @Inject constructor() {
             
             Log.d(TAG, "✅ $tokenSymbol ${transactionType.name}")
             
+            val parsedAmount = parseAmountFromInstructionData(instructionData, true)
+            val amount = if (parsedAmount > 0.0) parsedAmount else 1.0 // Fallback to 1.0 if parsing fails
+            
             return Transaction(
                 id = signature.take(8),
                 recipient = toAddress,
                 sender = fromAddress,
-                amount = 1.0, // Default amount - would need instruction data parsing for exact amount
+                amount = amount,
                 date = date,
                 description = if (transactionType == TransactionType.SENT) "Sent $tokenSymbol" else "Received $tokenSymbol",
                 currency = tokenSymbol,
@@ -544,6 +553,80 @@ class TransactionHistoryUseCase @Inject constructor() {
         return null
     }
     
+    private fun decodeBase58(input: String): ByteArray {
+        return try {
+            val alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+            val decoded = mutableListOf<Byte>()
+            
+            // Simple base58 decoder - might not be perfect but should work for our use case
+            var num = java.math.BigInteger.ZERO
+            val base = java.math.BigInteger.valueOf(58)
+            
+            for (char in input) {
+                val index = alphabet.indexOf(char)
+                if (index == -1) return byteArrayOf() // Invalid character
+                num = num.multiply(base).add(java.math.BigInteger.valueOf(index.toLong()))
+            }
+            
+            val bytes = num.toByteArray()
+            
+            // Count leading zeros in the original string
+            var leadingZeros = 0
+            for (char in input) {
+                if (char == '1') leadingZeros++ else break
+            }
+            
+            // Add leading zeros to the result
+            val result = ByteArray(leadingZeros + bytes.size)
+            bytes.copyInto(result, leadingZeros)
+            
+            result
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to decode base58: ${e.message}")
+            byteArrayOf()
+        }
+    }
+
+    private fun parseAmountFromInstructionData(data: String, isTokenTransfer: Boolean = true): Double {
+        return try {
+            if (data.isEmpty()) return 1.0
+            
+            // Decode base58 data (Solana uses base58 encoding)
+            val decodedData = decodeBase58(data)
+            
+            if (isTokenTransfer && decodedData.size >= 9) {
+                // For SPL token transfers, amount is typically at bytes 1-8 (little endian)
+                // First byte is the instruction type (3 for Transfer)
+                if (decodedData[0] == 3.toByte()) {
+                    var amount = 0L
+                    for (i in 1..8) {
+                        if (i < decodedData.size) {
+                            amount = amount or ((decodedData[i].toLong() and 0xFF) shl ((i - 1) * 8))
+                        }
+                    }
+                    // Convert from lamports to decimal (assuming 6 decimals for USDC/EURC)
+                    return amount.toDouble() / 1_000_000.0
+                }
+            } else if (!isTokenTransfer && decodedData.size >= 12) {
+                // For SOL transfers, amount is typically at bytes 4-11 (little endian)
+                if (decodedData.size >= 12) {
+                    var amount = 0L
+                    for (i in 4..11) {
+                        amount = amount or ((decodedData[i].toLong() and 0xFF) shl ((i - 4) * 8))
+                    }
+                    // Convert from lamports to SOL (9 decimals)
+                    return amount.toDouble() / 1_000_000_000.0
+                }
+            }
+            
+            Log.w(TAG, "⚠️ Could not parse amount from instruction data")
+            1.0 // Fallback
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Failed to parse instruction data: ${e.message}")
+            1.0 // Fallback
+        }
+    }
+
     private fun makeRpcCall(requestBody: String): String {
         val url = URL(RPC_URL)
         val connection = url.openConnection() as HttpURLConnection

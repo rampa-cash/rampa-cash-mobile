@@ -122,21 +122,29 @@ fun InvestmentScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                        // Header
-                        Column {
+                        // Header with refresh button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
                                 text = "Tokenized Stocks",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Real-time prices of tokenized stocks on Solana",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            IconButton(
+                                onClick = { viewModel.refreshData() }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Prices",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                     
                     items(viewState.tokens) { token ->
@@ -159,19 +167,6 @@ fun InvestmentScreen(
                     
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        // Refresh button
-                        OutlinedButton(
-                            onClick = { viewModel.refreshData() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Refresh Prices")
-                        }
                     }
                 }
             }
