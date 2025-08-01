@@ -19,7 +19,7 @@ sealed class NavigationDestination(
     object Home : NavigationDestination("dashboard", "Home", Icons.Default.Home)
     object Transfers : NavigationDestination("transfers", "Transfers", Icons.AutoMirrored.Filled.List)
     object Send : NavigationDestination("send", "Send", Icons.AutoMirrored.Filled.Send)
-    object Investment : NavigationDestination("investment", "Investment", customIconRes = R.drawable.chart_icon)
+    object Investment : NavigationDestination("investment", "Invest", customIconRes = R.drawable.chart_icon)
     object Learn : NavigationDestination("learn", "Learn", customIconRes = R.drawable.bonk1_logo)
     object Card : NavigationDestination("card", "Card", Icons.Default.AccountBox)
     object Recharge : NavigationDestination("recharge", "Recharge", Icons.Default.Add)

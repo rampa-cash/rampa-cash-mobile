@@ -29,9 +29,9 @@ import kotlinx.coroutines.delay
 
 // Recharge method enum
 enum class RechargeMethod(val displayName: String, val description: String, val icon: String) {
-    BANK("Bank Transfer", "Transfer funds from your bank account (2-3 business days)", "bank"),
+    BANK("Bank Transfer", "Transfer funds from your bank account (instant)", "bank"),
     CARD("Credit/Debit Card", "Pay with your credit or debit card (instant)", "card"),
-    CRYPTO("Cryptocurrency", "Deposit using cryptocurrencies (fast confirmation)", "crypto")
+    CRYPTO("Stablecoins", "Deposit using stablecoins (instant)", "crypto")
 }
 
 // Recharge method option data class

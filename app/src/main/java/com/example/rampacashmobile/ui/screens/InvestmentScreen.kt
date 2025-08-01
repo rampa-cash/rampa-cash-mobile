@@ -18,7 +18,7 @@ fun InvestmentScreen(navController: NavController) {
     ) {
         // Top Navigation with Profile Button
         TopNavBar(
-            title = "Investment",
+            title = "Invest",
             navController = navController,
             showBackButton = false,
             showProfileButton = true,

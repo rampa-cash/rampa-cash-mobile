@@ -70,14 +70,14 @@ private fun AboutSection() {
             )
             
             Text(
-                text = "rampa is a decentralized remittance application built on the Solana blockchain that enables fast, secure and low-cost money transfers across borders.",
+                text = "rampa is an On-chain remittance platform bringing Web3 and decentralized apps to real people, making it so simple that they don't realize they're using them.",
                 color = Color(0xFFD1D5DB),
                 fontSize = 22.sp,
                 lineHeight = 22.sp
             )
             
             Text(
-                text = "Our mission is to make international money transfers accessible to everyone, eliminating the high fees and delays associated with traditional remittance services.",
+                text = "Our mission is to turn stablecoin transfers into shared prosperity, empowering families to thrive trough financial education and a tokenized investment portfolio, so the money they send home today grows into collective wealth.",
                 color = Color(0xFFD1D5DB),
                 fontSize = 22.sp,
                 lineHeight = 22.sp

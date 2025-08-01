@@ -32,7 +32,7 @@ data class CardDetails(
     val cardNumber: String = "4000 1234 5678 9010",
     val expiryDate: String = "05/28",
     val cvv: String = "123",
-    val cardholderName: String = "RAMPACASH USER",
+    val cardholderName: String = "Maria Martinez",
     val balance: Double = 345.67,
     val isActive: Boolean = true
 )
@@ -663,9 +663,9 @@ private fun RecentTransactionsSection() {
         
         // Sample transactions
         val transactions = listOf(
-            Triple("Amazon", "May 1, 2025", "-$29.99"),
-            Triple("Netflix", "April 28, 2025", "-$14.99"),
-            Triple("Card Load", "April 25, 2025", "+$200.00")
+            Triple("Supermercado", "May 1, 2025", "-$29.99"),
+            Triple("Farmacia", "April 28, 2025", "-$14.99"),
+            Triple("Devolucion", "April 25, 2025", "+$200.00")
         )
         
         Column(
