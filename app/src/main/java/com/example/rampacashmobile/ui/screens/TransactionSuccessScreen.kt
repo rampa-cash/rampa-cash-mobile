@@ -37,9 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
+
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,7 +71,7 @@ fun TransactionSuccessScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val clipboardManager = LocalClipboard.current
+    val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     var showCopiedMessage by remember { mutableStateOf(false) }
     
@@ -301,7 +304,9 @@ fun TransactionSuccessScreen(
                             .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
                             .clickable {
-                                clipboardManager.setText(AnnotatedString(transactionDetails.signature))
+                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clipData = ClipData.newPlainText("Transaction Signature", transactionDetails.signature)
+                                clipboardManager.setPrimaryClip(clipData)
                                 showCopiedMessage = true
                             }
                             .padding(12.dp),
