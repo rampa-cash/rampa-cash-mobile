@@ -56,15 +56,6 @@ fun SendScreen(
     // Define tokens (same as MainScreen)
     val tokens = listOf(
         Token(
-            symbol = "USDC",
-            name = "USD Coin",
-            balance = viewState.usdcBalance,
-            icon = "usdc",
-            primaryColor = Color(0xFF2DBCD6),
-            secondaryColor = Color(0xFF2775CA),
-            mintAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-        ),
-        Token(
             symbol = "EURC",
             name = "Euro Coin",
             balance = viewState.eurcBalance,
@@ -72,6 +63,15 @@ fun SendScreen(
             primaryColor = Color(0xFF006BCF),
             secondaryColor = Color(0xFF66A0D5),
             mintAddress = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
+        ),
+        Token(
+            symbol = "USDC",
+            name = "USD Coin",
+            balance = viewState.usdcBalance,
+            icon = "usdc",
+            primaryColor = Color(0xFF2DBCD6),
+            secondaryColor = Color(0xFF2775CA),
+            mintAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
         ),
         Token(
             symbol = "SOL",

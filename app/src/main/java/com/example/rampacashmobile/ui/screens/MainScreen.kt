@@ -80,15 +80,6 @@ fun MainScreen(
     // Define tokens similar to React Dashboard
     val tokens = listOf(
         Token(
-            symbol = "USDC",
-            name = "USD Coin",
-            balance = viewState.usdcBalance,
-            icon = "usdc", // We'll handle this differently in Compose
-            primaryColor = Color(0xFF2DBCD6),
-            secondaryColor = Color(0xFF2775CA),
-            mintAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-        ),
-        Token(
             symbol = "EURC",
             name = "Euro Coin",
             balance = viewState.eurcBalance,
@@ -96,6 +87,15 @@ fun MainScreen(
             primaryColor = Color(0xFF006BCF),
             secondaryColor = Color(0xFF66A0D5),
             mintAddress = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
+        ),
+        Token(
+            symbol = "USDC",
+            name = "USD Coin",
+            balance = viewState.usdcBalance,
+            icon = "usdc", // We'll handle this differently in Compose
+            primaryColor = Color(0xFF2DBCD6),
+            secondaryColor = Color(0xFF2775CA),
+            mintAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
         ),
         Token(
             symbol = "SOL",
