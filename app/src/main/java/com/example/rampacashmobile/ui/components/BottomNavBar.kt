@@ -63,24 +63,31 @@ fun BottomNavBar(navController: NavController) {
                         icon = {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Bottom,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(vertical = 6.dp)
                             ) {
                                 if (destination.customIconRes != null) {
+                                    // Larger size for custom icons, especially the Rampa logo
+                                    val iconSize = if (destination.route == "dashboard") 30.dp else 26.dp
+                                    val topPadding = if (destination.route == "dashboard") 2.dp else 4.dp
                                     Icon(
                                         painter = painterResource(id = destination.customIconRes),
                                         contentDescription = destination.title,
                                         tint = Color.Unspecified,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier
+                                            .size(iconSize)
+                                            .padding(top = topPadding)
                                     )
                                 } else {
                                     Icon(
                                         imageVector = destination.icon!!,
                                         contentDescription = destination.title,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .padding(top = 4.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(1.dp))
                                 Text(
                                     text = destination.title,
                                     fontSize = 14.sp,
