@@ -61,39 +61,38 @@ fun BottomNavBar(navController: NavController) {
                             }
                         },
                         icon = {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 6.dp)
+                            // Fixed height container to ensure consistent text alignment
+                            Box(
+                                modifier = Modifier
+                                    .height(32.dp)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
                             ) {
                                 if (destination.customIconRes != null) {
                                     // Larger size for custom icons, especially the Rampa logo
-                                    val iconSize = if (destination.route == "dashboard") 30.dp else 26.dp
-                                    val topPadding = if (destination.route == "dashboard") 2.dp else 4.dp
+                                    val iconSize = if (destination.route == "dashboard") 32.dp else 28.dp
                                     Icon(
                                         painter = painterResource(id = destination.customIconRes),
                                         contentDescription = destination.title,
                                         tint = Color.Unspecified,
-                                        modifier = Modifier
-                                            .size(iconSize)
-                                            .padding(top = topPadding)
+                                        modifier = Modifier.size(iconSize)
                                     )
                                 } else {
                                     Icon(
                                         imageVector = destination.icon!!,
                                         contentDescription = destination.title,
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .padding(top = 4.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(1.dp))
-                                Text(
-                                    text = destination.title,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
                             }
+                        },
+                        label = {
+                            Text(
+                                text = destination.title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
+                            )
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Color(0xFF10B981), // Active green color
