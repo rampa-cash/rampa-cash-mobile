@@ -113,7 +113,7 @@ fun WalletConnectionCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "CRYPTO",
+                    text = "Balance",
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.95f),
                     letterSpacing = 1.sp,
