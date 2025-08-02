@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -93,19 +95,40 @@ fun TransfersScreen(
                     NoWalletContent()
                 }
                 viewState.transactionHistory.isEmpty() -> {
-                    EmptyContent()
+                    EmptyContent(viewModel = viewModel)
                 }
                 else -> {
-                    // Show transactions with simple header
+                    // Show transactions with header and refresh button
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Simple header
-                        Text(
-                            text = "Transaction History",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        // Header with refresh button
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Transaction History",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            
+                            IconButton(
+                                onClick = { 
+                                    viewModel.getTransactionHistory()
+                                },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Transactions",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                         
                         TransactionsList(
                             transactions = viewState.transactionHistory,
@@ -188,7 +211,7 @@ private fun NoWalletContent() {
 }
 
 @Composable
-private fun EmptyContent() {
+private fun EmptyContent(viewModel: MainViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -225,8 +248,29 @@ private fun EmptyContent() {
                     text = "Your transaction history will appear here once you make your first transfer",
                     color = Color(0xFF9CA3AF),
                     fontSize = 14.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
+                
+                Button(
+                    onClick = { 
+                        viewModel.getTransactionHistory()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF9945FF)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Refresh",
+                        color = Color.White
+                    )
+                }
             }
         }
     }
