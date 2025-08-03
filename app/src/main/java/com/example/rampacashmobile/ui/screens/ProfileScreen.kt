@@ -42,8 +42,8 @@ fun ProfileScreen(
     // Mock user data - replace with actual user data from auth context/state
     val userInfo = remember {
         UserInfo(
-            name = "James Rodriguez",
-            email = "jrod@rampa.cash",
+            name = "Maria Martinez",
+            email = "maria@rampa.cash",
             phone = "+49 (123) 456-6789"
         )
     }
