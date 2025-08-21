@@ -1,15 +1,18 @@
+// File: app/src/main/java/com/example/rampacashmobile/ui/screens/LoginScreen.kt
 package com.example.rampacashmobile.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -17,6 +20,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.ui.graphics.painter.Painter
+// Ensure painterResource is imported: import androidx.compose.ui.res.painterResource
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
@@ -37,7 +42,7 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         viewModel.loadConnection()
     }
-    
+
     // Navigate to dashboard when authenticated
     LaunchedEffect(viewState.canTransact, viewState.isWeb3AuthLoggedIn) {
         if (viewState.canTransact || viewState.isWeb3AuthLoggedIn) {
@@ -50,7 +55,7 @@ fun LoginScreen(
     // Handle snackbar messages
     LaunchedEffect(viewState.snackbarMessage) {
         viewState.snackbarMessage?.let { message ->
-            // You can add Toast or Snackbar here if needed
+            // Consider showing a Snackbar here if you have a SnackbarHostState
             viewModel.clearSnackBar()
         }
     }
@@ -58,7 +63,15 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF111827))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0F172A), // Dark slate
+                        Color(0xFF1E293B), // Lighter slate
+                        Color(0xFF111827)  // Original dark
+                    )
+                )
+            )
     ) {
         // Show loading during session restoration
         if (viewState.isLoading) {
@@ -67,86 +80,68 @@ fun LoginScreen(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    color = Color(0xFF9945FF)
+                    color = Color(0xFF9945FF),
+                    strokeWidth = 3.dp,
+                    modifier = Modifier.size(40.dp)
                 )
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween // Keeps top and bottom content pushed out
             ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Logo
-            Image(
-                painter = painterResource(id = R.mipmap.rampa_bonk),
-                contentDescription = "Rampa BONK Logo",
-                modifier = Modifier
-                    .size(250.dp)
-                    .padding(bottom = 10.dp)
-            )
-
-            // Welcome Text
-            Text(
-                text = "Welcome to Rampa",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            
-            // Subtitle
-            Text(
-                text = "ft. BONK!",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFFFF6B35), // Orange color for BONK branding
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // Web3Auth Social Login Section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1F2937)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
+                // Top Section: Logo and Welcome
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = 60.dp) // Maintain top padding
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .padding(bottom = 24.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.mipmap.rampa_bonk),
+                            contentDescription = "Rampa BONK Logo",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Text(
+                        text = "Welcome to Rampa",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Text(
+                        text = "ft. BONK!",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFFF6B35), // BONK orange
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp) // Removed bottom padding from here
+                    )
+                }
+
+                // Middle Section: Login Options with Adjusted Spacing
+                Column(
+                    modifier = Modifier.fillMaxWidth(), // This column will group login options
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "🌐 Social Login",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Login with your favorite social account",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF9CA3AF),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 12.dp)
-                    )
+                    // VVVVVV ADJUSTED SPACER (was implicitly part of the parent Column's SpaceBetween) VVVVVV
+                    Spacer(modifier = Modifier.height(32.dp)) // Space after welcome text, before social buttons
 
-                    // Social Login Buttons
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        SocialLoginButton(
+                        ModernSocialButton(
                             text = "Continue with Google",
-                            icon = "🔍",
-                            backgroundColor = Color(0xFFDB4437),
+                            iconPainter = painterResource(id = R.drawable.ic_logo_google),
                             isLoading = viewState.loadingProvider == Provider.GOOGLE,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -156,11 +151,9 @@ fun LoginScreen(
                                 }
                             }
                         )
-
-                        SocialLoginButton(
+                        ModernSocialButton(
                             text = "Continue with Facebook",
-                            icon = "📘",
-                            backgroundColor = Color(0xFF4267B2),
+                            iconPainter = painterResource(id = R.drawable.ic_logo_facebook),
                             isLoading = viewState.loadingProvider == Provider.FACEBOOK,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -170,11 +163,9 @@ fun LoginScreen(
                                 }
                             }
                         )
-
-                        SocialLoginButton(
-                            text = "Continue with Twitter",
-                            icon = "🐦",
-                            backgroundColor = Color(0xFF1DA1F2),
+                        ModernSocialButton(
+                            text = "Continue with X",
+                            iconPainter = painterResource(id = R.drawable.ic_logo_x),
                             isLoading = viewState.loadingProvider == Provider.TWITTER,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -185,155 +176,191 @@ fun LoginScreen(
                             }
                         )
                     }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                    // VVVVVV ADJUSTED SPACER VVVVVV
+                    Spacer(modifier = Modifier.height(20.dp))
 
-            // OR Divider
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = Color(0xFF374151)
-                )
-                Text(
-                    text = "OR",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = Color(0xFF9CA3AF),
-                    fontWeight = FontWeight.Medium
-                )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = Color(0xFF374151)
-                )
-            }
+                    // Modern OR Divider
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        // .padding(vertical = 20.dp), // Removed specific vertical padding here
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(1.dp)
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color(0xFF334155),
+                                            Color(0xFF475569)
+                                        )
+                                    )
+                                )
+                        )
+                        Text(
+                            text = "OR",
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = Color(0xFF64748B),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 2.sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(1.dp)
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFF475569),
+                                            Color(0xFF334155),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                    // VVVVVV ADJUSTED SPACER VVVVVV
+                    Spacer(modifier = Modifier.height(20.dp))
 
-            // Mobile Wallet Connection Section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1F2937)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "📱 Mobile Wallet",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Connect your Solana mobile wallet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF9CA3AF),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 12.dp)
-                    )
-
-                    Button(
+                    // Modern Wallet Connect Button
+                    ModernWalletButton(
+                        enabled = intentSender != null,
                         onClick = {
                             if (intentSender != null) {
                                 viewModel.connect(intentSender)
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF9945FF) // Solana purple
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = intentSender != null
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text("⚡", fontSize = 18.sp)
-                            Text(
-                                "Connect Wallet",
-                                color = Color.White,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp
-                            )
                         }
-                    }
+                    )
 
                     if (!viewState.walletFound) {
                         Text(
-                            text = "⚠️ No compatible wallet found. Please install Phantom or Solflare.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFEF4444),
+                            text = "⚠️ Install Phantom or Solflare to continue",
+                            fontSize = 13.sp,
+                            color = Color(0xFFEF4444), // Warning red
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 12.dp)
+                            // VVVVVV ADJUSTED PADDING/SPACER VVVVVV
+                            modifier = Modifier.padding(top = 12.dp) // More space if warning is shown
                         )
                     }
+                } // End of Middle Login Options Column
+
+                // Bottom Section: Modern Footer
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 32.dp) // Maintain bottom padding
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🔒", fontSize = 12.sp)
+                        Text("Secure", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("•", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("⚡", fontSize = 12.sp)
+                        Text("Fast", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("•", fontSize = 12.sp, color = Color(0xFF64748B))
+                        Text("🌐", fontSize = 12.sp)
+                        Text("Decentralized", fontSize = 12.sp, color = Color(0xFF64748B))
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Footer Info
-            Text(
-                text = "Secure • Decentralized • Fast",
-                color = Color(0xFF9CA3AF),
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
             }
         }
     }
 }
 
 @Composable
-private fun SocialLoginButton(
+private fun ModernSocialButton(
     text: String,
-    icon: String,
-    backgroundColor: Color,
+    iconPainter: Painter,
     isLoading: Boolean,
     isAnyLoading: Boolean = false,
     onClick: () -> Unit
 ) {
     val isDisabled = isLoading || isAnyLoading
-    
-    Button(
+
+    OutlinedButton(
         onClick = { if (!isDisabled) onClick() },
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor
+            .height(56.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = Color.White,
+            disabledContainerColor = Color.Transparent,
+            disabledContentColor = Color(0xFF64748B)
         ),
-        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isDisabled) Color(0xFF374151) else Color(0xFF475569)
+        ),
+        shape = RoundedCornerShape(16.dp),
         enabled = !isDisabled
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = Color(0xFF9945FF)
+            )
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Image(
+                    painter = iconPainter,
+                    contentDescription = "$text logo",
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = text,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernWalletButton(
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF9945FF),
+            disabledContainerColor = Color(0xFF9945FF).copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        enabled = enabled,
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
+        )
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = Color.White
-                )
-                Text("Connecting...", color = Color.White, fontWeight = FontWeight.Medium)
-            } else {
-                Text(icon, fontSize = 18.sp)
-                Text(text, color = Color.White, fontWeight = FontWeight.Medium)
-            }
+            Text("📱", fontSize = 20.sp) // Keeping emoji for wallet connect as it's common
+            Text(
+                "Connect Mobile Wallet",
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp
+            )
         }
     }
 }
+
