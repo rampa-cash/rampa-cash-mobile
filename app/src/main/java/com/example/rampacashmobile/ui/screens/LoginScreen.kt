@@ -1,6 +1,7 @@
 // File: app/src/main/java/com/example/rampacashmobile/ui/screens/LoginScreen.kt
 package com.example.rampacashmobile.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +20,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.ui.graphics.painter.Painter
+// Ensure painterResource is imported: import androidx.compose.ui.res.painterResource
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
@@ -52,6 +55,7 @@ fun LoginScreen(
     // Handle snackbar messages
     LaunchedEffect(viewState.snackbarMessage) {
         viewState.snackbarMessage?.let { message ->
+            // Consider showing a Snackbar here if you have a SnackbarHostState
             viewModel.clearSnackBar()
         }
     }
@@ -87,17 +91,16 @@ fun LoginScreen(
                     .fillMaxSize()
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.SpaceBetween // Keeps top and bottom content pushed out
             ) {
                 // Top Section: Logo and Welcome
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(top = 60.dp)
+                    modifier = Modifier.padding(top = 60.dp) // Maintain top padding
                 ) {
-                    // Logo with subtle glow effect
                     Box(
                         modifier = Modifier
-                            .size(160.dp)
+                            .size(200.dp)
                             .padding(bottom = 24.dp)
                     ) {
                         Image(
@@ -106,8 +109,6 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-
-                    // Modern welcome text with improved typography
                     Text(
                         text = "Welcome to Rampa",
                         fontSize = 32.sp,
@@ -116,41 +117,31 @@ fun LoginScreen(
                         textAlign = TextAlign.Center,
                         letterSpacing = (-0.5).sp
                     )
-
                     Text(
                         text = "ft. BONK!",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFF6B35),
+                        color = Color(0xFFFF6B35), // BONK orange
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
+                        modifier = Modifier.padding(top = 4.dp) // Removed bottom padding from here
                     )
                 }
 
-                // Middle Section: Modern Login Options
+                // Middle Section: Login Options with Adjusted Spacing
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxWidth(), // This column will group login options
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Title for login section
-                    Text(
-                        text = "Choose your login method",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF94A3B8),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                    // VVVVVV ADJUSTED SPACER (was implicitly part of the parent Column's SpaceBetween) VVVVVV
+                    Spacer(modifier = Modifier.height(32.dp)) // Space after welcome text, before social buttons
 
-                    // Modern Social Login Buttons - Minimal Design
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         ModernSocialButton(
                             text = "Continue with Google",
-                            icon = "🔍",
+                            iconPainter = painterResource(id = R.drawable.ic_logo_google),
                             isLoading = viewState.loadingProvider == Provider.GOOGLE,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -160,10 +151,9 @@ fun LoginScreen(
                                 }
                             }
                         )
-
                         ModernSocialButton(
                             text = "Continue with Facebook",
-                            icon = "📘",
+                            iconPainter = painterResource(id = R.drawable.ic_logo_facebook),
                             isLoading = viewState.loadingProvider == Provider.FACEBOOK,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -173,10 +163,9 @@ fun LoginScreen(
                                 }
                             }
                         )
-
                         ModernSocialButton(
-                            text = "Continue with Twitter",
-                            icon = "🐦",
+                            text = "Continue with X",
+                            iconPainter = painterResource(id = R.drawable.ic_logo_x),
                             isLoading = viewState.loadingProvider == Provider.TWITTER,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -188,11 +177,14 @@ fun LoginScreen(
                         )
                     }
 
+                    // VVVVVV ADJUSTED SPACER VVVVVV
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     // Modern OR Divider
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 20.dp),
+                            .fillMaxWidth(),
+                        // .padding(vertical = 20.dp), // Removed specific vertical padding here
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
@@ -233,6 +225,9 @@ fun LoginScreen(
                         )
                     }
 
+                    // VVVVVV ADJUSTED SPACER VVVVVV
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     // Modern Wallet Connect Button
                     ModernWalletButton(
                         enabled = intentSender != null,
@@ -247,17 +242,18 @@ fun LoginScreen(
                         Text(
                             text = "⚠️ Install Phantom or Solflare to continue",
                             fontSize = 13.sp,
-                            color = Color(0xFFEF4444),
+                            color = Color(0xFFEF4444), // Warning red
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 8.dp)
+                            // VVVVVV ADJUSTED PADDING/SPACER VVVVVV
+                            modifier = Modifier.padding(top = 12.dp) // More space if warning is shown
                         )
                     }
-                }
+                } // End of Middle Login Options Column
 
                 // Bottom Section: Modern Footer
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                    modifier = Modifier.padding(bottom = 32.dp) // Maintain bottom padding
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -281,7 +277,7 @@ fun LoginScreen(
 @Composable
 private fun ModernSocialButton(
     text: String,
-    icon: String,
+    iconPainter: Painter,
     isLoading: Boolean,
     isAnyLoading: Boolean = false,
     onClick: () -> Unit
@@ -299,7 +295,7 @@ private fun ModernSocialButton(
             disabledContainerColor = Color.Transparent,
             disabledContentColor = Color(0xFF64748B)
         ),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             width = 1.dp,
             color = if (isDisabled) Color(0xFF374151) else Color(0xFF475569)
         ),
@@ -317,7 +313,11 @@ private fun ModernSocialButton(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(icon, fontSize = 20.sp)
+                Image(
+                    painter = iconPainter,
+                    contentDescription = "$text logo",
+                    modifier = Modifier.size(24.dp)
+                )
                 Text(
                     text = text,
                     fontWeight = FontWeight.SemiBold,
@@ -353,7 +353,7 @@ private fun ModernWalletButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("📱", fontSize = 20.sp)
+            Text("📱", fontSize = 20.sp) // Keeping emoji for wallet connect as it's common
             Text(
                 "Connect Mobile Wallet",
                 color = Color.White,
@@ -363,3 +363,4 @@ private fun ModernWalletButton(
         }
     }
 }
+
