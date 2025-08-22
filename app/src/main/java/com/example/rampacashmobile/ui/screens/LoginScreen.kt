@@ -100,7 +100,7 @@ fun LoginScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(200.dp)
+                            .size(200.dp) // Increased logo size
                             .padding(bottom = 24.dp)
                     ) {
                         Image(
@@ -123,25 +123,25 @@ fun LoginScreen(
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFFFF6B35), // BONK orange
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp) // Removed bottom padding from here
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
 
                 // Middle Section: Login Options with Adjusted Spacing
                 Column(
-                    modifier = Modifier.fillMaxWidth(), // This column will group login options
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // VVVVVV ADJUSTED SPACER (was implicitly part of the parent Column's SpaceBetween) VVVVVV
-                    Spacer(modifier = Modifier.height(32.dp)) // Space after welcome text, before social buttons
+                    Spacer(modifier = Modifier.height(32.dp))
 
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         ModernSocialButton(
-                            text = "Continue with Google",
+                            buttonText = "Continue with",
                             iconPainter = painterResource(id = R.drawable.ic_logo_google),
+                            iconContentDescription = "Google logo",
                             isLoading = viewState.loadingProvider == Provider.GOOGLE,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -152,8 +152,9 @@ fun LoginScreen(
                             }
                         )
                         ModernSocialButton(
-                            text = "Continue with Facebook",
+                            buttonText = "Continue with",
                             iconPainter = painterResource(id = R.drawable.ic_logo_facebook),
+                            iconContentDescription = "Facebook logo",
                             isLoading = viewState.loadingProvider == Provider.FACEBOOK,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -164,8 +165,9 @@ fun LoginScreen(
                             }
                         )
                         ModernSocialButton(
-                            text = "Continue with X",
+                            buttonText = "Continue with",
                             iconPainter = painterResource(id = R.drawable.ic_logo_x),
+                            iconContentDescription = "X logo",
                             isLoading = viewState.loadingProvider == Provider.TWITTER,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
@@ -177,14 +179,10 @@ fun LoginScreen(
                         )
                     }
 
-                    // VVVVVV ADJUSTED SPACER VVVVVV
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Modern OR Divider
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        // .padding(vertical = 20.dp), // Removed specific vertical padding here
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
@@ -193,11 +191,7 @@ fun LoginScreen(
                                 .height(1.dp)
                                 .background(
                                     brush = Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            Color(0xFF334155),
-                                            Color(0xFF475569)
-                                        )
+                                        colors = listOf(Color.Transparent, Color(0xFF334155), Color(0xFF475569))
                                     )
                                 )
                         )
@@ -215,20 +209,14 @@ fun LoginScreen(
                                 .height(1.dp)
                                 .background(
                                     brush = Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color(0xFF475569),
-                                            Color(0xFF334155),
-                                            Color.Transparent
-                                        )
+                                        colors = listOf(Color(0xFF475569), Color(0xFF334155), Color.Transparent)
                                     )
                                 )
                         )
                     }
 
-                    // VVVVVV ADJUSTED SPACER VVVVVV
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Modern Wallet Connect Button
                     ModernWalletButton(
                         enabled = intentSender != null,
                         onClick = {
@@ -242,10 +230,9 @@ fun LoginScreen(
                         Text(
                             text = "⚠️ Install Phantom or Solflare to continue",
                             fontSize = 13.sp,
-                            color = Color(0xFFEF4444), // Warning red
+                            color = Color(0xFFEF4444),
                             textAlign = TextAlign.Center,
-                            // VVVVVV ADJUSTED PADDING/SPACER VVVVVV
-                            modifier = Modifier.padding(top = 12.dp) // More space if warning is shown
+                            modifier = Modifier.padding(top = 12.dp)
                         )
                     }
                 } // End of Middle Login Options Column
@@ -253,7 +240,7 @@ fun LoginScreen(
                 // Bottom Section: Modern Footer
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 32.dp) // Maintain bottom padding
+                    modifier = Modifier.padding(bottom = 32.dp)
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -276,8 +263,9 @@ fun LoginScreen(
 
 @Composable
 private fun ModernSocialButton(
-    text: String,
+    buttonText: String,
     iconPainter: Painter,
+    iconContentDescription: String,
     isLoading: Boolean,
     isAnyLoading: Boolean = false,
     onClick: () -> Unit
@@ -311,17 +299,18 @@ private fun ModernSocialButton(
         } else {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.Center // Centers "Text Logo" content
             ) {
+                Text(
+                    text = buttonText, // "Continue with"
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(end = 8.dp) // Space between text and logo
+                )
                 Image(
                     painter = iconPainter,
-                    contentDescription = "$text logo",
+                    contentDescription = iconContentDescription, // Specific description like "Google logo"
                     modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = text,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
                 )
             }
         }
@@ -353,7 +342,7 @@ private fun ModernWalletButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("📱", fontSize = 20.sp) // Keeping emoji for wallet connect as it's common
+            Text("📱", fontSize = 20.sp)
             Text(
                 "Connect Mobile Wallet",
                 color = Color.White,
@@ -363,4 +352,3 @@ private fun ModernWalletButton(
         }
     }
 }
-
