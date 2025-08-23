@@ -96,8 +96,8 @@ fun WalletConnectionCard(
                         "SOL" -> selectedToken.balance.let { balance ->
                             String.format("%.${if (balance < 1) 5 else 2}f", balance)
                         }
-                        "USDC" -> String.format("$%.2f", selectedToken.balance)
-                        "EURC" -> String.format("€%.2f", selectedToken.balance)
+                        "USD" -> String.format("$%.2f", selectedToken.balance)
+                        "EUR" -> String.format("€%.2f", selectedToken.balance)
                         else -> String.format("%.2f", selectedToken.balance)
                     },
                     fontSize = 36.sp,

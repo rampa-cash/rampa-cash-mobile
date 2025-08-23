@@ -7,6 +7,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,6 +16,8 @@ import com.example.rampacashmobile.ui.components.BottomNavBar
 import com.example.rampacashmobile.ui.screens.*
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
+import com.example.rampacashmobile.ui.screens.WithdrawScreen
+import com.example.rampacashmobile.viewmodel.WithdrawViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 
 @Composable
@@ -104,6 +107,12 @@ fun NavigationGraph(
                 RechargeScreen(
                     navController = navController,
                     viewModel = sharedViewModel
+                )
+            }
+            composable("withdraw") {
+                WithdrawScreen(
+                    navController = navController,
+                    viewModel = hiltViewModel<WithdrawViewModel>() // << CORRECTED
                 )
             }
             composable("profile") { 

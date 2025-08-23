@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -80,7 +81,7 @@ fun MainScreen(
     // Define tokens similar to React Dashboard
     val tokens = listOf(
         Token(
-            symbol = "EURC",
+            symbol = "EUR",
             name = "Euro Coin",
             balance = viewState.eurcBalance,
             icon = "eurc",
@@ -89,7 +90,7 @@ fun MainScreen(
             mintAddress = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
         ),
         Token(
-            symbol = "USDC",
+            symbol = "USD",
             name = "USD Coin",
             balance = viewState.usdcBalance,
             icon = "usdc", // We'll handle this differently in Compose
@@ -232,73 +233,77 @@ fun MainScreen(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
 
-                            // Action buttons (Recharge and Receive)
+                            // Action buttons (Recharge, Receive, and Withdraw)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    16.dp,
+                                    12.dp, // Adjust spacing if three buttons feel too cramped
                                     Alignment.CenterHorizontally
                                 )
                             ) {
                                 // Recharge Button
                                 Button(
                                     onClick = { navController.navigate("recharge") },
-                                    modifier = Modifier.width(120.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF4B5563)
-                                    ),
+                                    modifier = Modifier.weight(1f), // Use weight for equal distribution
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
                                     shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(vertical = 8.dp)
+                                    contentPadding = PaddingValues(vertical = 12.dp) // Adjusted padding slightly
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) { // For icon above text
                                         Icon(
                                             imageVector = Icons.Default.Add,
                                             contentDescription = "Recharge",
                                             tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
-                                        Text(
-                                            text = "Recharge",
-                                            color = Color.White,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("Recharge", color = Color.White, fontSize = 14.sp)
                                     }
                                 }
 
                                 // Receive Button
                                 Button(
                                     onClick = { navController.navigate("receive") },
-                                    modifier = Modifier.width(120.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF4B5563)
-                                    ),
+                                    modifier = Modifier.weight(1f), // Use weight
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
                                     shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(vertical = 8.dp)
+                                    contentPadding = PaddingValues(vertical = 12.dp)
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(
-                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            imageVector = Icons.Default.KeyboardArrowDown, // Consider a download/receive icon
                                             contentDescription = "Receive",
                                             tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
-                                        Text(
-                                            text = "Receive",
-                                            color = Color.White,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("Receive", color = Color.White, fontSize = 14.sp)
                                     }
                                 }
+
+                                // VVVVVV NEW WITHDRAW BUTTON VVVVVV
+                                Button(
+                                    onClick = { navController.navigate("withdraw") }, // New navigation route
+                                    modifier = Modifier.weight(1f), // Use weight
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(vertical = 12.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp, // Example: Upload/Outgoing icon
+                                            // Alternative: Icons.AutoMirrored.Filled.Logout, Icons.Filled.Send, Icons.Filled.AccountBalance
+                                            contentDescription = "Withdraw",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("Withdraw", color = Color.White, fontSize = 14.sp)
+                                    }
+                                }
+                                // ^^^^^^ NEW WITHDRAW BUTTON ^^^^^^
                             }
 
                             // Recent Transfers Section
