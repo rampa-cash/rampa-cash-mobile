@@ -118,8 +118,8 @@ fun TokenIcon(
     // Use actual drawable resources for token logos
     val drawableRes = when (tokenSymbol) {
         "SOL" -> R.drawable.solana_logo
-        "USDC" -> R.drawable.usdc_logo
-        "EURC" -> R.drawable.eurc_logo
+        "USD" -> R.drawable.usdc_logo
+        "EUR" -> R.drawable.eurc_logo
         else -> R.drawable.logo_new // Fallback to app logo
     }
     
