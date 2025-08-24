@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import com.example.rampacashmobile.viewmodel.WithdrawViewModel
 import com.example.rampacashmobile.ui.components.TopNavBar
-// import com.example.rampacashmobile.viewmodel.WithdrawViewModel // You'll create this
 
 // @HiltViewModel
 // class WithdrawViewModel @Inject constructor() : ViewModel() {
@@ -54,7 +53,7 @@ fun WithdrawScreen(
             TopNavBar(
                 title = "Withdraw to Bank",
                 navController = navController,
-                showBackButton = true
+                showBackButton = false
             )
         }
     ) { paddingValues ->
