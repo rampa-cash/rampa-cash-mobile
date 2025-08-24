@@ -23,7 +23,7 @@ fun TopNavBar(
     navController: NavController,
     showBackButton: Boolean = false,
     showProfileButton: Boolean = true,
-    showChatButton: Boolean = true
+    showChatButton: Boolean = false
 ) {
     TopAppBar(
         title = {
