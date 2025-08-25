@@ -10,19 +10,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.example.rampacashmobile.navigation.NavigationGraph
 import com.example.rampacashmobile.ui.theme.RampaCashMobileTheme
 import com.example.rampacashmobile.viewmodel.MainViewModel
-import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
-import com.web3auth.core.types.Web3AuthResponse
-import com.web3auth.core.types.Provider
 import com.example.rampacashmobile.web3auth.Web3AuthManager
+import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
+import com.web3auth.core.types.Provider
+import com.web3auth.core.types.Web3AuthResponse
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -62,7 +65,9 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         setContent {
             RampaCashMobileTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.navigationBars),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
