@@ -30,7 +30,7 @@ fun BottomNavBar(navController: NavController) {
         NavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(90.dp),
+                .height(75.dp),
             containerColor = Color(0xFF1F2937), // Dark background matching React version
             contentColor = Color(0xFFD1D5DB), // Light content color
             tonalElevation = 8.dp
@@ -110,7 +110,7 @@ fun BottomNavBar(navController: NavController) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-25).dp), // Adjusted for taller navigation bar
+                .offset(y = (-8).dp), // Adjusted for taller navigation bar
             contentAlignment = Alignment.Center
         ) {
             FloatingActionButton(
