@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -73,14 +74,16 @@ private fun AboutSection() {
                 text = "rampa is an On-chain remittance platform bringing Web3 and decentralized apps to real people, making it so simple that they don't realize they're using them.",
                 color = Color(0xFFD1D5DB),
                 fontSize = 22.sp,
-                lineHeight = 22.sp
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Justify
             )
             
             Text(
                 text = "Our mission is to turn stablecoin transfers into shared prosperity, empowering families to thrive trough financial education and a tokenized investment portfolio, so the money they send home today grows into collective wealth.",
                 color = Color(0xFFD1D5DB),
                 fontSize = 22.sp,
-                lineHeight = 22.sp
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Justify
             )
             
             // Version
@@ -148,7 +151,8 @@ private fun LegalInformationSection() {
                     text = "By using rampa, you agree to our terms of service, which can be found on our website.",
                     color = Color(0xFFD1D5DB),
                     fontSize = 22.sp,
-                    lineHeight = 22.sp
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Justify
                 )
             }
             
@@ -164,7 +168,8 @@ private fun LegalInformationSection() {
                     text = "We value your privacy. Please review our privacy policy to understand how we collect, use and protect your personal information.",
                     color = Color(0xFFD1D5DB),
                     fontSize = 22.sp,
-                    lineHeight = 22.sp
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Justify
                 )
             }
             
@@ -180,7 +185,8 @@ private fun LegalInformationSection() {
                     text = "rampa uses open-source libraries and components under various licenses, including MIT, Apache 2.0 and BSD.",
                     color = Color(0xFFD1D5DB),
                     fontSize = 22.sp,
-                    lineHeight = 22.sp
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Justify
                 )
             }
         }
