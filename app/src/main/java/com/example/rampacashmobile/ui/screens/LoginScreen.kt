@@ -100,12 +100,12 @@ fun LoginScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(200.dp) // Increased logo size
+                            .size(300.dp) // Increased logo size
                             .padding(bottom = 24.dp)
                     ) {
                         Image(
-                            painter = painterResource(id = R.mipmap.rampa_bonk),
-                            contentDescription = "Rampa BONK Logo",
+                            painter = painterResource(id = R.mipmap.rampa_trsl_txt_w_bott_foreground),
+                            contentDescription = "Rampa Logo",
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -116,14 +116,6 @@ fun LoginScreen(
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         letterSpacing = (-0.5).sp
-                    )
-                    Text(
-                        text = "ft. BONK!",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFF6B35), // BONK orange
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
 
