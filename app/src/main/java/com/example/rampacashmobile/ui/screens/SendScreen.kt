@@ -56,7 +56,7 @@ fun SendScreen(
     // Define tokens (same as MainScreen)
     val tokens = listOf(
         Token(
-            symbol = "EUR",
+            symbol = "EURC",
             name = "Euro Coin",
             balance = viewState.eurcBalance,
             icon = "eurc",
@@ -65,7 +65,7 @@ fun SendScreen(
             mintAddress = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
         ),
         Token(
-            symbol = "USD",
+            symbol = "USDC",
             name = "USD Coin",
             balance = viewState.usdcBalance,
             icon = "usdc",
