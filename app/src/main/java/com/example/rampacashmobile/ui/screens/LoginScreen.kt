@@ -100,7 +100,7 @@ fun LoginScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(200.dp) // Increased logo size
+                            .size(300.dp) // Increased logo size
                             .padding(bottom = 24.dp)
                     ) {
                         Image(
