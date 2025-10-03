@@ -176,7 +176,21 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
             Log.d(TAG, "🔑 Solana Public Key: $solanaPublicKey")
             Log.d(TAG, "📍 Display Address: $displayAddress")
 
+            // Handle Web3Auth success in ViewModel
             viewModel.handleWeb3AuthSuccess(response, provider, solanaPublicKey, displayAddress)
+
+            // Extract user info for potential onboarding
+            val (existingEmail, existingPhone) = viewModel.extractUserInfoFromAuth(response, provider)
+
+            // Check if user needs onboarding
+            if (viewModel.needsOnboarding()) {
+                Log.d(TAG, "🎯 User needs onboarding - navigating to user_onboarding")
+
+
+                // Since we can't directly access NavController from Activity, we'll use the ViewModel
+                // to set a flag that the LoginScreen can observe
+                viewModel.setNeedsOnboardingNavigation(provider.toString().lowercase(), existingEmail, existingPhone)
+            }
         }
     }
 
