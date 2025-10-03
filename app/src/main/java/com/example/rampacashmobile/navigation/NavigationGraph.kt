@@ -60,6 +60,21 @@ fun NavigationGraph(
                 )
             }
 
+            // User onboarding screen for collecting additional info
+            composable("user_onboarding/{authProvider}/{existingEmail}/{existingPhone}") { backStackEntry ->
+                val authProvider = backStackEntry.arguments?.getString("authProvider") ?: ""
+                val existingEmail = backStackEntry.arguments?.getString("existingEmail") ?: ""
+                val existingPhone = backStackEntry.arguments?.getString("existingPhone") ?: ""
+
+                UserOnboardingScreen(
+                    navController = navController,
+                    viewModel = sharedViewModel,
+                    authProvider = authProvider,
+                    existingEmail = existingEmail,
+                    existingPhone = existingPhone
+                )
+            }
+
             composable("dashboard") {
                 MainScreen(
                     navController = navController,

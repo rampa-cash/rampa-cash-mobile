@@ -3,10 +3,9 @@ package com.example.rampacashmobile.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,14 +20,6 @@ import androidx.navigation.NavController
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 
-// User information data class
-data class UserInfo(
-    val name: String,
-    val email: String,
-    val phone: String,
-    val password: String = "•••••••••"
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -38,14 +29,27 @@ fun ProfileScreen(
     web3AuthCallback: Web3AuthManager.Web3AuthCallback? = null
 ) {
     val viewState = viewModel?.viewState?.collectAsState()?.value
-    
-    // Mock user data - replace with actual user data from auth context/state
-    val userInfo = remember {
-        UserInfo(
-            name = "Maria Martinez",
-            email = "maria@rampa.cash",
-            phone = "+49 (123) 456-6789"
-        )
+
+    // Create display user info from available data sources
+    val displayUserInfo = remember(viewState) {
+        when {
+            // If we have a complete user profile, use it
+            viewState?.userAddress != null -> UserDisplayInfo(
+                name = viewState.userLabel ?: "Rampa User",
+                email = "Not available", // Remove reference to non-existent email property
+                phone = "Not available", // Remove reference to non-existent phoneNumber property
+                walletAddress = viewState.fullAddressForCopy ?: viewState.userAddress,
+                authProvider = "none" // Remove reference to non-existent authProvider property
+            )
+            // Fallback for edge cases
+            else -> UserDisplayInfo(
+                name = "Rampa User",
+                email = "Not available",
+                phone = "Not available",
+                walletAddress = "Not connected",
+                authProvider = "none"
+            )
+        }
     }
 
     Column(
@@ -78,8 +82,8 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // User Information Section
-            UserInformationSection(userInfo = userInfo)
-            
+            UserInformationSection(userInfo = displayUserInfo)
+
             // Divider
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 40.dp),
@@ -99,8 +103,17 @@ fun ProfileScreen(
     }
 }
 
+// Updated data class for user display information
+data class UserDisplayInfo(
+    val name: String,
+    val email: String,
+    val phone: String,
+    val walletAddress: String,
+    val authProvider: String
+)
+
 @Composable
-private fun UserInformationSection(userInfo: UserInfo) {
+private fun UserInformationSection(userInfo: UserDisplayInfo) {
     Column(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -111,25 +124,49 @@ private fun UserInformationSection(userInfo: UserInfo) {
             value = userInfo.name
         )
         
-        // Phone Number
+        // Wallet Address (most important for crypto users)
+        if (userInfo.walletAddress.isNotBlank() && userInfo.walletAddress != "Not connected") {
+            UserInfoItem(
+                icon = Icons.Default.AccountBox, // Using AccountBox instead - it's available
+                label = "Wallet Address",
+                value = if (userInfo.walletAddress.length > 20) {
+                    "${userInfo.walletAddress.take(8)}...${userInfo.walletAddress.takeLast(8)}"
+                } else {
+                    userInfo.walletAddress
+                }
+            )
+        }
+
+        // Phone Number (if available)
+        if (userInfo.phone.isNotBlank() && userInfo.phone != "Not available") {
+            UserInfoItem(
+                icon = Icons.Default.Phone,
+                label = "Mobile Number",
+                value = userInfo.phone
+            )
+        }
+
+        // Email (if available)
+        if (userInfo.email.isNotBlank() && userInfo.email != "Not available") {
+            UserInfoItem(
+                icon = Icons.Default.Email,
+                label = "Email Address",
+                value = userInfo.email
+            )
+        }
+
+        // Authentication Method
         UserInfoItem(
-            icon = Icons.Default.Phone,
-            label = "Mobile Number",
-            value = userInfo.phone
-        )
-        
-        // Email
-        UserInfoItem(
-            icon = Icons.Default.Email,
-            label = "Email Address",
-            value = userInfo.email
-        )
-        
-        // Password
-        UserInfoItem(
-            icon = Icons.Default.Lock,
-            label = "Password",
-            value = userInfo.password
+            icon = Icons.Default.Lock, // Changed from Security
+            label = "Authentication",
+            value = when (userInfo.authProvider) {
+                "google" -> "Google Sign-In"
+                "apple" -> "Apple Sign-In"
+                "sms" -> "Phone Number (SMS)"
+                "web3auth" -> "Web3Auth"
+                "wallet" -> "Mobile Wallet"
+                else -> "Unknown"
+            }
         )
     }
 }
@@ -203,21 +240,21 @@ private fun ActionButtonsSection(
         
         // Sign Out Button
         ActionButton(
-            icon = Icons.Default.ExitToApp,
+            icon = Icons.AutoMirrored.Filled.ExitToApp, // Changed from Icons.Default.ExitToApp
             text = "Sign Out",
             textColor = Color(0xFFEF4444),
             iconTint = Color(0xFFEF4444),
-                         onClick = {
-                 // Handle logout/disconnect
-                 if (web3AuthManager != null && web3AuthCallback != null) {
-                     web3AuthManager.logout(web3AuthCallback)
-                 } else {
-                     viewModel?.disconnect()
-                 }
-                 navController.navigate("login") {
-                     popUpTo(0) { inclusive = true }
-                 }
-             }
+            onClick = {
+                // Handle logout/disconnect
+                if (web3AuthManager != null && web3AuthCallback != null) {
+                    web3AuthManager.logout(web3AuthCallback)
+                } else {
+                    viewModel?.disconnect()
+                }
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
         )
     }
 }
@@ -269,4 +306,4 @@ private fun ActionButton(
             )
         }
     }
-} 
+}

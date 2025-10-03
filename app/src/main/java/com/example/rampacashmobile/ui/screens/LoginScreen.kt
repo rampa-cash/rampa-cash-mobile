@@ -56,6 +56,23 @@ fun LoginScreen(
         }
     }
 
+    // Handle onboarding navigation
+    LaunchedEffect(viewState.needsOnboardingNavigation) {
+        if (viewState.needsOnboardingNavigation) {
+            val authProvider = viewState.onboardingAuthProvider
+            val existingEmail = viewState.onboardingExistingEmail
+            val existingPhone = viewState.onboardingExistingPhone
+
+            // Clear the navigation flag
+            viewModel.clearOnboardingNavigation()
+
+            // Navigate to onboarding
+            navController.navigate("user_onboarding/$authProvider/$existingEmail/$existingPhone") {
+                popUpTo("login") { inclusive = false }
+            }
+        }
+    }
+
     // Handle snackbar messages
     LaunchedEffect(viewState.snackbarMessage) {
         viewState.snackbarMessage?.let { message ->
@@ -367,19 +384,18 @@ private fun ModernPhoneButton(
         } else {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center // Centers "Text Logo" content
             ) {
+                Text(
+                    text = buttonText, // "Continue with Phone"
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(end = 8.dp) // Space between text and logo
+                )
                 Image(
                     painter = iconPainter,
                     contentDescription = iconContentDescription,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .padding(end = 8.dp)
-                )
-                Text(
-                    text = buttonText,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
+                    modifier = Modifier.size(20.dp) // Removed padding(end = 8.dp) and moved icon to right
                 )
             }
         }
@@ -435,16 +451,10 @@ fun PhoneNumberDialog(
         text = {
             Column {
                 Text(
-                    "Please enter your phone number in this exact format: +[country code]-[phone number]",
+                    "You will receive a code. Tap the first field to reveal the code, then tap the SMS notification to autofill or enter the code manually",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1E293B)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "We'll send you a link to log in. Standard SMS rates may apply.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B)
+                    color = Color(0xFF94A3B8) // Changed from Color(0xFF64748B) to lighter color for better contrast
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
