@@ -435,15 +435,30 @@ fun PhoneNumberDialog(
         text = {
             Column {
                 Text(
-                    "We'll send you a link to log in. Standard SMS rates may apply.",
-                    style = MaterialTheme.typography.bodySmall
+                    "Please enter your phone number in this exact format: +[country code]-[phone number]",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1E293B)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "We'll send you a link to log in. Standard SMS rates may apply.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF64748B)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = phoneNumber,
                     onValueChange = onPhoneNumberChange,
                     label = { Text("Phone number") },
-                    placeholder = { Text("+1234567890") },
+                    placeholder = { Text("+1-2345678901") },
+                    supportingText = {
+                        Text(
+                            "Format: +[country code]-[number]",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9945FF)
+                        )
+                    },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Phone
                     ),
@@ -455,7 +470,7 @@ fun PhoneNumberDialog(
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                enabled = phoneNumber.isNotBlank()
+                enabled = phoneNumber.isNotBlank() && phoneNumber.contains("+") && phoneNumber.contains("-")
             ) {
                 Text("Continue")
             }
