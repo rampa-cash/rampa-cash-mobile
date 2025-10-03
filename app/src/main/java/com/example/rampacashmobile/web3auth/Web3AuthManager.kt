@@ -177,6 +177,52 @@ class Web3AuthManager @Inject constructor(
     }
     
     /**
+     * Start Web3Auth login process with phone number (SMS passwordless)
+     */
+    fun loginWithPhone(phoneNumber: String, callback: Web3AuthCallback) {
+        val web3AuthInstance = web3Auth
+        if (web3AuthInstance == null) {
+            callback.onLoginError("Web3Auth not initialized")
+            return
+        }
+
+        Log.d(TAG, "🚀 Starting Web3Auth SMS login with phone: ${phoneNumber.take(3)}***")
+        callback.onLoading(true)
+
+        try {
+            Log.d(TAG, "🔧 Creating SMS login params with login_hint")
+            val loginParams = LoginParams(
+                loginProvider = Provider.SMS_PASSWORDLESS,
+                extraLoginOptions = ExtraLoginOptions(
+                    login_hint = phoneNumber
+                )
+            )
+
+            Log.d(TAG, "🔑 Starting Web3Auth SMS login...")
+            val loginFuture = web3AuthInstance.login(loginParams)
+            Log.d(TAG, "📞 SMS login future created, SMS should be sent...")
+
+            // Handle completion using official pattern
+            loginFuture.whenComplete { web3AuthResponse, error ->
+                callback.onLoading(false)
+
+                if (error == null && web3AuthResponse != null) {
+                    Log.d(TAG, "✅ Web3Auth SMS login completed successfully!")
+                    handleLoginSuccess(web3AuthResponse, Provider.SMS_PASSWORDLESS, callback)
+                } else {
+                    Log.e(TAG, "❌ Web3Auth SMS login failed: ${error?.message}", error)
+                    callback.onLoginError("SMS login failed: ${error?.message ?: "Unknown error"}")
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Web3Auth SMS login setup failed: ${e.message}", e)
+            callback.onLoading(false)
+            callback.onLoginError("SMS setup failed: ${e.message}")
+        }
+    }
+
+    /**
      * Start Web3Auth logout process
      */
     fun logout(callback: Web3AuthCallback) {
