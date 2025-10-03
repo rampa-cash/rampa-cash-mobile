@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +39,8 @@ fun LoginScreen(
     web3AuthCallback: Web3AuthManager.Web3AuthCallback? = null
 ) {
     val viewState by viewModel.viewState.collectAsState()
+    var showPhoneDialog by remember { mutableStateOf(false) }
+    var phoneNumber by remember { mutableStateOf("") }
 
     // Check for existing session on app startup
     LaunchedEffect(Unit) {
@@ -58,6 +62,25 @@ fun LoginScreen(
             // Consider showing a Snackbar here if you have a SnackbarHostState
             viewModel.clearSnackBar()
         }
+    }
+
+    // Phone number input dialog
+    if (showPhoneDialog) {
+        PhoneNumberDialog(
+            phoneNumber = phoneNumber,
+            onPhoneNumberChange = { phoneNumber = it },
+            onConfirm = {
+                if (phoneNumber.isNotBlank() && web3AuthManager != null && web3AuthCallback != null) {
+                    showPhoneDialog = false
+                    viewModel.setWeb3AuthProviderLoading(Provider.SMS_PASSWORDLESS)
+                    web3AuthManager.loginWithPhone(phoneNumber.trim(), web3AuthCallback)
+                }
+            },
+            onDismiss = {
+                showPhoneDialog = false
+                phoneNumber = ""
+            }
+        )
     }
 
     Box(
@@ -130,6 +153,16 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        ModernPhoneButton(
+                            buttonText = "Continue with Phone",
+                            iconPainter = painterResource(id = R.drawable.ic_logo_phone),
+                            iconContentDescription = "Phone logo",
+                            isLoading = viewState.loadingProvider == Provider.SMS_PASSWORDLESS,
+                            isAnyLoading = viewState.isWeb3AuthLoading,
+                            onClick = {
+                                showPhoneDialog = true
+                            }
+                        )
                         ModernSocialButton(
                             buttonText = "Continue with",
                             iconPainter = painterResource(id = R.drawable.ic_logo_google),
@@ -145,27 +178,14 @@ fun LoginScreen(
                         )
                         ModernSocialButton(
                             buttonText = "Continue with",
-                            iconPainter = painterResource(id = R.drawable.ic_logo_facebook),
-                            iconContentDescription = "Facebook logo",
-                            isLoading = viewState.loadingProvider == Provider.FACEBOOK,
+                            iconPainter = painterResource(id = R.drawable.ic_logo_apple),
+                            iconContentDescription = "Apple logo",
+                            isLoading = viewState.loadingProvider == Provider.APPLE,
                             isAnyLoading = viewState.isWeb3AuthLoading,
                             onClick = {
                                 if (web3AuthManager != null && web3AuthCallback != null) {
-                                    viewModel.setWeb3AuthProviderLoading(Provider.FACEBOOK)
-                                    web3AuthManager.login(Provider.FACEBOOK, web3AuthCallback)
-                                }
-                            }
-                        )
-                        ModernSocialButton(
-                            buttonText = "Continue with",
-                            iconPainter = painterResource(id = R.drawable.ic_logo_x),
-                            iconContentDescription = "X logo",
-                            isLoading = viewState.loadingProvider == Provider.TWITTER,
-                            isAnyLoading = viewState.isWeb3AuthLoading,
-                            onClick = {
-                                if (web3AuthManager != null && web3AuthCallback != null) {
-                                    viewModel.setWeb3AuthProviderLoading(Provider.TWITTER)
-                                    web3AuthManager.login(Provider.TWITTER, web3AuthCallback)
+                                    viewModel.setWeb3AuthProviderLoading(Provider.APPLE)
+                                    web3AuthManager.login(Provider.APPLE, web3AuthCallback)
                                 }
                             }
                         )
@@ -310,6 +330,63 @@ private fun ModernSocialButton(
 }
 
 @Composable
+private fun ModernPhoneButton(
+    buttonText: String,
+    iconPainter: Painter,
+    iconContentDescription: String,
+    isLoading: Boolean,
+    isAnyLoading: Boolean = false,
+    onClick: () -> Unit
+) {
+    val isDisabled = isLoading || isAnyLoading
+
+    OutlinedButton(
+        onClick = { if (!isDisabled) onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = Color.White,
+            disabledContainerColor = Color.Transparent,
+            disabledContentColor = Color(0xFF64748B)
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isDisabled) Color(0xFF374151) else Color(0xFF475569)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        enabled = !isDisabled
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = Color(0xFF9945FF)
+            )
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    painter = iconPainter,
+                    contentDescription = iconContentDescription,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .padding(end = 8.dp)
+                )
+                Text(
+                    text = buttonText,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ModernWalletButton(
     enabled: Boolean,
     onClick: () -> Unit
@@ -343,4 +420,65 @@ private fun ModernWalletButton(
             )
         }
     }
+}
+
+@Composable
+fun PhoneNumberDialog(
+    phoneNumber: String,
+    onPhoneNumberChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Enter your phone number") },
+        text = {
+            Column {
+                Text(
+                    "Please enter your phone number in this exact format: +[country code]-[phone number]",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1E293B)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "We'll send you a link to log in. Standard SMS rates may apply.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF64748B)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = onPhoneNumberChange,
+                    label = { Text("Phone number") },
+                    placeholder = { Text("+1-2345678901") },
+                    supportingText = {
+                        Text(
+                            "Format: +[country code]-[number]",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9945FF)
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Phone
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = phoneNumber.isNotBlank() && phoneNumber.contains("+") && phoneNumber.contains("-")
+            ) {
+                Text("Continue")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
