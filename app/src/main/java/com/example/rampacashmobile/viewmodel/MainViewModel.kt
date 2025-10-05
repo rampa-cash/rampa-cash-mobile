@@ -92,7 +92,7 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val TAG = "MainViewModel"
     }
-    
+
     // Track if this is the first time loading connections (to show welcome snackbar)
     private var isInitialLoad = true
 
@@ -128,15 +128,15 @@ class MainViewModel @Inject constructor(
 
     fun loadConnection() {
         Log.d(TAG, "🔄 loadConnection() called - checking for persisted sessions...")
-        
+
         // Debug current session storage state
         DebugSessionHelper.debugAllStoredSessions(
             context.getSharedPreferences("scaffold_prefs", android.content.Context.MODE_PRIVATE)
         )
-        
+
         // Set loading state while checking for sessions
         _state.value.copy(isLoading = true).updateViewState()
-        
+
         val persistedConnection = persistenceUseCase.getWalletConnection()
         Log.d(TAG, "🔍 Persistence check result: ${persistedConnection::class.simpleName}")
 
@@ -164,14 +164,14 @@ class MainViewModel @Inject constructor(
                 // Set the auth token in walletAdapter
                 walletAdapter.authToken = persistedConnection.authToken
             }
-            
+
             is Web3AuthConnected -> {
                 Log.d(TAG, "🔄 Restoring Web3Auth session: ${persistedConnection.accountLabel}")
-                
+
                 // Create display-friendly address
                 val fullAddress = persistedConnection.publicKey.base58()
                 val displayAddress = "${fullAddress.take(8)}...${fullAddress.takeLast(8)}"
-                
+
                 _state.value.copy(
                     isLoading = true,
                     isWeb3AuthLoggedIn = true,
@@ -194,31 +194,31 @@ class MainViewModel @Inject constructor(
                     snackbarMessage = if (isInitialLoad) "✅ | Successfully auto-connected to Web3Auth: ${persistedConnection.accountLabel}" else null
                 ).updateViewState()
             }
-            
+
             is NotConnected -> {
                 Log.d(TAG, "🔄 No persisted session found - setting loading to false")
                 _state.value.copy(isLoading = false).updateViewState()
                 // No persisted session - stay in login state
             }
         }
-        
+
         // Mark initial load as complete
         isInitialLoad = false
     }
-    
+
     private var isLoadingTransactionHistory = false
-    
+
     fun getTransactionHistory() {
         if (isLoadingTransactionHistory) {
             Log.d(TAG, "⏸️ Transaction history fetch already in progress, skipping...")
             return
         }
-        
+
         viewModelScope.launch {
             try {
                 isLoadingTransactionHistory = true
                 val currentState = _state.value
-                
+
                 // Debug current state
                 Log.d(TAG, "🔍 Transaction History Debug:")
                 Log.d(TAG, "- canTransact: ${currentState.canTransact}")
@@ -226,7 +226,7 @@ class MainViewModel @Inject constructor(
                 Log.d(TAG, "- userAddress: ${currentState.userAddress}")
                 Log.d(TAG, "- fullAddressForCopy: ${currentState.fullAddressForCopy}")
                 Log.d(TAG, "- web3AuthSolanaPublicKey: ${currentState.web3AuthSolanaPublicKey}")
-                
+
                 // Determine wallet address based on connection type
                 val walletAddress = when {
                     currentState.isWeb3AuthLoggedIn && !currentState.web3AuthSolanaPublicKey.isNullOrEmpty() -> {
@@ -252,20 +252,20 @@ class MainViewModel @Inject constructor(
                         return@launch
                     }
                 }
-                
+
                 Log.d(TAG, "🔍 Fetching transaction history for wallet: ${walletAddress.take(8)}...")
-                
+
                 _state.update { it.copy(isLoadingTransactions = true) }
-                
+
                 val transactions = transactionHistoryUseCase.getTransactionHistory(walletAddress)
-                
+
                 _state.update { it.copy(
                     transactionHistory = transactions,
                     isLoadingTransactions = false
                 )}
-                
+
                 Log.d(TAG, "✅ Transaction history loaded: ${transactions.size} transactions")
-                
+
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Failed to load transaction history: ${e.message}", e)
                 _state.update { it.copy(
@@ -292,7 +292,7 @@ class MainViewModel @Inject constructor(
                     persistenceUseCase.persistConnection(
                         currentConn.publicKey, currentConn.accountLabel, currentConn.authToken
                     )
-                    
+
                     // Verify persistence worked
                     val testConnection = persistenceUseCase.getWalletConnection()
                     Log.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
@@ -341,7 +341,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             // Clear the loading flag to allow fresh transaction fetching on reconnect
             isLoadingTransactionHistory = false
-            
+
             val conn = persistenceUseCase.getWalletConnection()
             when (conn) {
                 is Connected -> {
@@ -440,30 +440,30 @@ class MainViewModel @Inject constructor(
             try {
                 Log.d(TAG, "🔄 Refreshing balances after transaction: ${signature.take(8)}...")
                 Log.d(TAG, "🔄 Account for balance refresh: ${account.base58()}")
-                
+
                 // Wait longer for transaction confirmation (blockchain updates can be slow)
                 Log.d(TAG, "⏳ Waiting 4 seconds for blockchain confirmation...")
                 delay(4000) // 4 seconds initial delay (increased from 2)
-                
+
                 // Refresh SOL balance immediately (usually faster to update)
                 getSolanaBalance(account)
-                
+
                 // Refresh token balances with retry logic (these can take longer)
                 Log.d(TAG, "🔄 Starting token balance refresh with retries...")
                 refreshTokenBalanceWithRetry(account, "EURC")
                 refreshTokenBalanceWithRetry(account, "USDC")
-                
+
                 Log.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
                 Log.d(TAG, "🎯 Current state after balance refresh - showTransactionSuccess: ${viewState.value.showTransactionSuccess}")
                 Log.d(TAG, "💰 Final balances - EURC: ${viewState.value.eurcBalance}, USDC: ${viewState.value.usdcBalance}")
-                
+
             } catch (e: Exception) {
                 Log.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${e.message}")
                 // Don't update UI state on refresh failure - keep existing balances
             }
         }
     }
-    
+
     /**
      * Refresh token balance with retry logic and graceful error handling
      */
@@ -471,26 +471,26 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             var attempts = 0
             val maxAttempts = 5 // Increased from 3 to 5 attempts
-            
+
             while (attempts < maxAttempts) {
                 try {
                     delay(attempts * 2000L) // 0s, 2s, 4s, 6s, 8s delays (longer delays)
-                    
+
                     Log.d(TAG, "🔍 Fetching $tokenSymbol balance (attempt ${attempts + 1}/$maxAttempts)...")
                     Log.d(TAG, "🔍 Account: ${account.base58()}")
-                    
+
                     when (tokenSymbol) {
                         "EURC" -> getEurcBalanceRobust(account)
                         "USDC" -> getUsdcBalanceRobust(account)
                     }
-                    
+
                     Log.d(TAG, "✅ $tokenSymbol balance refreshed successfully")
                     return@launch // Success - exit retry loop
-                    
+
                 } catch (e: Exception) {
                     attempts++
                     Log.w(TAG, "⚠️ $tokenSymbol balance fetch attempt $attempts failed: ${e.message}")
-                    
+
                     if (attempts >= maxAttempts) {
                         Log.e(TAG, "❌ $tokenSymbol balance refresh failed after $maxAttempts attempts")
                         // Don't reset balance to 0 - keep existing value
@@ -573,7 +573,7 @@ class MainViewModel @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Robust EURC balance fetching that preserves existing balance on errors
      */
@@ -581,7 +581,7 @@ class MainViewModel @Inject constructor(
         try {
             val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
             val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, eurcMint)
-            
+
             Log.d(TAG, "💰 Fetching EURC balance for account: ${account.base58()}")
             Log.d(TAG, "💰 EURC ATA: ${eurcAta.base58()}")
 
@@ -599,14 +599,14 @@ class MainViewModel @Inject constructor(
             // Fetch the balance
             val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
             val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
-            
+
             Log.d(TAG, "💰 EURC raw balance: $tokenBalance, human readable: $humanReadableBalance")
             Log.d(TAG, "💰 Previous EURC balance: ${viewState.value.eurcBalance}")
 
             _state.value.copy(
                 eurcBalance = humanReadableBalance
             ).updateViewState()
-            
+
             Log.d(TAG, "💰 EURC balance updated to: $humanReadableBalance")
 
         } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
@@ -621,7 +621,7 @@ class MainViewModel @Inject constructor(
             throw e // Re-throw for retry logic
         }
     }
-    
+
     /**
      * Robust USDC balance fetching that preserves existing balance on errors
      */
@@ -687,12 +687,12 @@ class MainViewModel @Inject constructor(
                     handleWeb3AuthSplTransfer(recipientAddress, amount, tokenMintAddress, tokenDecimals, recipientName)
                     return@launch
                 }
-                
+
                 // Show which implementation is being used
                 if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
                     Log.d(TAG, "${TransferConfig.getImplementationEmoji()} Using ${TransferConfig.getImplementationName()}")
                 }
-                
+
                 // Check if we have a valid connection first
                 val currentConnection = persistenceUseCase.getWalletConnection()
 
@@ -719,7 +719,7 @@ class MainViewModel @Inject constructor(
                         if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
                             Log.d(TAG, "🔧 Building transaction manually (bypasses web3-solana bugs)")
                         }
-                        
+
                         // Use manual implementation that bypasses library serialization bugs
                         val transactionBytes = try {
                             ManualSplTokenTransferUseCase.transfer(
@@ -733,13 +733,13 @@ class MainViewModel @Inject constructor(
                             Log.e(TAG, "❌ Manual transfer failed: ${e.message}", e)
                             throw RuntimeException("Manual transfer failed: ${e.message}", e)
                         }
-                        
+
                         signAndSendTransactions(arrayOf(transactionBytes))
                     } else {
                         if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
                             Log.d(TAG, "📚 Using web3-solana library transaction building")
                         }
-                        
+
                         // Use original implementation via web3-solana library
                         val tokenTransferTx = SplTokenTransferUseCase.transfer(
                             rpcUri = rpcUri,
@@ -748,7 +748,7 @@ class MainViewModel @Inject constructor(
                             mint = tokenMint,
                             amount = amountInTokenUnits
                         )
-                        
+
                         signAndSendTransactions(arrayOf(tokenTransferTx.serialize()))
                     }
                 }
@@ -911,8 +911,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-
-
     /**
      * Check token balance for debugging purposes
      */
@@ -930,7 +928,7 @@ class MainViewModel @Inject constructor(
                         currentConnection.publicKey
                     } else null
                 }
-                
+
                 if (userPublicKey == null) {
                     _state.value.copy(
                         snackbarMessage = "⚠️ | Please connect a wallet or login with Web3Auth first"
@@ -1019,7 +1017,7 @@ class MainViewModel @Inject constructor(
             loadingProvider = if (loading) _state.value.loadingProvider else null
         ).updateViewState()
     }
-    
+
     fun setWeb3AuthProviderLoading(provider: Provider) {
         _state.value.copy(
             isWeb3AuthLoading = true,
@@ -1039,7 +1037,7 @@ class MainViewModel @Inject constructor(
         try {
             val privateKey = web3AuthResponse.privKey
             val userInfo = web3AuthResponse.userInfo
-            
+
             if (privateKey != null) {
                 val providerName = when(provider) {
                     Provider.GOOGLE -> "Google"
@@ -1049,9 +1047,9 @@ class MainViewModel @Inject constructor(
                     Provider.APPLE -> "Apple"
                     else -> provider.name
                 }
-                
+
                 val displayName = userInfo?.name ?: userInfo?.email ?: "Web3Auth User"
-                
+
                 // Persist Web3Auth session
                 try {
                     Log.d(TAG, "💾 About to persist Web3Auth session for: $displayName")
@@ -1063,7 +1061,7 @@ class MainViewModel @Inject constructor(
                         userInfo = userInfo?.name ?: userInfo?.email ?: ""
                     )
                     Log.d(TAG, "✅ Web3Auth session persisted successfully")
-                    
+
                     // Verify persistence worked
                     val testConnection = persistenceUseCase.getWalletConnection()
                     Log.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
@@ -1071,7 +1069,7 @@ class MainViewModel @Inject constructor(
                     Log.e(TAG, "⚠️ Failed to persist Web3Auth session: ${e.message}", e)
                     // Continue anyway - session will work for this app session
                 }
-                
+
                 _state.value.copy(
                     isWeb3AuthLoading = false,
                     loadingProvider = null,
@@ -1085,9 +1083,9 @@ class MainViewModel @Inject constructor(
                     fullAddressForCopy = solanaPublicKey, // Full address for copy
                     snackbarMessage = "✅ | Successfully logged in with $providerName!"
                 ).updateViewState()
-                
+
                 Log.d(TAG, "Web3Auth login successful with $providerName - Solana address: $solanaPublicKey")
-                
+
                 // Load balances for Web3Auth user
                 try {
                     val userPublicKey = SolanaPublicKey.from(solanaPublicKey)
@@ -1120,7 +1118,7 @@ class MainViewModel @Inject constructor(
     fun handleWeb3AuthLogout() {
         // Clear persisted session
         persistenceUseCase.clearConnection()
-        
+
         _state.value.copy(
             isWeb3AuthLoading = false,
             isWeb3AuthLoggedIn = false,
@@ -1136,15 +1134,15 @@ class MainViewModel @Inject constructor(
             usdcBalance = 0.0,
             snackbarMessage = "✅ | Successfully logged out from Web3Auth"
         ).updateViewState()
-        
+
         Log.d(TAG, "Web3Auth logout completed successfully")
     }
-    
+
     // Handle Web3Auth session restoration on app startup
     fun handleWeb3AuthSessionRestore(privateKey: String, solanaPublicKey: String, displayAddress: String) {
         try {
             Log.d(TAG, "🔄 Restoring Web3Auth session from Web3Auth SDK")
-            
+
             _state.value.copy(
                 isWeb3AuthLoading = false,
                 isWeb3AuthLoggedIn = true,
@@ -1157,7 +1155,7 @@ class MainViewModel @Inject constructor(
                 fullAddressForCopy = solanaPublicKey,
                 snackbarMessage = "✅ | Web3Auth session restored!"
             ).updateViewState()
-            
+
             // Load balances for restored Web3Auth user
             try {
                 val userPublicKey = SolanaPublicKey.from(solanaPublicKey)
@@ -1168,7 +1166,7 @@ class MainViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load balances for restored Web3Auth user: ${e.message}", e)
             }
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to handle Web3Auth session restoration", e)
             _state.value.copy(
@@ -1177,8 +1175,6 @@ class MainViewModel @Inject constructor(
             ).updateViewState()
         }
     }
-
-
 
     /**
      * Handle Web3Auth redirect URLs from intent data
@@ -1272,7 +1268,7 @@ class MainViewModel @Inject constructor(
      */
     fun needsOnboarding(): Boolean {
         return !userRepository.isOnboardingCompleted() &&
-               (_state.value.isWeb3AuthLoggedIn || _state.value.canTransact)
+                (_state.value.isWeb3AuthLoggedIn || _state.value.canTransact)
     }
 
     /**
@@ -1323,7 +1319,7 @@ class MainViewModel @Inject constructor(
     }
 
     /**
-     * Handle Web3Auth SPL token transfer
+     * Handle Web3Auth SPL token transfer using the actual Web3AuthSplTransferUseCase
      */
     private fun handleWeb3AuthSplTransfer(
         recipientAddress: String,
@@ -1334,67 +1330,94 @@ class MainViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val privateKey = viewState.value.web3AuthPrivateKey
-                val userPublicKey = viewState.value.web3AuthSolanaPublicKey
+                val currentState = viewState.value
 
-                if (privateKey == null || userPublicKey == null) {
+                // Validate Web3Auth state
+                val web3AuthPrivateKey = currentState.web3AuthPrivateKey
+                val web3AuthPublicKey = currentState.web3AuthSolanaPublicKey
+
+                if (web3AuthPrivateKey == null || web3AuthPublicKey == null) {
                     _state.value.copy(
-                        snackbarMessage = "❌ | Web3Auth session not available"
+                        snackbarMessage = "❌ | Web3Auth session invalid. Please login again."
                     ).updateViewState()
                     return@launch
                 }
 
-                Log.d(TAG, "🔐 Executing Web3Auth SPL transfer...")
-
-                // For now, we'll create a simple transfer implementation
-                // In a real app, you'd implement the actual Web3Auth transfer logic
-                try {
-                    // Simulate a successful transfer
-                    val signature = "simulated_signature_${System.currentTimeMillis()}"
-
-                    // Refresh balances after successful transfer
-                    val userAccount = SolanaPublicKey.from(userPublicKey)
-                    refreshBalancesAfterTransaction(userAccount, signature)
-
-                    // Determine token symbol
-                    val tokenSymbol = when (tokenMintAddress) {
-                        TokenMints.EURC_DEVNET -> "EURC"
-                        TokenMints.USDC_DEVNET -> "USDC"
-                        else -> "Token"
-                    }
-
-                    // Create transaction details for success screen
-                    val transactionDetails = TransactionDetails(
-                        signature = signature,
-                        amount = amount,
-                        tokenSymbol = tokenSymbol,
-                        recipientAddress = recipientAddress,
-                        recipientName = recipientName,
-                        timestamp = System.currentTimeMillis(),
-                        isDevnet = true
-                    )
-
-                    _state.value.copy(
-                        showTransactionSuccess = true,
-                        transactionDetails = transactionDetails
-                    ).updateViewState()
-
-                    Log.d(TAG, "✅ Web3Auth SPL transfer successful: $signature")
-
-                } catch (e: Exception) {
-                    _state.value.copy(
-                        snackbarMessage = "❌ | Transfer failed: ${e.message}"
-                    ).updateViewState()
-
-                    Log.e(TAG, "❌ Web3Auth SPL transfer failed: ${e.message}")
+                // Show which implementation is being used
+                if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
+                    Log.d(TAG, "🔑 Using Web3Auth SPL Transfer (local signing)")
                 }
 
-            } catch (e: Exception) {
                 _state.value.copy(
-                    snackbarMessage = "❌ | Transfer error: ${e.message}"
+                    snackbarMessage = "🔄 | Processing Web3Auth SPL transfer..."
                 ).updateViewState()
 
-                Log.e(TAG, "❌ Web3Auth SPL transfer exception: ${e.message}", e)
+                // Parse and validate inputs
+                val fromWallet = SolanaPublicKey.from(web3AuthPublicKey)
+                val recipientPubkey = SolanaPublicKey.from(recipientAddress)
+                val tokenMint = SolanaPublicKey.from(tokenMintAddress)
+
+                // Convert amount based on token decimals
+                val amountDouble = amount.toDoubleOrNull()
+                    ?: throw IllegalArgumentException("Invalid amount: $amount")
+                val multiplier = 10.0.pow(tokenDecimals.toDouble())
+                val amountInTokenUnits = (amountDouble * multiplier).toLong()
+
+                Log.d(TAG, "Web3Auth SPL Transfer Details:")
+                Log.d(TAG, "From: ${fromWallet.base58()}")
+                Log.d(TAG, "To: ${recipientPubkey.base58()}")
+                Log.d(TAG, "Mint: ${tokenMint.base58()}")
+                Log.d(TAG, "Amount: $amountInTokenUnits ($amount tokens)")
+
+                // Execute Web3Auth transfer
+                val signature = Web3AuthSplTransferUseCase.transfer(
+                    rpcUri = rpcUri,
+                    web3AuthPrivateKey = web3AuthPrivateKey,
+                    fromWallet = fromWallet,
+                    toWallet = recipientPubkey,
+                    mint = tokenMint,
+                    amount = amountInTokenUnits
+                )
+
+                Log.d(TAG, "✅ Web3Auth SPL transfer successful: $signature")
+
+                // Determine token symbol
+                val tokenSymbol = when (tokenMintAddress) {
+                    TokenMints.EURC_DEVNET -> "EURC"
+                    TokenMints.USDC_DEVNET -> "USDC"
+                    else -> "Token"
+                }
+
+                // Create transaction details for success screen
+                val transactionDetails = TransactionDetails(
+                    signature = signature,
+                    amount = amount,
+                    tokenSymbol = tokenSymbol,
+                    recipientAddress = recipientAddress,
+                    recipientName = recipientName,
+                    timestamp = System.currentTimeMillis(),
+                    isDevnet = true // Update this based on your network configuration
+                )
+
+                // Navigate to success screen (same as MWA wallet flow)
+                Log.d(TAG, "🎯 Setting showTransactionSuccess = true for Web3Auth transfer")
+                Log.d(TAG, "Transaction details: signature=${signature.take(8)}, amount=$amount, token=$tokenSymbol")
+
+                _state.value.copy(
+                    showTransactionSuccess = true,
+                    transactionDetails = transactionDetails
+                ).updateViewState()
+
+                // Refresh balances after successful transfer (with delay for blockchain confirmation)
+                refreshBalancesAfterTransaction(fromWallet, signature)
+
+                Log.d(TAG, "🎯 Web3Auth SPL transfer completed successfully - showing success screen")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Web3Auth SPL transfer failed: ${e.message}", e)
+                _state.value.copy(
+                    snackbarMessage = "❌ | Transfer failed: ${e.message}"
+                ).updateViewState()
             }
         }
     }
