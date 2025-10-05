@@ -18,12 +18,21 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "RPC_URI", "\"https://api.devnet.solana.com\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "RPC_URI", "\"https://api.devnet.solana.com\"")
+            buildConfigField("String", "NETWORK_TYPE", "\"devnet\"")
+            buildConfigField("Boolean", "ENABLE_SIMULATION", "false")
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+        }
         release {
+            buildConfigField("String", "RPC_URI", "\"https://api.devnet.solana.com\"")
+            buildConfigField("String", "NETWORK_TYPE", "\"devnet\"")
+            buildConfigField("Boolean", "ENABLE_SIMULATION", "false")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -31,16 +40,20 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
