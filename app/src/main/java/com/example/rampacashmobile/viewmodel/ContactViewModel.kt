@@ -10,6 +10,7 @@ import com.example.rampacashmobile.domain.services.ContactDomainService
 import com.example.rampacashmobile.domain.valueobjects.Email
 import com.example.rampacashmobile.domain.valueobjects.UserId
 import com.example.rampacashmobile.domain.valueobjects.WalletAddress
+import com.example.rampacashmobile.utils.ErrorHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -67,14 +68,12 @@ class ContactViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load contacts", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to load contacts")
+                ErrorHandler.logError(error, TAG)
                 _contactState.update { 
                     it.copy(
                         isLoading = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to load contacts: ${e.message}",
-                            e
-                        )
+                        error = error
                     )
                 }
             }
@@ -127,14 +126,12 @@ class ContactViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create contact", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to create contact")
+                ErrorHandler.logError(error, TAG)
                 _contactState.update { 
                     it.copy(
                         isCreating = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to create contact: ${e.message}",
-                            e
-                        )
+                        error = error
                     )
                 }
             }
@@ -170,14 +167,12 @@ class ContactViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to update contact name", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to update contact name")
+                ErrorHandler.logError(error, TAG)
                 _contactState.update { 
                     it.copy(
                         isUpdating = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to update contact name: ${e.message}",
-                            e
-                        )
+                        error = error
                     )
                 }
             }
@@ -215,14 +210,12 @@ class ContactViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to delete contact", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to delete contact")
+                ErrorHandler.logError(error, TAG)
                 _contactState.update { 
                     it.copy(
                         isDeleting = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to delete contact: ${e.message}",
-                            e
-                        )
+                        error = error
                     )
                 }
             }
@@ -272,17 +265,4 @@ class ContactViewModel @Inject constructor(
     }
 }
 
-/**
- * State class for contact-related UI state
- * Aligned with our domain Contact entity
- */
-data class ContactState(
-    val isLoading: Boolean = false,
-    val isCreating: Boolean = false,
-    val isUpdating: Boolean = false,
-    val isDeleting: Boolean = false,
-    val contacts: List<Contact> = emptyList(),
-    val filteredContacts: List<Contact> = emptyList(),
-    val searchQuery: String = "",
-    val error: com.example.rampacashmobile.domain.common.DomainError? = null
-)
+// ContactState is now defined in AppViewState.kt

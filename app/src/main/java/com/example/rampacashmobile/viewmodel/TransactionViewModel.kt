@@ -13,6 +13,8 @@ import com.example.rampacashmobile.domain.valueobjects.Money
 import com.example.rampacashmobile.domain.valueobjects.TransactionId
 import com.example.rampacashmobile.domain.valueobjects.UserId
 import com.example.rampacashmobile.domain.valueobjects.WalletAddress
+import com.example.rampacashmobile.constants.AppConstants
+import com.example.rampacashmobile.utils.ErrorHandler
 import com.example.rampacashmobile.usecase.TransactionHistoryUseCase
 import com.example.rampacashmobile.ui.screens.Transaction as UITransaction
 import com.example.rampacashmobile.ui.screens.TransactionDetails
@@ -52,7 +54,7 @@ class TransactionViewModel @Inject constructor(
     fun loadTransactionHistory(userId: UserId) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                _transactionState.update { it.copy(isLoading = true, error = null) }
+                _transactionState.update { it.copy(isLoadingHistory = true, error = null) }
                 
                 // Use domain service to get transactions
                 val result = transactionDomainService.getUserTransactions(userId)
@@ -65,8 +67,8 @@ class TransactionViewModel @Inject constructor(
                         
                         _transactionState.update { 
                             it.copy(
-                                isLoading = false,
-                                transactions = uiTransactions,
+                                isLoadingHistory = false,
+                                transactionHistory = uiTransactions,
                                 error = null
                             )
                         }
@@ -74,21 +76,19 @@ class TransactionViewModel @Inject constructor(
                     is Result.Failure -> {
                         _transactionState.update { 
                             it.copy(
-                                isLoading = false,
+                                isLoadingHistory = false,
                                 error = result.error
                             )
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load transaction history", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to load transaction history")
+                ErrorHandler.logError(error, TAG)
                 _transactionState.update { 
                     it.copy(
-                        isLoading = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to load transaction history: ${e.message}",
-                            e
-                        )
+                        isLoadingHistory = false,
+                        error = error
                     )
                 }
             }
@@ -140,14 +140,12 @@ class TransactionViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create transaction", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to create transaction")
+                ErrorHandler.logError(error, TAG)
                 _transactionState.update { 
                     it.copy(
                         isCreatingTransaction = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to create transaction: ${e.message}",
-                            e
-                        )
+                        error = error
                     )
                 }
             }
@@ -195,14 +193,12 @@ class TransactionViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to get transaction details", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get transaction details")
+                ErrorHandler.logError(error, TAG)
                 _transactionState.update { 
                     it.copy(
                         isLoadingDetails = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to get transaction details: ${e.message}",
-                            e
-                        )
+                        error = error
                     )
                 }
             }
@@ -233,7 +229,7 @@ class TransactionViewModel @Inject constructor(
             sender = domainTransaction.fromWallet.value,
             amount = domainTransaction.amount.amount.toDouble(),
             date = java.util.Date(domainTransaction.createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()),
-            description = domainTransaction.description,
+            description = domainTransaction.description.ifBlank { AppConstants.DEFAULT_TRANSACTION_DESCRIPTION },
             currency = domainTransaction.currency.code,
             transactionType = when (domainTransaction.transactionType) {
                 TransactionType.SEND -> com.example.rampacashmobile.ui.screens.TransactionType.SENT
@@ -247,16 +243,4 @@ class TransactionViewModel @Inject constructor(
     }
 }
 
-/**
- * State class for transaction-related UI state
- * Aligned with our domain Transaction entity
- */
-data class TransactionState(
-    val isLoading: Boolean = false,
-    val isLoadingDetails: Boolean = false,
-    val isCreatingTransaction: Boolean = false,
-    val transactions: List<com.example.rampacashmobile.ui.screens.Transaction> = emptyList(),
-    val selectedTransaction: TransactionDetails? = null,
-    val lastCreatedTransaction: com.example.rampacashmobile.ui.screens.Transaction? = null,
-    val error: com.example.rampacashmobile.domain.common.DomainError? = null
-)
+// TransactionState is now defined in AppViewState.kt

@@ -22,6 +22,7 @@ rpcCore = "0.2.8"
 mobileWalletAdapterClientlibKtx = "2.0.8"
 sol4k = "0.4.1"
 hilt = "2.57"
+timber = "5.0.1"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
 espressoCore = "3.6.1"
@@ -57,6 +58,7 @@ ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref =
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
 dagger-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 dagger-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 web3auth-android-sdk = { module = "com.github.Web3Auth:web3auth-android-sdk", version.ref = "web3authAndroidSdk" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "coreVersion" }
 

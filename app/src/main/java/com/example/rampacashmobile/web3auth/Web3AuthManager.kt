@@ -2,7 +2,7 @@ package com.example.rampacashmobile.web3auth
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import timber.log.Timber
 import com.web3auth.core.Web3Auth
 import com.web3auth.core.types.*
 import org.sol4k.Keypair
@@ -41,7 +41,7 @@ class Web3AuthManager @Inject constructor(
      */
     fun initialize(clientId: String, activity: Context): Boolean {
         return try {
-            Log.d(TAG, "🔧 Initializing Web3Auth...")
+            Timber.d("🔧 Initializing Web3Auth...")
             web3Auth = Web3Auth(
                 Web3AuthOptions(
                     clientId = clientId,
@@ -52,10 +52,10 @@ class Web3AuthManager @Inject constructor(
                 ),
                 activity // Activity context - crucial for browser launching
             )
-            Log.d(TAG, "✅ Web3Auth initialized successfully")
+            Timber.d("✅ Web3Auth initialized successfully")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Web3Auth initialization failed: ${e.message}", e)
+            Timber.e(e, "❌ Web3Auth initialization failed: ${e.message}")
             false
         }
     }
@@ -67,7 +67,7 @@ class Web3AuthManager @Inject constructor(
         return try {
             val web3AuthInstance = web3Auth
             if (web3AuthInstance == null) {
-                Log.w(TAG, "⚠️ Web3Auth instance is null during session check")
+                Timber.w("⚠️ Web3Auth instance is null during session check")
                 return false
             }
             
@@ -76,21 +76,21 @@ class Web3AuthManager @Inject constructor(
             try {
                 val userInfo = web3AuthInstance.getUserInfo()
                 val hasSession = userInfo != null
-                Log.d(TAG, "🔍 Web3Auth session check: hasSession = $hasSession")
+                Timber.d("🔍 Web3Auth session check: hasSession = $hasSession")
                 
                 if (hasSession && userInfo != null) {
-                    Log.d(TAG, "🔑 User session exists: ${userInfo.name ?: userInfo.email ?: "Unknown user"}")
+                    Timber.d("🔑 User session exists: ${userInfo.name ?: userInfo.email ?: "Unknown user"}")
                 }
                 
                 hasSession
             } catch (e: Throwable) {
                 // getUserInfo() throws java.lang.Error when no user is found
                 // This is expected behavior when there's no active session
-                Log.d(TAG, "🔑 No user session found in Web3Auth SDK: ${e.message}")
+                Timber.d("🔑 No user session found in Web3Auth SDK: ${e.message}")
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to check Web3Auth session: ${e.message}", e)
+            Timber.e(e, "❌ Failed to check Web3Auth session: ${e.message}")
             false
         }
     }
@@ -107,30 +107,30 @@ class Web3AuthManager @Inject constructor(
             val userInfo = try {
                 web3AuthInstance.getUserInfo()
             } catch (e: Throwable) {
-                Log.d(TAG, "🔍 No Web3Auth session available: ${e.message}")
+                Timber.d(TAG, "🔍 No Web3Auth session available: ${e.message}")
                 return null
             }
             
             if (userInfo == null) {
-                Log.d(TAG, "🔍 No Web3Auth session available")
+                Timber.d(TAG, "🔍 No Web3Auth session available")
                 return null
             }
             
             // Get the Ed25519 private key using the correct method
             val ed25519PrivateKey = web3AuthInstance.getEd25519PrivKey()
             if (ed25519PrivateKey.isEmpty()) {
-                Log.d(TAG, "🔍 Web3Auth session exists but no private key available")
+                Timber.d(TAG, "🔍 Web3Auth session exists but no private key available")
                 return null
             }
             val solanaKeyPair = org.sol4k.Keypair.fromSecretKey(ed25519PrivateKey.hexToByteArray())
             val solanaPublicKey = solanaKeyPair.publicKey.toBase58()
             val displayAddress = "${solanaPublicKey.take(8)}...${solanaPublicKey.takeLast(8)}"
             
-            Log.d(TAG, "✅ Web3Auth session info retrieved")
+            Timber.d(TAG, "✅ Web3Auth session info retrieved")
             Triple(ed25519PrivateKey, solanaPublicKey, displayAddress)
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to get Web3Auth session info: ${e.message}", e)
+            Timber.e(TAG, "❌ Failed to get Web3Auth session info: ${e.message}", e)
             null
         }
     }
@@ -145,32 +145,32 @@ class Web3AuthManager @Inject constructor(
             return
         }
         
-        Log.d(TAG, "🚀 Starting Web3Auth login with provider: $provider")
+        Timber.d(TAG, "🚀 Starting Web3Auth login with provider: $provider")
         callback.onLoading(true)
         
         try {
-            Log.d(TAG, "🔧 Creating login params for $provider")
+            Timber.d(TAG, "🔧 Creating login params for $provider")
             val loginParams = LoginParams(provider)
             
-            Log.d(TAG, "🔑 Starting Web3Auth login...")
+            Timber.d(TAG, "🔑 Starting Web3Auth login...")
             val loginFuture = web3AuthInstance.login(loginParams)
-            Log.d(TAG, "📞 Login future created, browser should open...")
+            Timber.d(TAG, "📞 Login future created, browser should open...")
             
             // Handle completion using official pattern
             loginFuture.whenComplete { web3AuthResponse, error ->
                 callback.onLoading(false)
                 
                 if (error == null && web3AuthResponse != null) {
-                    Log.d(TAG, "✅ Web3Auth login completed successfully!")
+                    Timber.d(TAG, "✅ Web3Auth login completed successfully!")
                     handleLoginSuccess(web3AuthResponse, provider, callback)
                 } else {
-                    Log.e(TAG, "❌ Web3Auth login failed: ${error?.message}", error)
+                    Timber.e(TAG, "❌ Web3Auth login failed: ${error?.message}", error)
                     callback.onLoginError("Login failed: ${error?.message ?: "Unknown error"}")
                 }
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Web3Auth login setup failed: ${e.message}", e)
+            Timber.e(TAG, "❌ Web3Auth login setup failed: ${e.message}", e)
             callback.onLoading(false)
             callback.onLoginError("Setup failed: ${e.message}")
         }
@@ -186,11 +186,11 @@ class Web3AuthManager @Inject constructor(
             return
         }
 
-        Log.d(TAG, "🚀 Starting Web3Auth SMS login with phone: ${phoneNumber.take(3)}***")
+        Timber.d(TAG, "🚀 Starting Web3Auth SMS login with phone: ${phoneNumber.take(3)}***")
         callback.onLoading(true)
 
         try {
-            Log.d(TAG, "🔧 Creating SMS login params with login_hint")
+            Timber.d(TAG, "🔧 Creating SMS login params with login_hint")
             val loginParams = LoginParams(
                 loginProvider = Provider.SMS_PASSWORDLESS,
                 extraLoginOptions = ExtraLoginOptions(
@@ -198,25 +198,25 @@ class Web3AuthManager @Inject constructor(
                 )
             )
 
-            Log.d(TAG, "🔑 Starting Web3Auth SMS login...")
+            Timber.d(TAG, "🔑 Starting Web3Auth SMS login...")
             val loginFuture = web3AuthInstance.login(loginParams)
-            Log.d(TAG, "📞 SMS login future created, SMS should be sent...")
+            Timber.d(TAG, "📞 SMS login future created, SMS should be sent...")
 
             // Handle completion using official pattern
             loginFuture.whenComplete { web3AuthResponse, error ->
                 callback.onLoading(false)
 
                 if (error == null && web3AuthResponse != null) {
-                    Log.d(TAG, "✅ Web3Auth SMS login completed successfully!")
+                    Timber.d(TAG, "✅ Web3Auth SMS login completed successfully!")
                     handleLoginSuccess(web3AuthResponse, Provider.SMS_PASSWORDLESS, callback)
                 } else {
-                    Log.e(TAG, "❌ Web3Auth SMS login failed: ${error?.message}", error)
+                    Timber.e(TAG, "❌ Web3Auth SMS login failed: ${error?.message}", error)
                     callback.onLoginError("SMS login failed: ${error?.message ?: "Unknown error"}")
                 }
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Web3Auth SMS login setup failed: ${e.message}", e)
+            Timber.e(TAG, "❌ Web3Auth SMS login setup failed: ${e.message}", e)
             callback.onLoading(false)
             callback.onLoginError("SMS setup failed: ${e.message}")
         }
@@ -232,42 +232,42 @@ class Web3AuthManager @Inject constructor(
             return
         }
         
-        Log.d(TAG, "🚀 Starting Web3Auth logout")
+        Timber.d(TAG, "🚀 Starting Web3Auth logout")
         callback.onLoading(true)
         
         try {
             val logoutFuture = web3AuthInstance.logout()
-            Log.d(TAG, "📞 Logout future created...")
+            Timber.d(TAG, "📞 Logout future created...")
             
             // Handle completion using official pattern
             logoutFuture.whenComplete { result, error ->
                 callback.onLoading(false)
                 
                 if (error == null) {
-                    Log.d(TAG, "✅ Web3Auth logout completed successfully!")
+                    Timber.d(TAG, "✅ Web3Auth logout completed successfully!")
                     callback.onLogoutSuccess()
                 } else {
                     // Check if this is the sessionId uninitialized error from restored sessions
                     val errorMessage = error?.message ?: ""
                     if (errorMessage.contains("sessionId has not been initialized", ignoreCase = true)) {
-                        Log.d(TAG, "ℹ️ Web3Auth logout skipped - no active SDK session (restored from storage)")
+                        Timber.d(TAG, "ℹ️ Web3Auth logout skipped - no active SDK session (restored from storage)")
                         // This is expected for restored sessions - treat as successful logout
                         callback.onLogoutSuccess()
                     } else {
-                        Log.e(TAG, "❌ Web3Auth logout failed: ${error?.message}", error)
+                        Timber.e(TAG, "❌ Web3Auth logout failed: ${error?.message}", error)
                         callback.onLogoutError("Logout failed: ${error?.message ?: "Unknown error"}")
                     }
                 }
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Web3Auth logout setup failed: ${e.message}", e)
+            Timber.e(TAG, "❌ Web3Auth logout setup failed: ${e.message}", e)
             callback.onLoading(false)
             
             // Check if this is the sessionId error at the setup level too
             val errorMessage = e.message ?: ""
             if (errorMessage.contains("sessionId has not been initialized", ignoreCase = true)) {
-                Log.d(TAG, "ℹ️ Web3Auth logout skipped at setup - no active SDK session (restored from storage)")
+                Timber.d(TAG, "ℹ️ Web3Auth logout skipped at setup - no active SDK session (restored from storage)")
                 callback.onLogoutSuccess()
             } else {
                 callback.onLogoutError("Logout setup failed: ${e.message}")
@@ -281,22 +281,22 @@ class Web3AuthManager @Inject constructor(
     fun handleRedirect(data: Uri?): Boolean {
         if (data == null) return false
         
-        Log.d(TAG, "🔗 Handling redirect data: $data")
+        Timber.d(TAG, "🔗 Handling redirect data: $data")
         
         // Check if this is a Web3Auth redirect
         if (data.scheme == "com.example.rampacashmobile" && data.host == "auth") {
-            Log.d(TAG, "✅ Valid Web3Auth redirect detected")
+            Timber.d(TAG, "✅ Valid Web3Auth redirect detected")
             
             return try {
                 web3Auth?.setResultUrl(data)
-                Log.d(TAG, "📨 Web3Auth redirect handled: $data")
+                Timber.d(TAG, "📨 Web3Auth redirect handled: $data")
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Redirect handling failed: ${e.message}", e)
+                Timber.e(TAG, "❌ Redirect handling failed: ${e.message}", e)
                 false
             }
         } else {
-            Log.d(TAG, "ℹ️ Not a Web3Auth redirect: $data")
+            Timber.d(TAG, "ℹ️ Not a Web3Auth redirect: $data")
             return false
         }
     }
@@ -306,7 +306,7 @@ class Web3AuthManager @Inject constructor(
      */
     fun handleCustomTabsClosed(): Boolean {
         return if (Web3Auth.getCustomTabsClosed()) {
-            Log.d(TAG, "🌐 Web3Auth custom tabs were closed by user")
+            Timber.d(TAG, "🌐 Web3Auth custom tabs were closed by user")
             Web3Auth.setCustomTabsClosed(false)
             true
         } else {
@@ -327,27 +327,27 @@ class Web3AuthManager @Inject constructor(
             val userInfo = web3AuthResponse.userInfo
             
             if (privateKey != null) {
-                Log.d(TAG, "🔑 Web3Auth Private Key received: ${privateKey.take(10)}...")
-                Log.d(TAG, "👤 User Info: ${userInfo?.name ?: userInfo?.email ?: "Unknown"}")
+                Timber.d(TAG, "🔑 Web3Auth Private Key received: ${privateKey.take(10)}...")
+                Timber.d(TAG, "👤 User Info: ${userInfo?.name ?: userInfo?.email ?: "Unknown"}")
                 
                 // Derive Solana public key from Web3Auth private key
                 val keyDerivationResult = deriveSolanaKeys(privateKey)
                 
                 if (keyDerivationResult != null) {
                     val (solanaPublicKey, displayAddress) = keyDerivationResult
-                    Log.d(TAG, "🎯 Derived Solana Public Key: $solanaPublicKey")
-                    Log.d(TAG, "📍 Display Address: $displayAddress")
+                    Timber.d(TAG, "🎯 Derived Solana Public Key: $solanaPublicKey")
+                    Timber.d(TAG, "📍 Display Address: $displayAddress")
                     
                     callback.onLoginSuccess(web3AuthResponse, provider, solanaPublicKey, displayAddress)
                 } else {
                     callback.onLoginError("Failed to derive Solana keys")
                 }
             } else {
-                Log.e(TAG, "❌ No private key received from Web3Auth")
+                Timber.e(TAG, "❌ No private key received from Web3Auth")
                 callback.onLoginError("No private key received from Web3Auth")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to handle login success: ${e.message}", e)
+            Timber.e(TAG, "❌ Failed to handle login success: ${e.message}", e)
             callback.onLoginError("Failed to process login: ${e.message}")
         }
     }
@@ -361,7 +361,7 @@ class Web3AuthManager @Inject constructor(
             
             // Get Ed25519 private key from Web3Auth
             val ed25519PrivateKey = web3AuthInstance.getEd25519PrivKey()
-            Log.d(TAG, "🔐 Ed25519 Private Key: ${ed25519PrivateKey.take(10)}...")
+            Timber.d(TAG, "🔐 Ed25519 Private Key: ${ed25519PrivateKey.take(10)}...")
             
             // Create Keypair from Ed25519 private key using sol4k
             val solanaKeyPair = Keypair.fromSecretKey(ed25519PrivateKey.hexToByteArray())
@@ -375,7 +375,7 @@ class Web3AuthManager @Inject constructor(
             Pair(solanaPublicKey, displayAddress)
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to derive Solana keys: ${e.message}", e)
+            Timber.e(TAG, "❌ Failed to derive Solana keys: ${e.message}", e)
             null
         }
     }

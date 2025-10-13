@@ -2,7 +2,7 @@ package com.example.rampacashmobile.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import timber.log.Timber
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -98,7 +98,7 @@ class MainViewModel @Inject constructor(
 
     // Lazy Web3Auth initialization to prevent blocking during app startup
     private val web3AuthLazy: Web3Auth by lazy {
-        Log.d(TAG, "🔧 Creating Web3Auth instance...")
+        Timber.d("🔧 Creating Web3Auth instance...")
         try {
             Web3Auth(
                 Web3AuthOptions(
@@ -109,10 +109,10 @@ class MainViewModel @Inject constructor(
                 ),
                 context
             ).also {
-                Log.d(TAG, "✅ Web3Auth instance created successfully")
+                Timber.d("✅ Web3Auth instance created successfully")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to create Web3Auth instance: ${e.message}", e)
+            Timber.e(e, "❌ Failed to create Web3Auth instance: ${e.message}")
             throw e
         }
     }
@@ -127,7 +127,7 @@ class MainViewModel @Inject constructor(
         get() = _state
 
     fun loadConnection() {
-        Log.d(TAG, "🔄 loadConnection() called - checking for persisted sessions...")
+        Timber.d("🔄 loadConnection() called - checking for persisted sessions...")
 
         // Debug current session storage state
         DebugSessionHelper.debugAllStoredSessions(
@@ -138,11 +138,11 @@ class MainViewModel @Inject constructor(
         _state.value.copy(isLoading = true).updateViewState()
 
         val persistedConnection = persistenceUseCase.getWalletConnection()
-        Log.d(TAG, "🔍 Persistence check result: ${persistedConnection::class.simpleName}")
+        Timber.d("🔍 Persistence check result: ${persistedConnection::class.simpleName}")
 
         when (persistedConnection) {
             is Connected -> {
-                Log.d(TAG, "🔄 Restoring MWA session: ${persistedConnection.accountLabel}")
+                Timber.d("🔄 Restoring MWA session: ${persistedConnection.accountLabel}")
                 _state.value.copy(
                     isLoading = true,
                     canTransact = true,
@@ -166,7 +166,7 @@ class MainViewModel @Inject constructor(
             }
 
             is Web3AuthConnected -> {
-                Log.d(TAG, "🔄 Restoring Web3Auth session: ${persistedConnection.accountLabel}")
+                Timber.d("🔄 Restoring Web3Auth session: ${persistedConnection.accountLabel}")
 
                 // Create display-friendly address
                 val fullAddress = persistedConnection.publicKey.base58()
@@ -196,7 +196,7 @@ class MainViewModel @Inject constructor(
             }
 
             is NotConnected -> {
-                Log.d(TAG, "🔄 No persisted session found - setting loading to false")
+                Timber.d("🔄 No persisted session found - setting loading to false")
                 _state.value.copy(isLoading = false).updateViewState()
                 // No persisted session - stay in login state
             }
@@ -210,7 +210,7 @@ class MainViewModel @Inject constructor(
 
     fun getTransactionHistory() {
         if (isLoadingTransactionHistory) {
-            Log.d(TAG, "⏸️ Transaction history fetch already in progress, skipping...")
+            Timber.d("⏸️ Transaction history fetch already in progress, skipping...")
             return
         }
 
@@ -220,30 +220,30 @@ class MainViewModel @Inject constructor(
                 val currentState = _state.value
 
                 // Debug current state
-                Log.d(TAG, "🔍 Transaction History Debug:")
-                Log.d(TAG, "- canTransact: ${currentState.canTransact}")
-                Log.d(TAG, "- isWeb3AuthLoggedIn: ${currentState.isWeb3AuthLoggedIn}")
-                Log.d(TAG, "- userAddress: ${currentState.userAddress}")
-                Log.d(TAG, "- fullAddressForCopy: ${currentState.fullAddressForCopy}")
-                Log.d(TAG, "- web3AuthSolanaPublicKey: ${currentState.web3AuthSolanaPublicKey}")
+                Timber.d("🔍 Transaction History Debug:")
+                Timber.d("- canTransact: ${currentState.canTransact}")
+                Timber.d("- isWeb3AuthLoggedIn: ${currentState.isWeb3AuthLoggedIn}")
+                Timber.d(TAG, "- userAddress: ${currentState.userAddress}")
+                Timber.d(TAG, "- fullAddressForCopy: ${currentState.fullAddressForCopy}")
+                Timber.d(TAG, "- web3AuthSolanaPublicKey: ${currentState.web3AuthSolanaPublicKey}")
 
                 // Determine wallet address based on connection type
                 val walletAddress = when {
                     currentState.isWeb3AuthLoggedIn && !currentState.web3AuthSolanaPublicKey.isNullOrEmpty() -> {
-                        Log.d(TAG, "📱 Using Web3Auth address for transaction history")
+                        Timber.d(TAG, "📱 Using Web3Auth address for transaction history")
                         currentState.web3AuthSolanaPublicKey
                     }
                     currentState.canTransact && !currentState.fullAddressForCopy.isNullOrEmpty() -> {
-                        Log.d(TAG, "📱 Using MWA address for transaction history")
+                        Timber.d(TAG, "📱 Using MWA address for transaction history")
                         currentState.fullAddressForCopy
                     }
                     !currentState.userAddress.isNullOrEmpty() -> {
-                        Log.d(TAG, "📱 Using userAddress for transaction history")
+                        Timber.d(TAG, "📱 Using userAddress for transaction history")
                         currentState.userAddress
                     }
                     else -> {
-                        Log.w(TAG, "🔍 No wallet address available for transaction history")
-                        Log.w(TAG, "State dump: canTransact=${currentState.canTransact}, isWeb3Auth=${currentState.isWeb3AuthLoggedIn}")
+                        Timber.w(TAG, "🔍 No wallet address available for transaction history")
+                        Timber.w(TAG, "State dump: canTransact=${currentState.canTransact}, isWeb3Auth=${currentState.isWeb3AuthLoggedIn}")
                         _state.update { it.copy(
                             isLoadingTransactions = false,
                             snackbarMessage = "❌ | No wallet connected"
@@ -253,7 +253,7 @@ class MainViewModel @Inject constructor(
                     }
                 }
 
-                Log.d(TAG, "🔍 Fetching transaction history for wallet: ${walletAddress.take(8)}...")
+                Timber.d(TAG, "🔍 Fetching transaction history for wallet: ${walletAddress.take(8)}...")
 
                 _state.update { it.copy(isLoadingTransactions = true) }
 
@@ -264,10 +264,10 @@ class MainViewModel @Inject constructor(
                     isLoadingTransactions = false
                 )}
 
-                Log.d(TAG, "✅ Transaction history loaded: ${transactions.size} transactions")
+                Timber.d(TAG, "✅ Transaction history loaded: ${transactions.size} transactions")
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to load transaction history: ${e.message}", e)
+                Timber.e(TAG, "❌ Failed to load transaction history: ${e.message}", e)
                 _state.update { it.copy(
                     isLoadingTransactions = false,
                     snackbarMessage = "❌ | Failed to load transaction history"
@@ -288,14 +288,14 @@ class MainViewModel @Inject constructor(
                         result.authResult.authToken
                     )
 
-                    Log.d(TAG, "💾 About to persist MWA connection for: ${currentConn.accountLabel}")
+                    Timber.d(TAG, "💾 About to persist MWA connection for: ${currentConn.accountLabel}")
                     persistenceUseCase.persistConnection(
                         currentConn.publicKey, currentConn.accountLabel, currentConn.authToken
                     )
 
                     // Verify persistence worked
                     val testConnection = persistenceUseCase.getWalletConnection()
-                    Log.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
+                    Timber.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
 
                     // Set the auth token in walletAdapter
                     walletAdapter.authToken = currentConn.authToken
@@ -438,27 +438,27 @@ class MainViewModel @Inject constructor(
     private fun refreshBalancesAfterTransaction(account: SolanaPublicKey, signature: String) {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "🔄 Refreshing balances after transaction: ${signature.take(8)}...")
-                Log.d(TAG, "🔄 Account for balance refresh: ${account.base58()}")
+                Timber.d(TAG, "🔄 Refreshing balances after transaction: ${signature.take(8)}...")
+                Timber.d(TAG, "🔄 Account for balance refresh: ${account.base58()}")
 
                 // Wait longer for transaction confirmation (blockchain updates can be slow)
-                Log.d(TAG, "⏳ Waiting 4 seconds for blockchain confirmation...")
+                Timber.d(TAG, "⏳ Waiting 4 seconds for blockchain confirmation...")
                 delay(4000) // 4 seconds initial delay (increased from 2)
 
                 // Refresh SOL balance immediately (usually faster to update)
                 getSolanaBalance(account)
 
                 // Refresh token balances with retry logic (these can take longer)
-                Log.d(TAG, "🔄 Starting token balance refresh with retries...")
+                Timber.d(TAG, "🔄 Starting token balance refresh with retries...")
                 refreshTokenBalanceWithRetry(account, "EURC")
                 refreshTokenBalanceWithRetry(account, "USDC")
 
-                Log.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
-                Log.d(TAG, "🎯 Current state after balance refresh - showTransactionSuccess: ${viewState.value.showTransactionSuccess}")
-                Log.d(TAG, "💰 Final balances - EURC: ${viewState.value.eurcBalance}, USDC: ${viewState.value.usdcBalance}")
+                Timber.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
+                Timber.d(TAG, "🎯 Current state after balance refresh - showTransactionSuccess: ${viewState.value.showTransactionSuccess}")
+                Timber.d(TAG, "💰 Final balances - EURC: ${viewState.value.eurcBalance}, USDC: ${viewState.value.usdcBalance}")
 
             } catch (e: Exception) {
-                Log.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${e.message}")
+                Timber.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${e.message}")
                 // Don't update UI state on refresh failure - keep existing balances
             }
         }
@@ -476,26 +476,26 @@ class MainViewModel @Inject constructor(
                 try {
                     delay(attempts * 2000L) // 0s, 2s, 4s, 6s, 8s delays (longer delays)
 
-                    Log.d(TAG, "🔍 Fetching $tokenSymbol balance (attempt ${attempts + 1}/$maxAttempts)...")
-                    Log.d(TAG, "🔍 Account: ${account.base58()}")
+                    Timber.d(TAG, "🔍 Fetching $tokenSymbol balance (attempt ${attempts + 1}/$maxAttempts)...")
+                    Timber.d(TAG, "🔍 Account: ${account.base58()}")
 
                     when (tokenSymbol) {
                         "EURC" -> getEurcBalanceRobust(account)
                         "USDC" -> getUsdcBalanceRobust(account)
                     }
 
-                    Log.d(TAG, "✅ $tokenSymbol balance refreshed successfully")
+                    Timber.d(TAG, "✅ $tokenSymbol balance refreshed successfully")
                     return@launch // Success - exit retry loop
 
                 } catch (e: Exception) {
                     attempts++
-                    Log.w(TAG, "⚠️ $tokenSymbol balance fetch attempt $attempts failed: ${e.message}")
+                    Timber.w(TAG, "⚠️ $tokenSymbol balance fetch attempt $attempts failed: ${e.message}")
 
                     if (attempts >= maxAttempts) {
-                        Log.e(TAG, "❌ $tokenSymbol balance refresh failed after $maxAttempts attempts")
+                        Timber.e(TAG, "❌ $tokenSymbol balance refresh failed after $maxAttempts attempts")
                         // Don't reset balance to 0 - keep existing value
                     } else {
-                        Log.d(TAG, "🔄 Will retry $tokenSymbol balance fetch in ${(attempts * 2)} seconds...")
+                        Timber.d(TAG, "🔄 Will retry $tokenSymbol balance fetch in ${(attempts * 2)} seconds...")
                     }
                 }
             }
@@ -582,13 +582,13 @@ class MainViewModel @Inject constructor(
             val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
             val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, eurcMint)
 
-            Log.d(TAG, "💰 Fetching EURC balance for account: ${account.base58()}")
-            Log.d(TAG, "💰 EURC ATA: ${eurcAta.base58()}")
+            Timber.d(TAG, "💰 Fetching EURC balance for account: ${account.base58()}")
+            Timber.d(TAG, "💰 EURC ATA: ${eurcAta.base58()}")
 
             // Check if the ATA exists
             val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, eurcAta)
             if (!exists) {
-                Log.d(TAG, "💰 EURC ATA does not exist - setting balance to 0")
+                Timber.d(TAG, "💰 EURC ATA does not exist - setting balance to 0")
                 // Only update if we're sure the account doesn't exist
                 _state.value.copy(
                     eurcBalance = 0.0
@@ -600,24 +600,24 @@ class MainViewModel @Inject constructor(
             val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
             val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
 
-            Log.d(TAG, "💰 EURC raw balance: $tokenBalance, human readable: $humanReadableBalance")
-            Log.d(TAG, "💰 Previous EURC balance: ${viewState.value.eurcBalance}")
+            Timber.d(TAG, "💰 EURC raw balance: $tokenBalance, human readable: $humanReadableBalance")
+            Timber.d(TAG, "💰 Previous EURC balance: ${viewState.value.eurcBalance}")
 
             _state.value.copy(
                 eurcBalance = humanReadableBalance
             ).updateViewState()
 
-            Log.d(TAG, "💰 EURC balance updated to: $humanReadableBalance")
+            Timber.d(TAG, "💰 EURC balance updated to: $humanReadableBalance")
 
         } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
-            Log.d(TAG, "💰 EURC account not found - setting balance to 0")
+            Timber.d(TAG, "💰 EURC account not found - setting balance to 0")
             // Account doesn't exist - set to 0
             _state.value.copy(
                 eurcBalance = 0.0
             ).updateViewState()
         } catch (e: Exception) {
             // Temporary error - keep existing balance, don't reset to 0
-            Log.w(TAG, "💰 EURC balance fetch failed (keeping existing): ${e.message}")
+            Timber.w(TAG, "💰 EURC balance fetch failed (keeping existing): ${e.message}")
             throw e // Re-throw for retry logic
         }
     }
@@ -655,7 +655,7 @@ class MainViewModel @Inject constructor(
             ).updateViewState()
         } catch (e: Exception) {
             // Temporary error - keep existing balance, don't reset to 0
-            Log.w(TAG, "USDC balance fetch failed (keeping existing): ${e.message}")
+            Timber.w(TAG, "USDC balance fetch failed (keeping existing): ${e.message}")
             throw e // Re-throw for retry logic
         }
     }
@@ -690,7 +690,7 @@ class MainViewModel @Inject constructor(
 
                 // Show which implementation is being used
                 if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
-                    Log.d(TAG, "${TransferConfig.getImplementationEmoji()} Using ${TransferConfig.getImplementationName()}")
+                    Timber.d(TAG, "${TransferConfig.getImplementationEmoji()} Using ${TransferConfig.getImplementationName()}")
                 }
 
                 // Check if we have a valid connection first
@@ -717,7 +717,7 @@ class MainViewModel @Inject constructor(
                     // Choose implementation based on configuration
                     if (TransferConfig.USE_MANUAL_TRANSFER) {
                         if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
-                            Log.d(TAG, "🔧 Building transaction manually (bypasses web3-solana bugs)")
+                            Timber.d(TAG, "🔧 Building transaction manually (bypasses web3-solana bugs)")
                         }
 
                         // Use manual implementation that bypasses library serialization bugs
@@ -730,14 +730,14 @@ class MainViewModel @Inject constructor(
                                 amount = amountInTokenUnits
                             )
                         } catch (e: Exception) {
-                            Log.e(TAG, "❌ Manual transfer failed: ${e.message}", e)
+                            Timber.e(TAG, "❌ Manual transfer failed: ${e.message}", e)
                             throw RuntimeException("Manual transfer failed: ${e.message}", e)
                         }
 
                         signAndSendTransactions(arrayOf(transactionBytes))
                     } else {
                         if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
-                            Log.d(TAG, "📚 Using web3-solana library transaction building")
+                            Timber.d(TAG, "📚 Using web3-solana library transaction building")
                         }
 
                         // Use original implementation via web3-solana library
@@ -864,7 +864,7 @@ class MainViewModel @Inject constructor(
     ) {
         // Validate recipient address before proceeding
         if (recipientAddress.isBlank()) {
-            Log.w(TAG, "checkATA: Recipient address is blank")
+            Timber.w(TAG, "checkATA: Recipient address is blank")
             _state.value.copy(
                 snackbarMessage = "⚠️ | Please enter a valid recipient address"
             ).updateViewState()
@@ -881,14 +881,14 @@ class MainViewModel @Inject constructor(
                 )
 
                 val toStringATA = atAccount.toString()
-                Log.d(TAG, "checkATA: Deriving ATA $toStringATA for recipient: $recipientAddress")
+                Timber.d(TAG, "checkATA: Deriving ATA $toStringATA for recipient: $recipientAddress")
 
                 // Check if the ATA exists on-chain
-                Log.d(TAG, "checkATA: Checking if ATA exists on-chain...")
+                Timber.d(TAG, "checkATA: Checking if ATA exists on-chain...")
                 val ataExists = try {
                     AssociatedTokenAccountUtils.checkAccountExists(rpcUri, atAccount)
                 } catch (e: Exception) {
-                    Log.e(TAG, "checkATA: Failed to check ATA existence: ${e.message}", e)
+                    Timber.e(TAG, "checkATA: Failed to check ATA existence: ${e.message}", e)
                     null
                 }
 
@@ -903,7 +903,7 @@ class MainViewModel @Inject constructor(
                 ).updateViewState()
 
             } catch (e: Exception) {
-                Log.e(TAG, "checkATA: Failed to derive ATA for recipient: $recipientAddress", e)
+                Timber.e(TAG, "checkATA: Failed to derive ATA for recipient: $recipientAddress", e)
                 _state.value.copy(
                     snackbarMessage = "❌ | Invalid recipient address: ${e.message}"
                 ).updateViewState()
@@ -939,11 +939,11 @@ class MainViewModel @Inject constructor(
                 val tokenMint = SolanaPublicKey.from(tokenMintAddress)
 
                 // Derive ATA
-                Log.d(TAG, "checkTokenBalance: Deriving ATA for ${userPublicKey.base58()}")
+                Timber.d(TAG, "checkTokenBalance: Deriving ATA for ${userPublicKey.base58()}")
                 val senderAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(
                     userPublicKey, tokenMint
                 )
-                Log.d(TAG, "Sender ATA: $senderAta")
+                Timber.d(TAG, "Sender ATA: $senderAta")
 
                 // Determine token symbol based on mint address
                 val tokenSymbol = when (tokenMintAddress) {
@@ -1003,7 +1003,7 @@ class MainViewModel @Inject constructor(
      * Navigate back from transaction success screen to main screen
      */
     fun onTransactionSuccessDone() {
-        Log.d(TAG, "🔙 User clicked Done - navigating back from success screen")
+        Timber.d(TAG, "🔙 User clicked Done - navigating back from success screen")
         _state.value.copy(
             showTransactionSuccess = false,
             transactionDetails = null
@@ -1052,7 +1052,7 @@ class MainViewModel @Inject constructor(
 
                 // Persist Web3Auth session
                 try {
-                    Log.d(TAG, "💾 About to persist Web3Auth session for: $displayName")
+                    Timber.d(TAG, "💾 About to persist Web3Auth session for: $displayName")
                     persistenceUseCase.persistWeb3AuthConnection(
                         pubKey = SolanaPublicKey.from(solanaPublicKey),
                         accountLabel = displayName,
@@ -1060,13 +1060,13 @@ class MainViewModel @Inject constructor(
                         providerName = providerName,
                         userInfo = userInfo?.name ?: userInfo?.email ?: ""
                     )
-                    Log.d(TAG, "✅ Web3Auth session persisted successfully")
+                    Timber.d(TAG, "✅ Web3Auth session persisted successfully")
 
                     // Verify persistence worked
                     val testConnection = persistenceUseCase.getWalletConnection()
-                    Log.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
+                    Timber.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
                 } catch (e: Exception) {
-                    Log.e(TAG, "⚠️ Failed to persist Web3Auth session: ${e.message}", e)
+                    Timber.e(TAG, "⚠️ Failed to persist Web3Auth session: ${e.message}", e)
                     // Continue anyway - session will work for this app session
                 }
 
@@ -1084,7 +1084,7 @@ class MainViewModel @Inject constructor(
                     snackbarMessage = "✅ | Successfully logged in with $providerName!"
                 ).updateViewState()
 
-                Log.d(TAG, "Web3Auth login successful with $providerName - Solana address: $solanaPublicKey")
+                Timber.d(TAG, "Web3Auth login successful with $providerName - Solana address: $solanaPublicKey")
 
                 // Load balances for Web3Auth user
                 try {
@@ -1092,15 +1092,15 @@ class MainViewModel @Inject constructor(
                     getSolanaBalance(userPublicKey)
                     getEurcBalance(userPublicKey)
                     getUsdcBalance(userPublicKey)
-                    Log.d(TAG, "Loading balances for Web3Auth user: $solanaPublicKey")
+                    Timber.d(TAG, "Loading balances for Web3Auth user: $solanaPublicKey")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load balances for Web3Auth user: ${e.message}", e)
+                    Timber.e(TAG, "Failed to load balances for Web3Auth user: ${e.message}", e)
                 }
             } else {
                 throw Exception("No private key received from Web3Auth")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle Web3Auth response", e)
+            Timber.e(TAG, "Failed to handle Web3Auth response", e)
             _state.value.copy(
                 isWeb3AuthLoading = false,
                 snackbarMessage = "❌ | Failed to process login response: ${e.message}"
@@ -1110,7 +1110,7 @@ class MainViewModel @Inject constructor(
 
     // Login is now handled directly by MainActivity
     fun loginWithWeb3Auth(provider: Provider) {
-        Log.d(TAG, "🚀 ViewModel: Web3Auth login request for provider: $provider (delegated to MainActivity)")
+        Timber.d(TAG, "🚀 ViewModel: Web3Auth login request for provider: $provider (delegated to MainActivity)")
         // The actual login call is now in MainActivity - this method primarily exists for logging
     }
 
@@ -1135,13 +1135,13 @@ class MainViewModel @Inject constructor(
             snackbarMessage = "✅ | Successfully logged out from Web3Auth"
         ).updateViewState()
 
-        Log.d(TAG, "Web3Auth logout completed successfully")
+        Timber.d(TAG, "Web3Auth logout completed successfully")
     }
 
     // Handle Web3Auth session restoration on app startup
     fun handleWeb3AuthSessionRestore(privateKey: String, solanaPublicKey: String, displayAddress: String) {
         try {
-            Log.d(TAG, "🔄 Restoring Web3Auth session from Web3Auth SDK")
+            Timber.d(TAG, "🔄 Restoring Web3Auth session from Web3Auth SDK")
 
             _state.value.copy(
                 isWeb3AuthLoading = false,
@@ -1162,13 +1162,13 @@ class MainViewModel @Inject constructor(
                 getSolanaBalance(userPublicKey)
                 getEurcBalance(userPublicKey)
                 getUsdcBalance(userPublicKey)
-                Log.d(TAG, "Loading balances for restored Web3Auth user: $solanaPublicKey")
+                Timber.d(TAG, "Loading balances for restored Web3Auth user: $solanaPublicKey")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load balances for restored Web3Auth user: ${e.message}", e)
+                Timber.e(TAG, "Failed to load balances for restored Web3Auth user: ${e.message}", e)
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle Web3Auth session restoration", e)
+            Timber.e(TAG, "Failed to handle Web3Auth session restoration", e)
             _state.value.copy(
                 isWeb3AuthLoading = false,
                 snackbarMessage = "❌ | Failed to restore Web3Auth session: ${e.message}"
@@ -1183,9 +1183,9 @@ class MainViewModel @Inject constructor(
         try {
             // Handle the redirect data without blocking
             web3AuthLazy.setResultUrl(data)
-            Log.d(TAG, "Web3Auth redirect handled: ${data}")
+            Timber.d(TAG, "Web3Auth redirect handled: ${data}")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle Web3Auth redirect: ${e.message}", e)
+            Timber.e(TAG, "Failed to handle Web3Auth redirect: ${e.message}", e)
         }
     }
 
@@ -1193,7 +1193,7 @@ class MainViewModel @Inject constructor(
      * Handle when user cancels Web3Auth by closing the browser
      */
     fun onWeb3AuthCancelled() {
-        Log.d(TAG, "🚫 Web3Auth cancelled by user")
+        Timber.d(TAG, "🚫 Web3Auth cancelled by user")
         _state.value.copy(
             isWeb3AuthLoading = false,
             loadingProvider = null,
@@ -1286,9 +1286,9 @@ class MainViewModel @Inject constructor(
                 // Complete onboarding and create user
                 userRepository.completeOnboarding(walletAddress, authProvider)
 
-                Log.d(TAG, "✅ User onboarding completed successfully")
+                Timber.d(TAG, "✅ User onboarding completed successfully")
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to complete user onboarding: ${e.message}", e)
+                Timber.e(TAG, "❌ Failed to complete user onboarding: ${e.message}", e)
                 showSnackBar("Failed to save user information")
             }
         }
@@ -1345,7 +1345,7 @@ class MainViewModel @Inject constructor(
 
                 // Show which implementation is being used
                 if (TransferConfig.ENABLE_TRANSFER_LOGGING) {
-                    Log.d(TAG, "🔑 Using Web3Auth SPL Transfer (local signing)")
+                    Timber.d(TAG, "🔑 Using Web3Auth SPL Transfer (local signing)")
                 }
 
                 _state.value.copy(
@@ -1363,11 +1363,11 @@ class MainViewModel @Inject constructor(
                 val multiplier = 10.0.pow(tokenDecimals.toDouble())
                 val amountInTokenUnits = (amountDouble * multiplier).toLong()
 
-                Log.d(TAG, "Web3Auth SPL Transfer Details:")
-                Log.d(TAG, "From: ${fromWallet.base58()}")
-                Log.d(TAG, "To: ${recipientPubkey.base58()}")
-                Log.d(TAG, "Mint: ${tokenMint.base58()}")
-                Log.d(TAG, "Amount: $amountInTokenUnits ($amount tokens)")
+                Timber.d(TAG, "Web3Auth SPL Transfer Details:")
+                Timber.d(TAG, "From: ${fromWallet.base58()}")
+                Timber.d(TAG, "To: ${recipientPubkey.base58()}")
+                Timber.d(TAG, "Mint: ${tokenMint.base58()}")
+                Timber.d(TAG, "Amount: $amountInTokenUnits ($amount tokens)")
 
                 // Execute Web3Auth transfer
                 val signature = Web3AuthSplTransferUseCase.transfer(
@@ -1379,7 +1379,7 @@ class MainViewModel @Inject constructor(
                     amount = amountInTokenUnits
                 )
 
-                Log.d(TAG, "✅ Web3Auth SPL transfer successful: $signature")
+                Timber.d(TAG, "✅ Web3Auth SPL transfer successful: $signature")
 
                 // Determine token symbol
                 val tokenSymbol = when (tokenMintAddress) {
@@ -1400,8 +1400,8 @@ class MainViewModel @Inject constructor(
                 )
 
                 // Navigate to success screen (same as MWA wallet flow)
-                Log.d(TAG, "🎯 Setting showTransactionSuccess = true for Web3Auth transfer")
-                Log.d(TAG, "Transaction details: signature=${signature.take(8)}, amount=$amount, token=$tokenSymbol")
+                Timber.d(TAG, "🎯 Setting showTransactionSuccess = true for Web3Auth transfer")
+                Timber.d(TAG, "Transaction details: signature=${signature.take(8)}, amount=$amount, token=$tokenSymbol")
 
                 _state.value.copy(
                     showTransactionSuccess = true,
@@ -1411,10 +1411,10 @@ class MainViewModel @Inject constructor(
                 // Refresh balances after successful transfer (with delay for blockchain confirmation)
                 refreshBalancesAfterTransaction(fromWallet, signature)
 
-                Log.d(TAG, "🎯 Web3Auth SPL transfer completed successfully - showing success screen")
+                Timber.d(TAG, "🎯 Web3Auth SPL transfer completed successfully - showing success screen")
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Web3Auth SPL transfer failed: ${e.message}", e)
+                Timber.e(TAG, "❌ Web3Auth SPL transfer failed: ${e.message}", e)
                 _state.value.copy(
                     snackbarMessage = "❌ | Transfer failed: ${e.message}"
                 ).updateViewState()

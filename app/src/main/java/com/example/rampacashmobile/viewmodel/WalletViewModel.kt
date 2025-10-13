@@ -12,6 +12,8 @@ import com.example.rampacashmobile.domain.valueobjects.Money
 import com.example.rampacashmobile.domain.valueobjects.Currency
 import com.example.rampacashmobile.domain.valueobjects.UserId
 import com.example.rampacashmobile.domain.valueobjects.WalletAddress
+import com.example.rampacashmobile.constants.AppConstants
+import com.example.rampacashmobile.utils.ErrorHandler
 import com.example.rampacashmobile.solanautils.AssociatedTokenAccountUtils
 import com.example.rampacashmobile.solanautils.TokenMints
 import com.example.rampacashmobile.usecase.AccountBalanceUseCase
@@ -54,31 +56,36 @@ class WalletViewModel @Inject constructor(
      */
     fun getSolBalance(walletAddress: WalletAddress) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                _walletState.update { it.copy(isLoading = true, error = null) }
-                
-                val publicKey = walletAddress.toSolanaPublicKey()
-                val balance = AccountBalanceUseCase(rpcUri, publicKey)
-                val solAmount = BigDecimal.valueOf(balance / 1000000000.0)
-                val money = Money(solAmount, Currency.USD) // SOL is typically priced in USD
-                
-                _walletState.update { 
-                    it.copy(
-                        isLoading = false,
-                        solBalance = money,
-                        error = null
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to get SOL balance", e)
-                _walletState.update { 
-                    it.copy(
-                        isLoading = false,
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to fetch SOL balance: ${e.message}",
-                            e
+            _walletState.update { it.copy(isLoading = true, error = null) }
+            
+            val result = ErrorHandler.safeCall(
+                operation = {
+                    val publicKey = walletAddress.toSolanaPublicKey()
+                    val balance = AccountBalanceUseCase(rpcUri, publicKey)
+                    val solAmount = BigDecimal.valueOf(AppConstants.lamportsToSol(balance))
+                    Money(solAmount, Currency.USD) // SOL is typically priced in USD
+                },
+                errorMessage = "Failed to get SOL balance"
+            )
+            
+            when (result) {
+                is Result.Success -> {
+                    _walletState.update { 
+                        it.copy(
+                            isLoading = false,
+                            solBalance = result.data,
+                            error = null
                         )
-                    )
+                    }
+                }
+                is Result.Failure -> {
+                    ErrorHandler.logError(result.error, TAG)
+                    _walletState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = result.error
+                        )
+                    }
                 }
             }
         }
@@ -89,30 +96,35 @@ class WalletViewModel @Inject constructor(
      */
     fun getEurcBalance(walletAddress: WalletAddress) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val publicKey = walletAddress.toSolanaPublicKey()
-                val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
-                val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(publicKey, eurcMint)
-                
-                val balance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
-                val eurcAmount = BigDecimal.valueOf(balance / 1000000.0) // EURC has 6 decimals
-                val money = Money(eurcAmount, Currency.EUR)
-                
-                _walletState.update { 
-                    it.copy(
-                        eurcBalance = money,
-                        error = null
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to get EURC balance", e)
-                _walletState.update { 
-                    it.copy(
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to fetch EURC balance: ${e.message}",
-                            e
+            val result = ErrorHandler.safeCall(
+                operation = {
+                    val publicKey = walletAddress.toSolanaPublicKey()
+                    val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
+                    val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(publicKey, eurcMint)
+                    
+                    val balance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
+                    val eurcAmount = BigDecimal.valueOf(AppConstants.tokenUnitsToAmount(balance, AppConstants.EURC_DECIMAL_PLACES))
+                    Money(eurcAmount, Currency.EUR)
+                },
+                errorMessage = "Failed to get EURC balance"
+            )
+            
+            when (result) {
+                is Result.Success -> {
+                    _walletState.update { 
+                        it.copy(
+                            eurcBalance = result.data,
+                            error = null
                         )
-                    )
+                    }
+                }
+                is Result.Failure -> {
+                    ErrorHandler.logError(result.error, TAG)
+                    _walletState.update { 
+                        it.copy(
+                            error = result.error
+                        )
+                    }
                 }
             }
         }
@@ -123,30 +135,35 @@ class WalletViewModel @Inject constructor(
      */
     fun getUsdcBalance(walletAddress: WalletAddress) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val publicKey = walletAddress.toSolanaPublicKey()
-                val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
-                val usdcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(publicKey, usdcMint)
-                
-                val balance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
-                val usdcAmount = BigDecimal.valueOf(balance / 1000000.0) // USDC has 6 decimals
-                val money = Money(usdcAmount, Currency.USD)
-                
-                _walletState.update { 
-                    it.copy(
-                        usdcBalance = money,
-                        error = null
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to get USDC balance", e)
-                _walletState.update { 
-                    it.copy(
-                        error = com.example.rampacashmobile.domain.common.DomainError.NetworkError(
-                            "Failed to fetch USDC balance: ${e.message}",
-                            e
+            val result = ErrorHandler.safeCall(
+                operation = {
+                    val publicKey = walletAddress.toSolanaPublicKey()
+                    val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
+                    val usdcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(publicKey, usdcMint)
+                    
+                    val balance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
+                    val usdcAmount = BigDecimal.valueOf(AppConstants.tokenUnitsToAmount(balance, AppConstants.USDC_DECIMAL_PLACES))
+                    Money(usdcAmount, Currency.USD)
+                },
+                errorMessage = "Failed to get USDC balance"
+            )
+            
+            when (result) {
+                is Result.Success -> {
+                    _walletState.update { 
+                        it.copy(
+                            usdcBalance = result.data,
+                            error = null
                         )
-                    )
+                    }
+                }
+                is Result.Failure -> {
+                    ErrorHandler.logError(result.error, TAG)
+                    _walletState.update { 
+                        it.copy(
+                            error = result.error
+                        )
+                    }
                 }
             }
         }
@@ -167,9 +184,9 @@ class WalletViewModel @Inject constructor(
     fun canSendAmount(amount: Money, currency: String): Boolean {
         val currentState = _walletState.value
         return when (currency.uppercase()) {
-            "SOL" -> currentState.solBalance?.let { it.isGreaterThanOrEqual(amount) } ?: false
-            "EURC" -> currentState.eurcBalance?.let { it.isGreaterThanOrEqual(amount) } ?: false
-            "USDC" -> currentState.usdcBalance?.let { it.isGreaterThanOrEqual(amount) } ?: false
+            AppConstants.SOL_SYMBOL -> currentState.solBalance?.let { it.isGreaterThanOrEqual(amount) } ?: false
+            AppConstants.EURC_SYMBOL -> currentState.eurcBalance?.let { it.isGreaterThanOrEqual(amount) } ?: false
+            AppConstants.USDC_SYMBOL -> currentState.usdcBalance?.let { it.isGreaterThanOrEqual(amount) } ?: false
             else -> false
         }
     }
@@ -182,14 +199,4 @@ class WalletViewModel @Inject constructor(
     }
 }
 
-/**
- * State class for wallet-related UI state
- * Aligned with our domain Wallet entity
- */
-data class WalletState(
-    val isLoading: Boolean = false,
-    val solBalance: Money? = null,
-    val eurcBalance: Money? = null,
-    val usdcBalance: Money? = null,
-    val error: com.example.rampacashmobile.domain.common.DomainError? = null
-)
+// WalletState is now defined in AppViewState.kt

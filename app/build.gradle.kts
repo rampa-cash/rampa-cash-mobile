@@ -93,5 +93,6 @@ dependencies {
     implementation(libs.dagger.hilt.android)
     implementation(libs.web3auth.android.sdk)
     implementation(libs.core)
+    implementation(libs.timber)
     ksp(libs.dagger.hilt.compiler)
 }
