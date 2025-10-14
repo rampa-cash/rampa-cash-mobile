@@ -3,6 +3,7 @@ package com.example.rampacashmobile.data.api.service
 import com.example.rampacashmobile.data.api.model.Web3AuthValidateRequest
 import com.example.rampacashmobile.data.api.model.Web3AuthValidateResponse
 import com.example.rampacashmobile.data.api.model.UserProfileResponse
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -18,17 +19,17 @@ interface Web3AuthApiService {
     @POST("auth/web3auth/validate")
     suspend fun validateWeb3AuthToken(
         @Body request: Web3AuthValidateRequest
-    ): Web3AuthValidateResponse
+    ): Response<Web3AuthValidateResponse>
     
     /**
      * Get user profile
      */
     @GET("auth/me")
-    suspend fun getUserProfile(): UserProfileResponse
+    suspend fun getUserProfile(): Response<UserProfileResponse>
     
     /**
      * Logout user
      */
     @POST("auth/logout")
-    suspend fun logout(): Map<String, String>
+    suspend fun logout(): Response<Map<String, String>>
 }

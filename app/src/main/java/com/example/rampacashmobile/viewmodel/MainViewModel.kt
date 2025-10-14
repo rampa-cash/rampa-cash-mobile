@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.rampacashmobile.BuildConfig
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.data.repository.UserRepository
+import com.example.rampacashmobile.data.api.service.Web3AuthService
 import com.example.rampacashmobile.domain.valueobjects.WalletAddress
 import com.example.rampacashmobile.domain.valueobjects.UserId
 import com.example.rampacashmobile.domain.common.Result
@@ -89,7 +90,9 @@ class MainViewModel @Inject constructor(
     // DDD-aligned domain services
     private val walletDomainService: WalletDomainService,
     private val transactionDomainService: TransactionDomainService,
-    private val contactDomainService: ContactDomainService
+    private val contactDomainService: ContactDomainService,
+    // Backend API services
+    private val web3AuthService: Web3AuthService
 ) : ViewModel() {
     companion object {
         private const val TAG = "MainViewModel"
@@ -255,8 +258,50 @@ class MainViewModel @Inject constructor(
         solanaPublicKey: String,
         displayAddress: String
     ) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "handleWeb3AuthSuccess() - TODO: Delegate to Web3AuthViewModel")
+        Timber.d(TAG, "🔐 Web3Auth login successful, exchanging token with backend...")
+        
+        viewModelScope.launch {
+            try {
+                // Call Web3AuthService to exchange token with backend
+                val result = web3AuthService.validateWeb3AuthToken(web3AuthResponse)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val response = result.data
+                        Timber.d(TAG, "✅ Backend token exchange successful")
+                        Timber.d(TAG, "👤 User: ${response.user.email}")
+                        Timber.d(TAG, "🔑 API Token: ${response.accessToken.take(20)}...")
+                        
+                        // Update UI state
+                        _state.value = _state.value.copy(
+                    isWeb3AuthLoading = false,
+                    loadingProvider = null,
+                    isWeb3AuthLoggedIn = true,
+                            web3AuthUserInfo = response.user.email,
+                            web3AuthSolanaPublicKey = solanaPublicKey,
+                            userAddress = displayAddress
+                        )
+                    }
+                    is Result.Failure -> {
+                        Timber.e(TAG, "❌ Backend token exchange failed: ${result.error.message}")
+                        _state.value = _state.value.copy(
+                            isWeb3AuthLoading = false,
+                            loadingProvider = null,
+                            isWeb3AuthLoggedIn = false,
+                            web3AuthUserInfo = null
+                        )
+                    }
+            }
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Exception during backend token exchange: ${e.message}", e)
+                _state.value = _state.value.copy(
+                    isWeb3AuthLoading = false,
+                    loadingProvider = null,
+                    isWeb3AuthLoggedIn = false,
+                    web3AuthUserInfo = null
+                )
+            }
+        }
     }
 
     fun handleWeb3AuthLogout() {

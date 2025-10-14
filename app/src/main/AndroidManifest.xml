@@ -14,6 +14,7 @@
         android:roundIcon="@mipmap/rampa_cash_icon_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RampaCashMobile"
+        android:usesCleartextTraffic="true"
         tools:replace="android:allowBackup,android:fullBackupContent">
         <activity
             android:launchMode="singleTop"

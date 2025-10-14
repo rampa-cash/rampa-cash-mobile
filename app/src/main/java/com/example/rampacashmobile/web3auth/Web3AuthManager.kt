@@ -78,8 +78,8 @@ class Web3AuthManager @Inject constructor(
                 val hasSession = userInfo != null
                 Timber.d("🔍 Web3Auth session check: hasSession = $hasSession")
                 
-                if (hasSession && userInfo != null) {
-                    Timber.d("🔑 User session exists: ${userInfo.name ?: userInfo.email ?: "Unknown user"}")
+                if (hasSession) {
+                    Timber.d("🔑 User session exists: ${userInfo?.name ?: userInfo?.email ?: "Unknown user"}")
                 }
                 
                 hasSession

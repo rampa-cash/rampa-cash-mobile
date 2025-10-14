@@ -39,7 +39,7 @@ data class UserApiModel(
     val lastName: String,
     val language: String,
     val authProvider: String,
-    val authProviderId: String,
+    val authProviderId: String? = null,
     val isActive: Boolean,
     val status: String,
     val createdAt: String? = null,

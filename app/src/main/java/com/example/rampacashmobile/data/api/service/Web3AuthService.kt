@@ -31,24 +31,41 @@ class Web3AuthService @Inject constructor(
     suspend fun validateWeb3AuthToken(web3AuthResponse: Web3AuthResponse): Result<Web3AuthValidateResponse> {
         return try {
             Timber.d(TAG, "🔐 Validating Web3Auth token with backend...")
+            Timber.d(TAG, "📊 Web3Auth response: userInfo=${web3AuthResponse.userInfo?.name}, privKey=${web3AuthResponse.privKey?.take(10)}...")
             
             // Extract JWT token from Web3Auth response
-            val web3AuthJwt = web3AuthResponse.idToken
+            // Web3Auth typically provides the JWT token through userInfo
+            val web3AuthJwt = web3AuthResponse.userInfo?.idToken
+            Timber.d(TAG, "🔑 Extracted JWT token: ${web3AuthJwt?.take(20)}...")
+            
             if (web3AuthJwt.isNullOrBlank()) {
+                Timber.e(TAG, "❌ No JWT token found in Web3Auth response")
                 return Result.failure(DomainError.AuthenticationError("No JWT token received from Web3Auth"))
             }
             
             // Create validation request
             val request = Web3AuthValidateRequest(token = web3AuthJwt)
+            Timber.d(TAG, "📤 Sending validation request to backend...")
             
             // Call backend validation endpoint
             val response = apiClient.web3AuthApiService.validateWeb3AuthToken(request)
+            Timber.d(TAG, "📥 Backend response received: success=${response.isSuccessful}")
             
-            // Store the API JWT token
-            apiClient.setAuthToken(response.accessToken, response.expiresIn)
-            
-            Timber.d(TAG, "✅ Web3Auth token validated successfully")
-            Result.success(response)
+            if (response.isSuccessful && response.body() != null) {
+                val responseBody = response.body()!!
+                Timber.d(TAG, "✅ Backend validation successful")
+                Timber.d(TAG, "👤 User: ${responseBody.user.email}")
+                Timber.d(TAG, "🔑 API Token: ${responseBody.accessToken.take(20)}...")
+                
+                // Store the API JWT token
+                apiClient.setAuthToken(responseBody.accessToken, responseBody.expiresIn)
+                
+                Timber.d(TAG, "✅ Web3Auth token validated and stored successfully")
+                Result.success(responseBody)
+            } else {
+                Timber.e(TAG, "❌ Backend validation failed: ${response.code()} - ${response.message()}")
+                Result.failure(DomainError.AuthenticationError("Backend validation failed: ${response.message()}"))
+            }
             
         } catch (e: Exception) {
             Timber.e(e, "❌ Failed to validate Web3Auth token: ${e.message}")
@@ -65,8 +82,14 @@ class Web3AuthService @Inject constructor(
             
             val response = apiClient.web3AuthApiService.getUserProfile()
             
-            Timber.d(TAG, "✅ User profile retrieved successfully")
-            Result.success(response)
+            if (response.isSuccessful && response.body() != null) {
+                val userProfile = response.body()!!
+                Timber.d(TAG, "✅ User profile retrieved successfully")
+                Result.success(userProfile)
+            } else {
+                Timber.e(TAG, "❌ Failed to get user profile: ${response.code()} - ${response.message()}")
+                Result.failure(DomainError.NetworkError("Failed to get user profile: ${response.message()}"))
+            }
             
         } catch (e: Exception) {
             Timber.e(e, "❌ Failed to get user profile: ${e.message}")
