@@ -9,6 +9,8 @@ import com.example.rampacashmobile.BuildConfig
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.data.repository.UserRepository
 import com.example.rampacashmobile.data.api.service.Web3AuthService
+import com.example.rampacashmobile.data.api.service.TokenRefreshService
+import com.example.rampacashmobile.data.api.ApiClient
 import com.example.rampacashmobile.domain.valueobjects.WalletAddress
 import com.example.rampacashmobile.domain.valueobjects.UserId
 import com.example.rampacashmobile.domain.common.Result
@@ -91,9 +93,11 @@ class MainViewModel @Inject constructor(
     private val walletDomainService: WalletDomainService,
     private val transactionDomainService: TransactionDomainService,
     private val contactDomainService: ContactDomainService,
-    // Backend API services
-    private val web3AuthService: Web3AuthService
-) : ViewModel() {
+        // Backend API services
+        private val web3AuthService: Web3AuthService,
+        private val tokenRefreshService: TokenRefreshService,
+        private val apiClient: ApiClient
+    ) : ViewModel() {
     companion object {
         private const val TAG = "MainViewModel"
     }
@@ -152,6 +156,10 @@ class MainViewModel @Inject constructor(
                     // No user session, show login screen
                     _state.update { it.copy(isLoading = false) }
                 }
+                
+                // Check backend authentication status
+                checkAuthenticationStatus()
+                
             } catch (e: Exception) {
                 Timber.e(e, "Error during app initialization")
                 _state.update { it.copy(isLoading = false) }
@@ -389,6 +397,96 @@ class MainViewModel @Inject constructor(
             currentState.isWeb3AuthLoggedIn -> "web3auth"
             currentState.canTransact -> "wallet"
             else -> "unknown"
+        }
+    }
+
+    /**
+     * Check if user is authenticated with backend API
+     */
+    fun isBackendAuthenticated(): Boolean {
+        return apiClient.isAuthenticated()
+    }
+
+    /**
+     * Get valid access token
+     */
+    fun getValidAccessToken(): String? {
+        return apiClient.getCurrentAccessToken()
+    }
+
+    /**
+     * Check if token needs refresh
+     */
+    fun shouldRefreshToken(): Boolean {
+        return tokenRefreshService.shouldRefreshToken()
+    }
+
+    /**
+     * Force refresh the authentication token
+     */
+    suspend fun refreshAuthenticationToken(): Result<String> {
+        return try {
+            Timber.d(TAG, "🔄 Force refreshing authentication token...")
+            val result = apiClient.refreshToken()
+            
+            when (result) {
+                is Result.Success -> {
+                    Timber.d(TAG, "✅ Token refreshed successfully")
+                    Result.success(result.data)
+                }
+                is Result.Failure -> {
+                    Timber.e(TAG, "❌ Token refresh failed: ${result.error.message}")
+                    // If refresh fails, clear authentication state
+                    clearAuthenticationState()
+                    Result.failure(result.error)
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(TAG, "❌ Exception during token refresh: ${e.message}", e)
+            clearAuthenticationState()
+            Result.failure(com.example.rampacashmobile.domain.common.DomainError.NetworkError("Token refresh failed: ${e.message}"))
+        }
+    }
+
+    /**
+     * Check if token can be refreshed
+     */
+    fun canRefreshToken(): Boolean {
+        return apiClient.canRefreshToken()
+    }
+
+    /**
+     * Clear authentication state and force re-login
+     */
+    fun clearAuthenticationState() {
+        Timber.d(TAG, "🚪 Clearing authentication state...")
+        
+        // Clear backend tokens
+        apiClient.clearAuthToken()
+        
+        // Update UI state
+        _state.value = _state.value.copy(
+            isWeb3AuthLoggedIn = false,
+            web3AuthUserInfo = null,
+            web3AuthPrivateKey = null,
+            web3AuthSolanaPublicKey = null,
+            userAddress = ""
+        )
+    }
+
+    /**
+     * Check authentication status and update UI accordingly
+     */
+    suspend fun checkAuthenticationStatus() {
+        Timber.d(TAG, "🔍 Checking authentication status...")
+        
+        if (isBackendAuthenticated()) {
+            Timber.d(TAG, "✅ User is authenticated with backend")
+            // User is authenticated, no need to update UI state
+        } else {
+            Timber.d(TAG, "❌ User is not authenticated with backend")
+            // Clear authentication state if not authenticated
+            clearAuthenticationState()
         }
     }
 }

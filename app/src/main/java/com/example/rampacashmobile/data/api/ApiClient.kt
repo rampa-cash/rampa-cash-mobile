@@ -2,6 +2,7 @@ package com.example.rampacashmobile.data.api
 
 import com.example.rampacashmobile.BuildConfig
 import com.example.rampacashmobile.data.api.service.*
+import com.example.rampacashmobile.domain.common.Result
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
@@ -9,6 +10,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,7 +21,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ApiClient @Inject constructor(
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val tokenRefreshService: TokenRefreshService,
+    private val tokenRefreshManager: TokenRefreshManager
 ) {
     
     private val json = Json {
@@ -48,7 +52,33 @@ class ApiClient @Inject constructor(
             request
         }
         
-        chain.proceed(newRequest)
+        val response = chain.proceed(newRequest)
+        
+        // Handle 401 Unauthorized responses
+        if (response.code == 401 && token != null) {
+            Timber.d("🔄 Received 401 response, handling token expiration...")
+            response.close()
+            
+            // Check if we should attempt token refresh
+            if (tokenRefreshManager.shouldRefreshTokenSync()) {
+                Timber.d("🔄 Token appears to be expired, clearing tokens for re-authentication...")
+                // Clear tokens and force re-authentication
+                // The user will need to re-authenticate via Web3Auth
+                tokenRefreshManager.clearTokensAndForceReauth()
+            } else {
+                Timber.d("ℹ️ Token doesn't appear expired, likely invalid credentials")
+                // Clear tokens anyway for security
+                tokenRefreshManager.clearTokensAndForceReauth()
+            }
+            
+            // Return a new 401 response with updated headers
+            return@Interceptor response.newBuilder()
+                .code(401)
+                .message("Unauthorized - Token expired or invalid")
+                .build()
+        }
+        
+        response
     }
     
     private val okHttpClient = OkHttpClient.Builder()
@@ -100,5 +130,26 @@ class ApiClient @Inject constructor(
      */
     fun isAuthenticated(): Boolean {
         return tokenManager.isAuthenticated()
+    }
+    
+    /**
+     * Get current access token
+     */
+    fun getCurrentAccessToken(): String? {
+        return tokenManager.getAccessToken()
+    }
+
+    /**
+     * Force refresh the current token
+     */
+    suspend fun refreshToken(): Result<String> {
+        return tokenRefreshManager.refreshToken()
+    }
+
+    /**
+     * Check if token can be refreshed
+     */
+    fun canRefreshToken(): Boolean {
+        return tokenRefreshManager.canRefreshToken()
     }
 }
