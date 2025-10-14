@@ -10,6 +10,15 @@ import com.example.rampacashmobile.BuildConfig
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.data.repository.UserRepository
 import com.example.rampacashmobile.solanautils.AssociatedTokenAccountUtils
+import com.example.rampacashmobile.domain.valueobjects.WalletAddress
+import com.example.rampacashmobile.domain.valueobjects.UserId
+import com.example.rampacashmobile.domain.common.Result
+import com.example.rampacashmobile.domain.common.DomainError
+import com.example.rampacashmobile.domain.services.WalletDomainService
+import com.example.rampacashmobile.domain.services.TransactionDomainService
+import com.example.rampacashmobile.domain.services.ContactDomainService
+import com.example.rampacashmobile.constants.AppConstants
+import com.example.rampacashmobile.utils.ErrorHandler
 import com.example.rampacashmobile.solanautils.TokenMints
 import com.example.rampacashmobile.usecase.AccountBalanceUseCase
 import com.example.rampacashmobile.usecase.Connected
@@ -25,6 +34,7 @@ import com.example.rampacashmobile.usecase.TransferConfig
 import com.example.rampacashmobile.usecase.TransactionHistoryUseCase
 import com.example.rampacashmobile.ui.screens.TransactionDetails
 import com.example.rampacashmobile.ui.screens.Transaction
+import com.example.rampacashmobile.ui.screens.TransactionType
 import com.funkatronics.encoders.Base58
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
@@ -85,7 +95,11 @@ class MainViewModel @Inject constructor(
     private val persistenceUseCase: PersistenceUseCase,
     private val transactionHistoryUseCase: TransactionHistoryUseCase,
     private val userRepository: UserRepository,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    // DDD-aligned domain services
+    private val walletDomainService: WalletDomainService,
+    private val transactionDomainService: TransactionDomainService,
+    private val contactDomainService: ContactDomainService
 ) : ViewModel() {
     private val rpcUri = BuildConfig.RPC_URI.toUri()
 
@@ -257,20 +271,53 @@ class MainViewModel @Inject constructor(
 
                 _state.update { it.copy(isLoadingTransactions = true) }
 
-                val transactions = transactionHistoryUseCase.getTransactionHistory(walletAddress)
-
-                _state.update { it.copy(
-                    transactionHistory = transactions,
-                    isLoadingTransactions = false
-                )}
-
-                Timber.d(TAG, "✅ Transaction history loaded: ${transactions.size} transactions")
+                // Delegate to TransactionViewModel
+                val userId = UserId.of(walletAddress) // Use wallet address as user ID for now
+                val result = transactionDomainService.getUserTransactions(userId)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val domainTransactions = result.data
+                        val uiTransactions = domainTransactions.map { domainTransaction ->
+                            Transaction(
+                                id = domainTransaction.id.value,
+                                recipient = domainTransaction.toWallet.value,
+                                sender = domainTransaction.fromWallet.value,
+                                amount = domainTransaction.amount.amount.toDouble(),
+                                date = java.util.Date.from(domainTransaction.createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant()),
+                                description = domainTransaction.description,
+                                currency = domainTransaction.currency.code,
+                                transactionType = when (domainTransaction.transactionType) {
+                                    com.example.rampacashmobile.domain.entities.TransactionType.SEND -> TransactionType.SENT
+                                    com.example.rampacashmobile.domain.entities.TransactionType.RECEIVE -> TransactionType.RECEIVED
+                                    com.example.rampacashmobile.domain.entities.TransactionType.TRANSFER -> TransactionType.SENT
+                                },
+                                tokenSymbol = domainTransaction.currency.code,
+                                tokenIcon = R.drawable.solana_logo,
+                                tokenName = domainTransaction.currency.code
+                            )
+                        }
+                        _state.update { it.copy(
+                            transactionHistory = uiTransactions,
+                            isLoadingTransactions = false
+                        )}
+                        Timber.d(TAG, "✅ Transaction history loaded: ${uiTransactions.size} transactions")
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _state.update { it.copy(
+                            isLoadingTransactions = false,
+                            snackbarMessage = ErrorHandler.getUserFriendlyMessage(result.error)
+                        )}
+                    }
+                }
 
             } catch (e: Exception) {
-                Timber.e(TAG, "❌ Failed to load transaction history: ${e.message}", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to load transaction history")
+                ErrorHandler.logError(error, TAG)
                 _state.update { it.copy(
                     isLoadingTransactions = false,
-                    snackbarMessage = "❌ | Failed to load transaction history"
+                    snackbarMessage = ErrorHandler.getUserFriendlyMessage(error)
                 )}
             } finally {
                 isLoadingTransactionHistory = false
@@ -419,14 +466,28 @@ class MainViewModel @Inject constructor(
     fun getSolanaBalance(account: SolanaPublicKey) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = AccountBalanceUseCase(rpcUri, account)
-
-                _state.value.copy(
-                    solBalance = result / 1000000000.0
-                ).updateViewState()
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.getSolBalance(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val money = result.data
+                        _state.value.copy(
+                            solBalance = money.amount.toDouble()
+                        ).updateViewState()
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _state.value.copy(
+                            snackbarMessage = ErrorHandler.getUserFriendlyMessage(result.error)
+                        ).updateViewState()
+                    }
+                }
             } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get SOL balance")
+                ErrorHandler.logError(error, TAG)
                 _state.value.copy(
-                    snackbarMessage = "❌ | Failed fetching account balance."
+                    snackbarMessage = ErrorHandler.getUserFriendlyMessage(error)
                 ).updateViewState()
             }
         }
@@ -434,6 +495,7 @@ class MainViewModel @Inject constructor(
 
     /**
      * Refresh balances after a successful transaction with proper timing and retry logic
+     * Delegates to WalletViewModel for balance operations
      */
     private fun refreshBalancesAfterTransaction(account: SolanaPublicKey, signature: String) {
         viewModelScope.launch {
@@ -445,94 +507,83 @@ class MainViewModel @Inject constructor(
                 Timber.d(TAG, "⏳ Waiting 4 seconds for blockchain confirmation...")
                 delay(4000) // 4 seconds initial delay (increased from 2)
 
-                // Refresh SOL balance immediately (usually faster to update)
-                getSolanaBalance(account)
+                val walletAddress = WalletAddress.of(account)
 
-                // Refresh token balances with retry logic (these can take longer)
-                Timber.d(TAG, "🔄 Starting token balance refresh with retries...")
-                refreshTokenBalanceWithRetry(account, "EURC")
-                refreshTokenBalanceWithRetry(account, "USDC")
-
-                Timber.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
-                Timber.d(TAG, "🎯 Current state after balance refresh - showTransactionSuccess: ${viewState.value.showTransactionSuccess}")
-                Timber.d(TAG, "💰 Final balances - EURC: ${viewState.value.eurcBalance}, USDC: ${viewState.value.usdcBalance}")
+                // Refresh all balances using WalletViewModel
+                val refreshResult = walletDomainService.loadWalletBalances(walletAddress)
+                
+                when (refreshResult) {
+                    is Result.Success -> {
+                        // Refresh individual balances since Wallet entity doesn't contain balances
+                        val solResult = walletDomainService.getSolBalance(walletAddress)
+                        val eurcResult = walletDomainService.getEurcBalance(walletAddress)
+                        val usdcResult = walletDomainService.getUsdcBalance(walletAddress)
+                        
+                        val solBalance = when (solResult) {
+                            is Result.Success -> solResult.data.amount.toDouble()
+                            is Result.Failure -> 0.0
+                        }
+                        
+                        val eurcBalance = when (eurcResult) {
+                            is Result.Success -> eurcResult.data.amount.toDouble()
+                            is Result.Failure -> 0.0
+                        }
+                        
+                        val usdcBalance = when (usdcResult) {
+                            is Result.Success -> usdcResult.data.amount.toDouble()
+                            is Result.Failure -> 0.0
+                        }
+                        
+                        _state.value.copy(
+                            solBalance = solBalance,
+                            eurcBalance = eurcBalance,
+                            usdcBalance = usdcBalance
+                        ).updateViewState()
+                        
+                        Timber.d(TAG, "✅ Balance refresh completed for transaction ${signature.take(8)}")
+                        Timber.d(TAG, "💰 Final balances - SOL: $solBalance, EURC: $eurcBalance, USDC: $usdcBalance")
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(refreshResult.error, TAG)
+                        Timber.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${refreshResult.error.message}")
+                    }
+                }
 
             } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to refresh balances after transaction")
+                ErrorHandler.logError(error, TAG)
                 Timber.e(TAG, "⚠️ Balance refresh failed for transaction ${signature.take(8)}: ${e.message}")
                 // Don't update UI state on refresh failure - keep existing balances
             }
         }
     }
 
-    /**
-     * Refresh token balance with retry logic and graceful error handling
-     */
-    private fun refreshTokenBalanceWithRetry(account: SolanaPublicKey, tokenSymbol: String) {
-        viewModelScope.launch {
-            var attempts = 0
-            val maxAttempts = 5 // Increased from 3 to 5 attempts
-
-            while (attempts < maxAttempts) {
-                try {
-                    delay(attempts * 2000L) // 0s, 2s, 4s, 6s, 8s delays (longer delays)
-
-                    Timber.d(TAG, "🔍 Fetching $tokenSymbol balance (attempt ${attempts + 1}/$maxAttempts)...")
-                    Timber.d(TAG, "🔍 Account: ${account.base58()}")
-
-                    when (tokenSymbol) {
-                        "EURC" -> getEurcBalanceRobust(account)
-                        "USDC" -> getUsdcBalanceRobust(account)
-                    }
-
-                    Timber.d(TAG, "✅ $tokenSymbol balance refreshed successfully")
-                    return@launch // Success - exit retry loop
-
-                } catch (e: Exception) {
-                    attempts++
-                    Timber.w(TAG, "⚠️ $tokenSymbol balance fetch attempt $attempts failed: ${e.message}")
-
-                    if (attempts >= maxAttempts) {
-                        Timber.e(TAG, "❌ $tokenSymbol balance refresh failed after $maxAttempts attempts")
-                        // Don't reset balance to 0 - keep existing value
-                    } else {
-                        Timber.d(TAG, "🔄 Will retry $tokenSymbol balance fetch in ${(attempts * 2)} seconds...")
-                    }
-                }
-            }
-        }
-    }
 
     fun getEurcBalance(account: SolanaPublicKey) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
-                val eurcAta =
-                    AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, eurcMint)
-
-                // 1. Check if the ATA exists
-                val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, eurcAta)
-                if (!exists) {
-                    _state.value.copy(
-                        eurcBalance = 0.0, snackbarMessage = "💸 | EURC account does not exist yet."
-                    ).updateViewState()
-                    return@launch
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.getEurcBalance(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val money = result.data
+                        _state.value.copy(
+                            eurcBalance = money.amount.toDouble()
+                        ).updateViewState()
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _state.value.copy(
+                            snackbarMessage = ErrorHandler.getUserFriendlyMessage(result.error)
+                        ).updateViewState()
+                    }
                 }
-
-                // 2. If it exists, fetch the balance
-                val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
-                val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
-
-                _state.value.copy(
-                    eurcBalance = humanReadableBalance
-                ).updateViewState()
-
-            } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
-                _state.value.copy(
-                    eurcBalance = 0.0
-                ).updateViewState()
             } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get EURC balance")
+                ErrorHandler.logError(error, TAG)
                 _state.value.copy(
-                    eurcBalance = 0.0, snackbarMessage = "❌ | Failed fetching EURC balance."
+                    snackbarMessage = ErrorHandler.getUserFriendlyMessage(error)
                 ).updateViewState()
             }
         }
@@ -541,124 +592,33 @@ class MainViewModel @Inject constructor(
     fun getUsdcBalance(account: SolanaPublicKey) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
-                val usdcAta =
-                    AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, usdcMint)
-
-                // 1. Check if the ATA exists
-                val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, usdcAta)
-                if (!exists) {
-                    _state.value.copy(
-                        usdcBalance = 0.0
-                    ).updateViewState()
-                    return@launch
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.getUsdcBalance(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val money = result.data
+                        _state.value.copy(
+                            usdcBalance = money.amount.toDouble()
+                        ).updateViewState()
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _state.value.copy(
+                            snackbarMessage = ErrorHandler.getUserFriendlyMessage(result.error)
+                        ).updateViewState()
+                    }
                 }
-
-                // 2. If it exists, fetch the balance
-                val tokenBalance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
-                val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
-
-                _state.value.copy(
-                    usdcBalance = humanReadableBalance
-                ).updateViewState()
-
-            } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
-                _state.value.copy(
-                    usdcBalance = 0.0
-                ).updateViewState()
             } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get USDC balance")
+                ErrorHandler.logError(error, TAG)
                 _state.value.copy(
-                    usdcBalance = 0.0
+                    snackbarMessage = ErrorHandler.getUserFriendlyMessage(error)
                 ).updateViewState()
             }
         }
     }
 
-    /**
-     * Robust EURC balance fetching that preserves existing balance on errors
-     */
-    private suspend fun getEurcBalanceRobust(account: SolanaPublicKey) {
-        try {
-            val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
-            val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, eurcMint)
-
-            Timber.d(TAG, "💰 Fetching EURC balance for account: ${account.base58()}")
-            Timber.d(TAG, "💰 EURC ATA: ${eurcAta.base58()}")
-
-            // Check if the ATA exists
-            val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, eurcAta)
-            if (!exists) {
-                Timber.d(TAG, "💰 EURC ATA does not exist - setting balance to 0")
-                // Only update if we're sure the account doesn't exist
-                _state.value.copy(
-                    eurcBalance = 0.0
-                ).updateViewState()
-                return
-            }
-
-            // Fetch the balance
-            val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
-            val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
-
-            Timber.d(TAG, "💰 EURC raw balance: $tokenBalance, human readable: $humanReadableBalance")
-            Timber.d(TAG, "💰 Previous EURC balance: ${viewState.value.eurcBalance}")
-
-            _state.value.copy(
-                eurcBalance = humanReadableBalance
-            ).updateViewState()
-
-            Timber.d(TAG, "💰 EURC balance updated to: $humanReadableBalance")
-
-        } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
-            Timber.d(TAG, "💰 EURC account not found - setting balance to 0")
-            // Account doesn't exist - set to 0
-            _state.value.copy(
-                eurcBalance = 0.0
-            ).updateViewState()
-        } catch (e: Exception) {
-            // Temporary error - keep existing balance, don't reset to 0
-            Timber.w(TAG, "💰 EURC balance fetch failed (keeping existing): ${e.message}")
-            throw e // Re-throw for retry logic
-        }
-    }
-
-    /**
-     * Robust USDC balance fetching that preserves existing balance on errors
-     */
-    private suspend fun getUsdcBalanceRobust(account: SolanaPublicKey) {
-        try {
-            val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
-            val usdcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(account, usdcMint)
-
-            // Check if the ATA exists
-            val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, usdcAta)
-            if (!exists) {
-                // Only update if we're sure the account doesn't exist
-                _state.value.copy(
-                    usdcBalance = 0.0
-                ).updateViewState()
-                return
-            }
-
-            // Fetch the balance
-            val tokenBalance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
-            val humanReadableBalance = tokenBalance.toDouble() / 10.0.pow(6.0)
-
-            _state.value.copy(
-                usdcBalance = humanReadableBalance
-            ).updateViewState()
-
-        } catch (e: TokenAccountBalanceUseCase.TokenAccountNotFoundException) {
-            // Account doesn't exist - set to 0
-            _state.value.copy(
-                usdcBalance = 0.0
-            ).updateViewState()
-        } catch (e: Exception) {
-            // Temporary error - keep existing balance, don't reset to 0
-            Timber.w(TAG, "USDC balance fetch failed (keeping existing): ${e.message}")
-            throw e // Re-throw for retry logic
-        }
-    }
 
     private suspend fun getAccountBalance(account: SolanaPublicKey): Double {
         return try {
@@ -862,11 +822,12 @@ class MainViewModel @Inject constructor(
         recipientAddress: String,
         tokenMintAddress: String
     ) {
-        // Validate recipient address before proceeding
-        if (recipientAddress.isBlank()) {
-            Timber.w(TAG, "checkATA: Recipient address is blank")
+        // Validate recipient address using InputValidator
+        val addressValidation = com.example.rampacashmobile.utils.InputValidator.validateWalletAddress(recipientAddress)
+        if (addressValidation is Result.Failure) {
+            Timber.w(TAG, "checkATA: Invalid recipient address: ${addressValidation.error.message}")
             _state.value.copy(
-                snackbarMessage = "⚠️ | Please enter a valid recipient address"
+                snackbarMessage = ErrorHandler.getUserFriendlyMessage(addressValidation.error)
             ).updateViewState()
             return
         }
@@ -903,9 +864,10 @@ class MainViewModel @Inject constructor(
                 ).updateViewState()
 
             } catch (e: Exception) {
-                Timber.e(TAG, "checkATA: Failed to derive ATA for recipient: $recipientAddress", e)
+                val error = ErrorHandler.mapNetworkException(e, "Failed to check ATA")
+                ErrorHandler.logError(error, TAG)
                 _state.value.copy(
-                    snackbarMessage = "❌ | Invalid recipient address: ${e.message}"
+                    snackbarMessage = ErrorHandler.getUserFriendlyMessage(error)
                 ).updateViewState()
             }
         }
@@ -1280,16 +1242,21 @@ class MainViewModel @Inject constructor(
                 userRepository.updateOnboardingData(onboardingData)
 
                 // Get current wallet address and auth provider from state
-                val walletAddress = _state.value.web3AuthSolanaPublicKey ?: _state.value.userAddress
+                val walletAddressString = _state.value.web3AuthSolanaPublicKey ?: _state.value.userAddress
                 val authProvider = getAuthProviderFromState()
 
+                // Use value objects for type safety
+                val walletAddress = WalletAddress.of(walletAddressString)
+                val userId = UserId.generate() // Generate a new user ID
+
                 // Complete onboarding and create user
-                userRepository.completeOnboarding(walletAddress, authProvider)
+                userRepository.completeOnboarding(walletAddress.value, authProvider)
 
                 Timber.d(TAG, "✅ User onboarding completed successfully")
             } catch (e: Exception) {
-                Timber.e(TAG, "❌ Failed to complete user onboarding: ${e.message}", e)
-                showSnackBar("Failed to save user information")
+                val error = ErrorHandler.mapNetworkException(e, "Failed to complete user onboarding")
+                ErrorHandler.logError(error, TAG)
+                showSnackBar(ErrorHandler.getUserFriendlyMessage(error))
             }
         }
     }

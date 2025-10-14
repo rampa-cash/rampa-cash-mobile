@@ -197,6 +197,76 @@ class WalletViewModel @Inject constructor(
     fun clearError() {
         _walletState.update { it.copy(error = null) }
     }
+
+    /**
+     * Get SOL balance and return Result for external use
+     */
+    suspend fun getSolBalanceResult(walletAddress: WalletAddress): Result<Money> {
+        return ErrorHandler.safeCall(
+            operation = {
+                val publicKey = walletAddress.toSolanaPublicKey()
+                val balance = AccountBalanceUseCase(rpcUri, publicKey)
+                val solAmount = BigDecimal.valueOf(AppConstants.lamportsToSol(balance))
+                Money(solAmount, Currency.USD) // SOL is typically priced in USD
+            },
+            errorMessage = "Failed to get SOL balance"
+        )
+    }
+
+    /**
+     * Get EURC balance and return Result for external use
+     */
+    suspend fun getEurcBalanceResult(walletAddress: WalletAddress): Result<Money> {
+        return ErrorHandler.safeCall(
+            operation = {
+                val publicKey = walletAddress.toSolanaPublicKey()
+                val eurcMint = SolanaPublicKey.from(TokenMints.EURC_DEVNET)
+                val eurcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(publicKey, eurcMint)
+                
+                // Check if the ATA exists
+                val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, eurcAta)
+                if (!exists) {
+                    Money(BigDecimal.ZERO, Currency.EUR)
+                } else {
+                    val tokenBalance = TokenAccountBalanceUseCase(rpcUri, eurcAta)
+                    val eurcAmount = BigDecimal.valueOf(AppConstants.tokenUnitsToAmount(tokenBalance, AppConstants.EURC_DECIMAL_PLACES))
+                    Money(eurcAmount, Currency.EUR)
+                }
+            },
+            errorMessage = "Failed to get EURC balance"
+        )
+    }
+
+    /**
+     * Get USDC balance and return Result for external use
+     */
+    suspend fun getUsdcBalanceResult(walletAddress: WalletAddress): Result<Money> {
+        return ErrorHandler.safeCall(
+            operation = {
+                val publicKey = walletAddress.toSolanaPublicKey()
+                val usdcMint = SolanaPublicKey.from(TokenMints.USDC_DEVNET)
+                val usdcAta = AssociatedTokenAccountUtils.deriveAssociatedTokenAccount(publicKey, usdcMint)
+                
+                // Check if the ATA exists
+                val exists = AssociatedTokenAccountUtils.checkAccountExists(rpcUri, usdcAta)
+                if (!exists) {
+                    Money(BigDecimal.ZERO, Currency.USD)
+                } else {
+                    val tokenBalance = TokenAccountBalanceUseCase(rpcUri, usdcAta)
+                    val usdcAmount = BigDecimal.valueOf(AppConstants.tokenUnitsToAmount(tokenBalance, AppConstants.USDC_DECIMAL_PLACES))
+                    Money(usdcAmount, Currency.USD)
+                }
+            },
+            errorMessage = "Failed to get USDC balance"
+        )
+    }
+
+    /**
+     * Refresh all balances and return Result for external use
+     */
+    suspend fun refreshAllBalancesResult(walletAddress: WalletAddress): Result<Wallet> {
+        return walletDomainService.loadWalletBalances(walletAddress)
+    }
 }
 
 // WalletState is now defined in AppViewState.kt

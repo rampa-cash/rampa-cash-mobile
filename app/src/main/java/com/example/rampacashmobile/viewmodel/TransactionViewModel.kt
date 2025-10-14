@@ -96,6 +96,28 @@ class TransactionViewModel @Inject constructor(
     }
 
     /**
+     * Load transaction history and return Result for external use
+     */
+    suspend fun loadTransactionHistoryResult(userId: UserId): Result<List<UITransaction>> {
+        return try {
+            val result = transactionDomainService.getUserTransactions(userId)
+            when (result) {
+                is Result.Success -> {
+                    val uiTransactions = result.data.map { domainTransaction ->
+                        convertToUITransaction(domainTransaction)
+                    }
+                    Result.success(uiTransactions)
+                }
+                is Result.Failure -> result
+            }
+        } catch (e: Exception) {
+            val error = ErrorHandler.mapNetworkException(e, "Failed to load transaction history")
+            ErrorHandler.logError(error, TAG)
+            Result.failure(error)
+        }
+    }
+
+    /**
      * Create a new transaction
      */
     fun createTransaction(

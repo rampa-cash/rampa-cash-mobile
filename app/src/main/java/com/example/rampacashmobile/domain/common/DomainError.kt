@@ -91,6 +91,14 @@ sealed class DomainError {
     ) : DomainError()
 
     /**
+     * Storage error - when there's a data storage issue
+     */
+    data class StorageError(
+        override val message: String,
+        override val cause: Throwable? = null
+    ) : DomainError()
+
+    /**
      * Unknown error - for unexpected errors
      */
     data class UnknownError(

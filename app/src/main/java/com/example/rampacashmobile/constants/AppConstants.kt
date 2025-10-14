@@ -68,6 +68,19 @@ object AppConstants {
     const val DEFAULT_BALANCE = 0.0
     
     // ============================================================================
+    // VALIDATION CONSTANTS
+    // ============================================================================
+    
+    /** Minimum amount value for transactions */
+    val MIN_AMOUNT_VALUE = BigDecimal("0.01")
+    
+    /** Maximum description length for transactions */
+    const val MAX_DESCRIPTION_LENGTH = 250
+    
+    /** Minimum password length */
+    const val MIN_PASSWORD_LENGTH = 8
+    
+    // ============================================================================
     // NETWORK CONSTANTS
     // ============================================================================
     
