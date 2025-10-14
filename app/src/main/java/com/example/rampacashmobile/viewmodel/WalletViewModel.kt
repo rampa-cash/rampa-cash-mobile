@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.math.BigDecimal
 import java.util.Currency as JavaCurrency
 import javax.inject.Inject
@@ -266,6 +267,193 @@ class WalletViewModel @Inject constructor(
      */
     suspend fun refreshAllBalancesResult(walletAddress: WalletAddress): Result<Wallet> {
         return walletDomainService.loadWalletBalances(walletAddress)
+    }
+
+    /**
+     * Get SOL balance for a given SolanaPublicKey (matches MainViewModel interface)
+     */
+    fun getSolanaBalance(account: SolanaPublicKey) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.getSolBalance(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val money = result.data
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                solBalance = money,
+                                error = null
+                            )
+                        }
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                error = result.error
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get SOL balance")
+                ErrorHandler.logError(error, TAG)
+                _walletState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = error
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Get EURC balance for a given SolanaPublicKey (matches MainViewModel interface)
+     */
+    fun getEurcBalance(account: SolanaPublicKey) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.getEurcBalance(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val money = result.data
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                eurcBalance = money,
+                                error = null
+                            )
+                        }
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                error = result.error
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get EURC balance")
+                ErrorHandler.logError(error, TAG)
+                _walletState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = error
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Get USDC balance for a given SolanaPublicKey (matches MainViewModel interface)
+     */
+    fun getUsdcBalance(account: SolanaPublicKey) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.getUsdcBalance(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val money = result.data
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                usdcBalance = money,
+                                error = null
+                            )
+                        }
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                error = result.error
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to get USDC balance")
+                ErrorHandler.logError(error, TAG)
+                _walletState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = error
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Refresh balances after a successful transaction (matches MainViewModel interface)
+     */
+    fun refreshBalancesAfterTransaction(account: SolanaPublicKey, signature: String) {
+        viewModelScope.launch {
+            try {
+                Timber.d(TAG, "🔄 Refreshing balances after transaction: ${signature.take(8)}...")
+                Timber.d(TAG, "🔄 Account for balance refresh: ${account.base58()}")
+
+                // Wait longer for transaction confirmation (blockchain updates can be slow)
+                Timber.d(TAG, "⏳ Waiting 4 seconds for blockchain confirmation...")
+                delay(4000) // 4 seconds initial delay (increased from 2)
+
+                val walletAddress = WalletAddress.of(account)
+                val result = walletDomainService.loadWalletBalances(walletAddress)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val wallet = result.data
+                        // Update individual balances
+                        val solResult = walletDomainService.getSolBalance(walletAddress)
+                        val eurcResult = walletDomainService.getEurcBalance(walletAddress)
+                        val usdcResult = walletDomainService.getUsdcBalance(walletAddress)
+                        
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                solBalance = if (solResult is Result.Success) solResult.data else null,
+                                eurcBalance = if (eurcResult is Result.Success) eurcResult.data else null,
+                                usdcBalance = if (usdcResult is Result.Success) usdcResult.data else null,
+                                error = null
+                            )
+                        }
+                        Timber.d(TAG, "✅ Balances refreshed successfully after transaction")
+                    }
+                    is Result.Failure -> {
+                        ErrorHandler.logError(result.error, TAG)
+                        _walletState.update { 
+                            it.copy(
+                                isLoading = false,
+                                error = result.error
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to refresh balances after transaction")
+                ErrorHandler.logError(error, TAG)
+                _walletState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = error
+                    )
+                }
+            }
+        }
     }
 }
 

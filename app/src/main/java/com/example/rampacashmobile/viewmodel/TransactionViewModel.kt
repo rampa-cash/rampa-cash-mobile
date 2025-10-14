@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rampacashmobile.BuildConfig
 import com.example.rampacashmobile.domain.common.Result
+import com.example.rampacashmobile.domain.common.DomainError
 import com.example.rampacashmobile.domain.entities.Transaction
 import com.example.rampacashmobile.domain.entities.TransactionType
 import com.example.rampacashmobile.domain.services.TransactionDomainService
@@ -239,6 +240,97 @@ class TransactionViewModel @Inject constructor(
      */
     fun clearError() {
         _transactionState.update { it.copy(error = null) }
+    }
+
+    /**
+     * Get transaction history (matches MainViewModel interface)
+     * This method handles the complex logic from MainViewModel
+     */
+    fun getTransactionHistory(
+        isWeb3AuthLoggedIn: Boolean,
+        web3AuthSolanaPublicKey: String?,
+        canTransact: Boolean,
+        fullAddressForCopy: String?,
+        userAddress: String?
+    ) {
+        viewModelScope.launch {
+            try {
+                _transactionState.update { it.copy(isLoadingHistory = true, error = null) }
+
+                // Determine wallet address based on connection type (same logic as MainViewModel)
+                val walletAddress = when {
+                    isWeb3AuthLoggedIn && !web3AuthSolanaPublicKey.isNullOrEmpty() -> {
+                        web3AuthSolanaPublicKey
+                    }
+                    canTransact && !fullAddressForCopy.isNullOrEmpty() -> {
+                        fullAddressForCopy
+                    }
+                    !userAddress.isNullOrEmpty() -> {
+                        userAddress
+                    }
+                    else -> {
+                        _transactionState.update { 
+                            it.copy(
+                                isLoadingHistory = false,
+                                error = DomainError.NotFound("No wallet connected")
+                            )
+                        }
+                        return@launch
+                    }
+                }
+
+                val userId = UserId.of(walletAddress)
+                val result = transactionDomainService.getUserTransactions(userId)
+                
+                when (result) {
+                    is Result.Success -> {
+                        val domainTransactions = result.data
+                        val uiTransactions = domainTransactions.map { domainTransaction ->
+                            UITransaction(
+                                id = domainTransaction.id.value,
+                                recipient = domainTransaction.toWallet.value,
+                                sender = domainTransaction.fromWallet.value,
+                                amount = domainTransaction.amount.amount.toDouble(),
+                                date = java.util.Date.from(domainTransaction.createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant()),
+                                description = domainTransaction.description,
+                                currency = domainTransaction.currency.code,
+                                transactionType = when (domainTransaction.transactionType) {
+                                    com.example.rampacashmobile.domain.entities.TransactionType.SEND -> com.example.rampacashmobile.ui.screens.TransactionType.SENT
+                                    com.example.rampacashmobile.domain.entities.TransactionType.RECEIVE -> com.example.rampacashmobile.ui.screens.TransactionType.RECEIVED
+                                    com.example.rampacashmobile.domain.entities.TransactionType.TRANSFER -> com.example.rampacashmobile.ui.screens.TransactionType.SENT
+                                },
+                                tokenSymbol = domainTransaction.currency.code,
+                                tokenIcon = 0, // Default icon
+                                tokenName = domainTransaction.currency.code
+                            )
+                        }
+                        _transactionState.update { 
+                            it.copy(
+                                isLoadingHistory = false,
+                                transactionHistory = uiTransactions,
+                                error = null
+                            )
+                        }
+                    }
+                    is Result.Failure -> {
+                        _transactionState.update { 
+                            it.copy(
+                                isLoadingHistory = false,
+                                error = result.error
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                val error = ErrorHandler.mapNetworkException(e, "Failed to load transaction history")
+                _transactionState.update { 
+                    it.copy(
+                        isLoadingHistory = false,
+                        error = error
+                    )
+                }
+            }
+        }
     }
 
     /**
