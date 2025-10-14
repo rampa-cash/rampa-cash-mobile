@@ -102,17 +102,16 @@ class MainViewModel @Inject constructor(
     val viewState: StateFlow<MainViewState> = _state
 
     init {
-        // For now, just use a simple state management approach
-        // TODO: Implement proper state combination when all ViewModels are properly integrated
+        // Initialize with loading state, then check for existing session
         _state.update { 
             MainViewState(
-                isLoading = true,
-                canTransact = false,
-                solBalance = 0.0,
-                eurcBalance = 0.0,
-                usdcBalance = 0.0,
-                userAddress = "",
-                userLabel = "",
+                    isLoading = true,
+                        canTransact = false,
+                        solBalance = 0.0,
+                        eurcBalance = 0.0,
+                        usdcBalance = 0.0,
+                        userAddress = "",
+                        userLabel = "",
                 fullAddressForCopy = null,
                 walletFound = true,
                 memoTxSignature = null,
@@ -122,15 +121,49 @@ class MainViewModel @Inject constructor(
                 isWeb3AuthLoading = false,
                 loadingProvider = null,
                 isWeb3AuthLoggedIn = false,
-                web3AuthUserInfo = null,
-                web3AuthPrivateKey = null,
-                web3AuthSolanaPublicKey = null,
-                transactionHistory = emptyList(),
-                isLoadingTransactions = false,
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
+                        transactionHistory = emptyList(),
+                        isLoadingTransactions = false,
                 needsOnboardingNavigation = false,
                 onboardingAuthProvider = "",
                 onboardingExistingEmail = "",
                 onboardingExistingPhone = ""
+            )
+        }
+        
+        // Initialize the app state
+        initializeApp()
+    }
+    
+    private fun initializeApp() {
+        viewModelScope.launch {
+            try {
+                // Check for existing user session
+                val user = userRepository.currentUser.value
+                if (user != null) {
+                    // User is logged in, load their data
+                    loadUserData(user)
+                } else {
+                    // No user session, show login screen
+                    _state.update { it.copy(isLoading = false) }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error during app initialization")
+                _state.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+    
+    private suspend fun loadUserData(user: com.example.rampacashmobile.data.model.User) {
+        // TODO: Load user's wallet data, balances, etc.
+        // For now, just set loading to false
+        _state.update { 
+            it.copy(
+                isLoading = false,
+                userAddress = user.email, // Temporary - should be wallet address
+                userLabel = user.fullName
             )
         }
     }
