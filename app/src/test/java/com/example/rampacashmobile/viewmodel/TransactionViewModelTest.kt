@@ -16,7 +16,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
 import java.math.BigDecimal
-import java.util.Currency
 import android.content.Context
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,8 +89,9 @@ class TransactionViewModelTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(1, result.data.size)
-        assertEquals("Test Transaction", result.data[0].description)
+        val successResult = result as Result.Success<List<com.example.rampacashmobile.ui.screens.Transaction>>
+        assertEquals(1, successResult.data.size)
+        assertEquals("Test Transaction", successResult.data[0].description)
     }
 
     @Test
@@ -119,13 +119,13 @@ class TransactionViewModelTest {
         val description = "Test transaction"
         val transaction = createTestTransaction()
         
-        every { transactionDomainService.createTransaction(fromWallet, toWallet, amount, description) } returns Result.success(transaction)
+        every { transactionDomainService.processTransaction(any(), fromWallet, toWallet, amount, any(), description) } returns Result.success(transaction)
 
         // When
         transactionViewModel.createTransaction(fromWallet, toWallet, amount, description)
 
         // Then
-        verify { transactionDomainService.createTransaction(fromWallet, toWallet, amount, description) }
+        verify { transactionDomainService.processTransaction(any(), fromWallet, toWallet, amount, any(), description) }
     }
 
     @Test
@@ -137,7 +137,7 @@ class TransactionViewModelTest {
         val description = "Test transaction"
         val error = DomainError.BusinessRuleViolation("Insufficient funds")
         
-        every { transactionDomainService.createTransaction(fromWallet, toWallet, amount, description) } returns Result.failure(error)
+        every { transactionDomainService.processTransaction(any(), fromWallet, toWallet, amount, any(), description) } returns Result.failure(error)
 
         // When
         transactionViewModel.createTransaction(fromWallet, toWallet, amount, description)
@@ -227,13 +227,29 @@ class TransactionViewModelTest {
 
     private fun createTestTransaction(description: String = "Test Transaction"): Transaction {
         val id = TransactionId.of("tx_123")
-        val fromWallet = createTestWallet()
-        val toWallet = createTestWallet()
+        val userId = UserId.of("user_123")
+        val fromWallet = WalletAddress.of("9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM")
+        val toWallet = WalletAddress.of("9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM")
         val amount = Money(BigDecimal("100.0"), Currency.USD)
         val type = TransactionType.SEND
         val createdAt = java.time.LocalDateTime.now()
 
-        return Transaction.restore(id, fromWallet, toWallet, amount, description, type, createdAt).data
+        return Transaction.restore(
+            id = id,
+            userId = userId,
+            fromWallet = fromWallet,
+            toWallet = toWallet,
+            amount = amount,
+            currency = amount.currency,
+            status = TransactionStatus.PENDING,
+            transactionType = type,
+            description = description,
+            solanaHash = null,
+            fee = null,
+            createdAt = createdAt,
+            updatedAt = createdAt,
+            completedAt = null
+        ).getOrThrow()
     }
 
     private fun createTestWallet(): com.example.rampacashmobile.domain.entities.Wallet {
@@ -243,6 +259,14 @@ class TransactionViewModelTest {
         val createdAt = java.time.LocalDateTime.now()
         val updatedAt = java.time.LocalDateTime.now()
 
-        return com.example.rampacashmobile.domain.entities.Wallet.restore("wallet_123", userId, address, label, true, createdAt, updatedAt).data
+        return com.example.rampacashmobile.domain.entities.Wallet.restore(
+            id = "wallet_123",
+            userId = userId,
+            address = address,
+            label = label,
+            isActive = true,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+        ).getOrThrow()
     }
 }

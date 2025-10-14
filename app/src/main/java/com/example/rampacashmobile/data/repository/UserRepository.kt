@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.rampacashmobile.data.model.User
 import com.example.rampacashmobile.data.model.OnboardingData
+import com.example.rampacashmobile.data.model.AuthProvider
+import com.example.rampacashmobile.data.model.UserStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -115,11 +117,11 @@ class UserRepository @Inject constructor(
             firstName = onboarding.firstName,
             lastName = onboarding.lastName,
             email = onboarding.email,
-            phoneNumber = onboarding.phoneNumber,
-            walletAddress = walletAddress,
-            authProvider = authProvider,
-            isEmailVerified = authProvider == "google" || authProvider == "apple",
-            isPhoneVerified = authProvider == "sms"
+            phone = onboarding.phoneNumber.takeIf { it.isNotBlank() },
+            authProvider = AuthProvider.fromValue(authProvider),
+            authProviderId = "temp_${System.currentTimeMillis()}", // TODO: Get real provider ID
+            isActive = true,
+            status = UserStatus.ACTIVE
         )
 
         saveUser(user)

@@ -19,7 +19,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
 import java.math.BigDecimal
-import java.util.Currency
 import android.content.Context
 import android.net.Uri
 
@@ -240,8 +239,9 @@ class WalletViewModelTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(expectedMoney.amount, result.data.amount)
-        assertEquals(expectedMoney.currency, result.data.currency)
+        val successResult = result as Result.Success<Money>
+        assertEquals(expectedMoney.amount, successResult.data.amount)
+        assertEquals(expectedMoney.currency, successResult.data.currency)
     }
 
     @Test
@@ -261,8 +261,9 @@ class WalletViewModelTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(BigDecimal("1.0"), result.data.amount)
-        assertEquals(Currency.EUR, result.data.currency)
+        val successResult = result as Result.Success<Money>
+        assertEquals(BigDecimal("1.0"), successResult.data.amount)
+        assertEquals(Currency.EUR, successResult.data.currency)
     }
 
     @Test
@@ -282,8 +283,9 @@ class WalletViewModelTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(BigDecimal("1.0"), result.data.amount)
-        assertEquals(Currency.USD, result.data.currency)
+        val successResult = result as Result.Success<Money>
+        assertEquals(BigDecimal("1.0"), successResult.data.amount)
+        assertEquals(Currency.USD, successResult.data.currency)
     }
 
     @Test

@@ -3,7 +3,6 @@ package com.example.rampacashmobile.domain.valueobjects
 import org.junit.Test
 import org.junit.Assert.*
 import java.math.BigDecimal
-import java.util.Currency
 
 class MoneyTest {
 
@@ -11,7 +10,7 @@ class MoneyTest {
     fun `Money creation with valid amount should succeed`() {
         // Given
         val amount = BigDecimal("100.50")
-        val currency = Currency.getInstance("USD")
+        val currency = Currency.USD
 
         // When
         val money = Money(amount, currency)
@@ -25,7 +24,7 @@ class MoneyTest {
     fun `Money creation with zero amount should succeed`() {
         // Given
         val amount = BigDecimal.ZERO
-        val currency = Currency.getInstance("USD")
+        val currency = Currency.USD
 
         // When
         val money = Money(amount, currency)
@@ -38,22 +37,22 @@ class MoneyTest {
     @Test
     fun `Money addition with same currency should succeed`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("50.25"), Currency.getInstance("USD"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("50.25"), Currency.USD)
 
         // When
         val result = money1 + money2
 
         // Then
         assertEquals(BigDecimal("150.75"), result.amount)
-        assertEquals(Currency.getInstance("USD"), result.currency)
+        assertEquals(Currency.USD, result.currency)
     }
 
     @Test
     fun `Money addition with different currencies should throw exception`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("50.25"), Currency.getInstance("EUR"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("50.25"), Currency.EUR)
 
         // When & Then
         try {
@@ -67,22 +66,22 @@ class MoneyTest {
     @Test
     fun `Money subtraction with same currency should succeed`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("50.25"), Currency.getInstance("USD"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("50.25"), Currency.USD)
 
         // When
         val result = money1 - money2
 
         // Then
         assertEquals(BigDecimal("50.25"), result.amount)
-        assertEquals(Currency.getInstance("USD"), result.currency)
+        assertEquals(Currency.USD, result.currency)
     }
 
     @Test
     fun `Money subtraction with different currencies should throw exception`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("50.25"), Currency.getInstance("EUR"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("50.25"), Currency.EUR)
 
         // When & Then
         try {
@@ -96,7 +95,7 @@ class MoneyTest {
     @Test
     fun `Money multiplication should succeed`() {
         // Given
-        val money = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
+        val money = Money(BigDecimal("100.50"), Currency.USD)
         val multiplier = BigDecimal("2.5")
 
         // When
@@ -104,15 +103,15 @@ class MoneyTest {
 
         // Then
         assertEquals(BigDecimal("251.25"), result.amount)
-        assertEquals(Currency.getInstance("USD"), result.currency)
+        assertEquals(Currency.USD, result.currency)
     }
 
     @Test
     fun `Money comparison with same currency should work correctly`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("50.25"), Currency.getInstance("USD"))
-        val money3 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("50.25"), Currency.USD)
+        val money3 = Money(BigDecimal("100.50"), Currency.USD)
 
         // When & Then
         assertTrue(money1.isGreaterThan(money2))
@@ -124,8 +123,8 @@ class MoneyTest {
     @Test
     fun `Money comparison with different currencies should throw exception`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("50.25"), Currency.getInstance("EUR"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("50.25"), Currency.EUR)
 
         // When & Then
         try {
@@ -139,7 +138,7 @@ class MoneyTest {
     @Test
     fun `Money isZero should return true for zero amount`() {
         // Given
-        val money = Money(BigDecimal.ZERO, Currency.getInstance("USD"))
+        val money = Money(BigDecimal.ZERO, Currency.USD)
 
         // When & Then
         assertTrue(money.isZero())
@@ -148,7 +147,7 @@ class MoneyTest {
     @Test
     fun `Money isZero should return false for non-zero amount`() {
         // Given
-        val money = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
+        val money = Money(BigDecimal("100.50"), Currency.USD)
 
         // When & Then
         assertFalse(money.isZero())
@@ -157,7 +156,7 @@ class MoneyTest {
     @Test
     fun `Money toString should format correctly`() {
         // Given
-        val money = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
+        val money = Money(BigDecimal("100.50"), Currency.USD)
 
         // When
         val result = money.toString()
@@ -169,9 +168,9 @@ class MoneyTest {
     @Test
     fun `Money equals should work correctly`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money3 = Money(BigDecimal("100.51"), Currency.getInstance("USD"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("100.50"), Currency.USD)
+        val money3 = Money(BigDecimal("100.51"), Currency.USD)
 
         // When & Then
         assertEquals(money1, money2)
@@ -181,8 +180,8 @@ class MoneyTest {
     @Test
     fun `Money hashCode should work correctly`() {
         // Given
-        val money1 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
-        val money2 = Money(BigDecimal("100.50"), Currency.getInstance("USD"))
+        val money1 = Money(BigDecimal("100.50"), Currency.USD)
+        val money2 = Money(BigDecimal("100.50"), Currency.USD)
 
         // When & Then
         assertEquals(money1.hashCode(), money2.hashCode())
