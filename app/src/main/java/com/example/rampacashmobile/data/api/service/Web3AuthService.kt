@@ -34,7 +34,7 @@ class Web3AuthService @Inject constructor(
             Timber.d(TAG, "📊 Web3Auth response: userInfo=${web3AuthResponse.userInfo?.name}, privKey=${web3AuthResponse.privKey?.take(10)}...")
             
             // Extract JWT token from Web3Auth response
-            // Web3Auth typically provides the JWT token through userInfo
+            // Web3Auth provides the JWT token through userInfo.idToken
             val web3AuthJwt = web3AuthResponse.userInfo?.idToken
             Timber.d(TAG, "🔑 Extracted JWT token: ${web3AuthJwt?.take(20)}...")
             

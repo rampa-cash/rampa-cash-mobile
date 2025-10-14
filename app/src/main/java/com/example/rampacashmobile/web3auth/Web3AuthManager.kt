@@ -46,7 +46,7 @@ class Web3AuthManager @Inject constructor(
                 Web3AuthOptions(
                     clientId = clientId,
                     network = Network.SAPPHIRE_DEVNET,
-                    buildEnv = BuildEnv.PRODUCTION,
+                    buildEnv = BuildEnv.STAGING, // Use STAGING for devnet
                     redirectUrl = Uri.parse("com.example.rampacashmobile://auth"),
                     sessionTime = 86400 // 24 hours in seconds
                 ),
@@ -325,6 +325,13 @@ class Web3AuthManager @Inject constructor(
         try {
             val privateKey = web3AuthResponse.privKey
             val userInfo = web3AuthResponse.userInfo
+            val idToken = web3AuthResponse.userInfo?.idToken
+            
+            Timber.d(TAG, "🔑 Web3Auth Response Details:")
+            Timber.d(TAG, "  - Private Key: ${privateKey?.take(10)}...")
+            Timber.d(TAG, "  - User Info: ${userInfo?.name ?: userInfo?.email ?: "Unknown"}")
+            Timber.d(TAG, "  - ID Token: ${idToken?.take(20)}...")
+            Timber.d(TAG, "  - User Info ID Token: ${userInfo?.idToken?.take(20)}...")
             
             if (privateKey != null) {
                 Timber.d(TAG, "🔑 Web3Auth Private Key received: ${privateKey.take(10)}...")
