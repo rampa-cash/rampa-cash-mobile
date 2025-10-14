@@ -338,6 +338,8 @@ class Web3AuthManager @Inject constructor(
                     Timber.d(TAG, "🎯 Derived Solana Public Key: $solanaPublicKey")
                     Timber.d(TAG, "📍 Display Address: $displayAddress")
                     
+                    // TODO: Integrate with backend API for JWT token exchange
+                    // This will be implemented in the next step
                     callback.onLoginSuccess(web3AuthResponse, provider, solanaPublicKey, displayAddress)
                 } else {
                     callback.onLoginError("Failed to derive Solana keys")

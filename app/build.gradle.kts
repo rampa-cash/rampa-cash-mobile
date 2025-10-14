@@ -26,6 +26,7 @@ android {
             buildConfigField("String", "RPC_URI", "\"https://api.devnet.solana.com\"")
             buildConfigField("String", "NETWORK_TYPE", "\"devnet\"")
             buildConfigField("Boolean", "ENABLE_SIMULATION", "false")
+            buildConfigField("String", "API_BASE_URL", "\"http://localhost:3001\"")
             isDebuggable = true
             applicationIdSuffix = ".debug"
         }
@@ -33,6 +34,7 @@ android {
             buildConfigField("String", "RPC_URI", "\"https://api.devnet.solana.com\"")
             buildConfigField("String", "NETWORK_TYPE", "\"devnet\"")
             buildConfigField("Boolean", "ENABLE_SIMULATION", "false")
+            buildConfigField("String", "API_BASE_URL", "\"https://api.rampa.com\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -99,5 +101,10 @@ dependencies {
     implementation(libs.web3auth.android.sdk)
     implementation(libs.core)
     implementation(libs.timber)
+    // Retrofit for API communication
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
     ksp(libs.dagger.hilt.compiler)
 }

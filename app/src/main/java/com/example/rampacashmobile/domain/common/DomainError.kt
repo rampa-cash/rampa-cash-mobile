@@ -99,6 +99,38 @@ sealed class DomainError {
     ) : DomainError()
 
     /**
+     * Persistence error - when there's a data persistence issue
+     */
+    data class PersistenceError(
+        override val message: String,
+        override val cause: Throwable? = null
+    ) : DomainError()
+
+    /**
+     * Rate limit error - when API rate limit is exceeded
+     */
+    data class RateLimitError(
+        override val message: String,
+        override val cause: Throwable? = null
+    ) : DomainError()
+
+    /**
+     * Server error - when there's a server-side error
+     */
+    data class ServerError(
+        override val message: String,
+        override val cause: Throwable? = null
+    ) : DomainError()
+
+    /**
+     * Not found error - when a resource is not found (alias for NotFound)
+     */
+    data class NotFoundError(
+        override val message: String,
+        override val cause: Throwable? = null
+    ) : DomainError()
+
+    /**
      * Unknown error - for unexpected errors
      */
     data class UnknownError(
