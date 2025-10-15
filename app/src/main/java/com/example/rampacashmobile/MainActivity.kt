@@ -152,6 +152,10 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
             Log.d(TAG, "📱 Checking intent data on resume: $data")
             web3AuthManager.handleRedirect(data)
         }
+        
+        // Check authentication status when app resumes
+        Log.d(TAG, "📱 MainActivity onResume - checking authentication status")
+        viewModel.onAppResume()
     }
 
     override fun onPause() {
@@ -211,7 +215,7 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
     override fun onLogoutError(message: String) {
         runOnUiThread {
             Log.e(TAG, "❌ Web3Auth logout error: $message")
-            viewModel.setWeb3AuthError(message)
+            viewModel.handleWeb3AuthLogoutError(message)
         }
     }
 

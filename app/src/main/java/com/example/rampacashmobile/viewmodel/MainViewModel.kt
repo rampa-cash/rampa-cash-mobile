@@ -64,7 +64,7 @@ data class MainViewState(
     val isWeb3AuthLoading: Boolean = false,
     val loadingProvider: Provider? = null, // Track which specific provider is loading
     val isWeb3AuthLoggedIn: Boolean = false,
-    val web3AuthUserInfo: String? = null,
+    val web3AuthUserInfo: com.example.rampacashmobile.data.api.model.UserApiModel? = null,
     val web3AuthPrivateKey: String? = null,
     val web3AuthSolanaPublicKey: String? = null, // Full Solana public key for transactions
     // Transaction history
@@ -147,21 +147,31 @@ class MainViewModel @Inject constructor(
     private fun initializeApp() {
         viewModelScope.launch {
             try {
-                // Check for existing user session
-                val user = userRepository.currentUser.value
-                if (user != null) {
-                    // User is logged in, load their data
-                    loadUserData(user)
+                Timber.d(TAG, "🚀 Initializing app...")
+                
+                // First, check if user has valid backend authentication
+                if (isBackendAuthenticated()) {
+                    Timber.d(TAG, "✅ User has valid backend authentication, loading user data...")
+                    
+                    // User is authenticated with backend, load their profile
+                    loadAuthenticatedUserData()
                 } else {
-                    // No user session, show login screen
+                    Timber.d(TAG, "❌ No valid backend authentication found")
+                    
+                    // Check if user has Web3Auth session but no backend auth
+                    val user = userRepository.currentUser.value
+                    if (user != null) {
+                        Timber.d(TAG, "🔍 User has local session but no backend auth, clearing...")
+                        // Clear local session if no backend auth
+                        userRepository.clearUserData()
+                    }
+                    
+                    // Show login screen
                     _state.update { it.copy(isLoading = false) }
                 }
                 
-                // Check backend authentication status
-                checkAuthenticationStatus()
-                
             } catch (e: Exception) {
-                Timber.e(e, "Error during app initialization")
+                Timber.e(e, "❌ Error during app initialization")
                 _state.update { it.copy(isLoading = false) }
             }
         }
@@ -176,6 +186,91 @@ class MainViewModel @Inject constructor(
                 userAddress = user.email, // Temporary - should be wallet address
                 userLabel = user.fullName
             )
+        }
+    }
+    
+    /**
+     * Load user data for authenticated users
+     */
+    private suspend fun loadAuthenticatedUserData() {
+        try {
+            Timber.d(TAG, "📱 Loading authenticated user data...")
+            
+            // For now, we'll get the user profile from the backend
+            // In a real implementation, we might want to store the user data locally
+            // and refresh it periodically or on app resume
+            
+            // Get user profile from backend
+            val profileResult = web3AuthService.getUserProfile()
+            
+            when (profileResult) {
+                is Result.Success -> {
+                    val userProfile = profileResult.data
+                    Timber.d(TAG, "✅ User profile loaded: ${userProfile.email}")
+                    
+                    // Convert UserProfileResponse to UserApiModel for consistency
+                    val userApiModel = com.example.rampacashmobile.data.api.model.UserApiModel(
+                        id = userProfile.id,
+                        email = userProfile.email,
+                        firstName = userProfile.firstName,
+                        lastName = userProfile.lastName,
+                        language = userProfile.language,
+                        authProvider = userProfile.authProvider,
+                        isActive = userProfile.isActive,
+                        status = userProfile.status,
+                        createdAt = userProfile.createdAt,
+                        lastLoginAt = userProfile.lastLoginAt
+                    )
+                    
+                    // Update UI state with user data
+                    _state.update { 
+                        it.copy(
+                            isLoading = false,
+                            isWeb3AuthLoggedIn = true,
+                            web3AuthUserInfo = userApiModel,
+                            userAddress = userProfile.email, // Temporary - should be wallet address
+                            userLabel = "${userProfile.firstName} ${userProfile.lastName}"
+                        )
+                    }
+                    
+                    // Load additional user data (wallet, transactions, etc.)
+                    loadUserWalletData()
+                }
+                is Result.Failure -> {
+                    Timber.e(TAG, "❌ Failed to load user profile: ${profileResult.error.message}")
+                    
+                    // If profile loading fails, clear authentication and show login
+                    clearAuthenticationState()
+                    _state.update { it.copy(isLoading = false) }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(TAG, "❌ Exception loading authenticated user data: ${e.message}", e)
+            clearAuthenticationState()
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+    
+    /**
+     * Load user's wallet data and balances
+     */
+    private suspend fun loadUserWalletData() {
+        try {
+            Timber.d(TAG, "💰 Loading user wallet data...")
+            
+            // TODO: Load wallet balances, transaction history, etc.
+            // For now, just set some default values
+            _state.update { 
+                it.copy(
+                    solBalance = 0.0,
+                    eurcBalance = 0.0,
+                    usdcBalance = 0.0,
+                    canTransact = true
+                )
+            }
+            
+        } catch (e: Exception) {
+            Timber.e(TAG, "❌ Exception loading wallet data: ${e.message}", e)
         }
     }
 
@@ -285,7 +380,7 @@ class MainViewModel @Inject constructor(
                     isWeb3AuthLoading = false,
                     loadingProvider = null,
                     isWeb3AuthLoggedIn = true,
-                            web3AuthUserInfo = response.user.email,
+                            web3AuthUserInfo = response.user,
                             web3AuthSolanaPublicKey = solanaPublicKey,
                             userAddress = displayAddress
                         )
@@ -313,8 +408,56 @@ class MainViewModel @Inject constructor(
     }
 
     fun handleWeb3AuthLogout() {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "handleWeb3AuthLogout() - TODO: Delegate to Web3AuthViewModel")
+        viewModelScope.launch {
+            try {
+                Timber.d(TAG, "🚪 Starting complete logout process...")
+                
+                // 1. Logout from backend API
+                val backendLogoutResult = web3AuthService.logout()
+                
+                when (backendLogoutResult) {
+                    is Result.Success -> {
+                        Timber.d(TAG, "✅ Backend logout successful")
+                    }
+                    is Result.Failure -> {
+                        Timber.e(TAG, "❌ Backend logout failed: ${backendLogoutResult.error.message}")
+                        // Continue with local logout even if backend fails
+                    }
+                }
+                
+                // 2. Clear all authentication state
+                clearAuthenticationState()
+                
+                // 3. Clear local user data
+                userRepository.clearUserData()
+                
+                // 4. Update UI state to show logged out
+                _state.update { 
+                    it.copy(
+                        isLoading = false,
+                        isWeb3AuthLoggedIn = false,
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
+                        userAddress = "",
+                        userLabel = "",
+                        canTransact = false,
+                        solBalance = 0.0,
+                        eurcBalance = 0.0,
+                        usdcBalance = 0.0
+                    )
+                }
+                
+                Timber.d(TAG, "✅ Complete logout process finished")
+                
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Exception during logout: ${e.message}", e)
+                
+                // Even if there's an exception, clear local state
+                clearAuthenticationState()
+                userRepository.clearUserData()
+            }
+        }
     }
 
     fun handleWeb3AuthSessionRestore(privateKey: String, solanaPublicKey: String, displayAddress: String) {
@@ -330,6 +473,104 @@ class MainViewModel @Inject constructor(
     fun onWeb3AuthCancelled() {
         // TODO: Delegate to Web3AuthViewModel
         Timber.d(TAG, "onWeb3AuthCancelled() - TODO: Delegate to Web3AuthViewModel")
+    }
+    
+    /**
+     * Handle Web3Auth logout error
+     */
+    fun handleWeb3AuthLogoutError(errorMessage: String) {
+        Timber.e(TAG, "❌ Web3Auth logout error: $errorMessage")
+        
+        // Even if Web3Auth logout fails, we should still clear local state
+        // This ensures the user can still log out locally
+        viewModelScope.launch {
+            try {
+                // Clear all authentication state
+                clearAuthenticationState()
+                
+                // Clear local user data
+                userRepository.clearUserData()
+                
+                // Update UI state to show logged out
+                _state.update { 
+                    it.copy(
+                        isLoading = false,
+                        isWeb3AuthLoggedIn = false,
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
+                        userAddress = "",
+                        userLabel = "",
+                        canTransact = false,
+                        solBalance = 0.0,
+                        eurcBalance = 0.0,
+                        usdcBalance = 0.0
+                    )
+                }
+                
+                Timber.d(TAG, "✅ Local logout completed despite Web3Auth error")
+                
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Exception during error logout: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * Direct logout method for when Web3Auth session is not available
+     * This can be called directly from UI when user wants to logout
+     */
+    fun performDirectLogout() {
+        viewModelScope.launch {
+            try {
+                Timber.d(TAG, "🚪 Performing direct logout...")
+                
+                // 1. Logout from backend API
+                val backendLogoutResult = web3AuthService.logout()
+                
+                when (backendLogoutResult) {
+                    is Result.Success -> {
+                        Timber.d(TAG, "✅ Backend logout successful")
+                    }
+                    is Result.Failure -> {
+                        Timber.e(TAG, "❌ Backend logout failed: ${backendLogoutResult.error.message}")
+                        // Continue with local logout even if backend fails
+                    }
+                }
+                
+                // 2. Clear all authentication state
+                clearAuthenticationState()
+                
+                // 3. Clear local user data
+                userRepository.clearUserData()
+                
+                // 4. Update UI state to show logged out
+                _state.update { 
+                    it.copy(
+                        isLoading = false,
+                        isWeb3AuthLoggedIn = false,
+                        web3AuthUserInfo = null,
+                        web3AuthPrivateKey = null,
+                        web3AuthSolanaPublicKey = null,
+                        userAddress = "",
+                        userLabel = "",
+                        canTransact = false,
+                        solBalance = 0.0,
+                        eurcBalance = 0.0,
+                        usdcBalance = 0.0
+                    )
+                }
+                
+                Timber.d(TAG, "✅ Direct logout completed")
+                
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Exception during direct logout: ${e.message}", e)
+                
+                // Even if there's an exception, clear local state
+                clearAuthenticationState()
+                userRepository.clearUserData()
+            }
+        }
     }
 
     fun handleWeb3AuthSplTransfer(
@@ -482,11 +723,63 @@ class MainViewModel @Inject constructor(
         
         if (isBackendAuthenticated()) {
             Timber.d(TAG, "✅ User is authenticated with backend")
-            // User is authenticated, no need to update UI state
+            
+            // Check if token needs refresh
+            if (shouldRefreshToken()) {
+                Timber.d(TAG, "🔄 Token needs refresh, attempting refresh...")
+                val refreshResult = refreshAuthenticationToken()
+                
+                when (refreshResult) {
+                    is Result.Success -> {
+                        Timber.d(TAG, "✅ Token refreshed successfully")
+                    }
+                    is Result.Failure -> {
+                        Timber.e(TAG, "❌ Token refresh failed: ${refreshResult.error.message}")
+                        clearAuthenticationState()
+                    }
+                }
+            }
         } else {
             Timber.d(TAG, "❌ User is not authenticated with backend")
             // Clear authentication state if not authenticated
             clearAuthenticationState()
+        }
+    }
+    
+    /**
+     * Handle app resume - check authentication and refresh if needed
+     */
+    fun onAppResume() {
+        viewModelScope.launch {
+            try {
+                Timber.d(TAG, "📱 App resumed, checking authentication...")
+                
+                if (isBackendAuthenticated()) {
+                    Timber.d(TAG, "✅ User still authenticated, checking token validity...")
+                    
+                    // Check if token needs refresh
+                    if (shouldRefreshToken()) {
+                        Timber.d(TAG, "🔄 Token needs refresh on app resume...")
+                        val refreshResult = refreshAuthenticationToken()
+                        
+                        when (refreshResult) {
+                            is Result.Success -> {
+                                Timber.d(TAG, "✅ Token refreshed on app resume")
+                            }
+                            is Result.Failure -> {
+                                Timber.e(TAG, "❌ Token refresh failed on app resume: ${refreshResult.error.message}")
+                                clearAuthenticationState()
+                            }
+                        }
+                    }
+                } else {
+                    Timber.d(TAG, "❌ User no longer authenticated on app resume")
+                    clearAuthenticationState()
+                }
+                
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Exception during app resume check: ${e.message}", e)
+            }
         }
     }
 }

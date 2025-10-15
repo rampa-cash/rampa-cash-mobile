@@ -247,9 +247,11 @@ private fun ActionButtonsSection(
             onClick = {
                 // Handle logout/disconnect
                 if (web3AuthManager != null && web3AuthCallback != null) {
+                    // Try Web3Auth logout first
                     web3AuthManager.logout(web3AuthCallback)
                 } else {
-                    viewModel?.disconnect()
+                    // Fallback to direct logout if Web3Auth is not available
+                    viewModel?.performDirectLogout()
                 }
                 navController.navigate("login") {
                     popUpTo(0) { inclusive = true }
