@@ -131,6 +131,14 @@ sealed class DomainError {
     ) : DomainError()
 
     /**
+     * Phone login needs onboarding error - when phone login requires profile completion
+     */
+    data class PhoneLoginNeedsOnboarding(
+        override val message: String,
+        override val cause: Throwable? = null
+    ) : DomainError()
+
+    /**
      * Unknown error - for unexpected errors
      */
     data class UnknownError(

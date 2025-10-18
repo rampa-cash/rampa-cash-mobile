@@ -28,7 +28,8 @@ class Web3AuthService @Inject constructor(
     /**
      * Validate Web3Auth JWT token and exchange for API token
      */
-    suspend fun validateWeb3AuthToken(web3AuthResponse: Web3AuthResponse): Result<Web3AuthValidateResponse> {
+    suspend fun validateWeb3AuthToken(web3AuthResponse: Web3AuthResponse): com.example.rampacashmobile.domain.common.Result<Web3AuthValidateResponse> {
+        Timber.d(TAG, "🚀 ENTERING validateWeb3AuthToken method")
         return try {
             Timber.d(TAG, "🔐 Validating Web3Auth token with backend...")
             Timber.d(TAG, "📊 Web3Auth response: userInfo=${web3AuthResponse.userInfo?.name}, privKey=${web3AuthResponse.privKey?.take(10)}...")
@@ -43,6 +44,10 @@ class Web3AuthService @Inject constructor(
                 return Result.failure(DomainError.AuthenticationError("No JWT token received from Web3Auth"))
             }
             
+            // Check if this is a phone number login by examining the JWT token
+            val isPhoneLogin = isPhoneNumberLogin(web3AuthJwt)
+            Timber.d(TAG, "📱 Login type detected: ${if (isPhoneLogin) "Phone Number" else "Email/Google"}")
+            
             // Create validation request
             val request = Web3AuthValidateRequest(token = web3AuthJwt)
             Timber.d(TAG, "📤 Sending validation request to backend...")
@@ -50,26 +55,75 @@ class Web3AuthService @Inject constructor(
             // Call backend validation endpoint
             val response = apiClient.web3AuthApiService.validateWeb3AuthToken(request)
             Timber.d(TAG, "📥 Backend response received: success=${response.isSuccessful}")
+            Timber.d(TAG, "📥 Backend response code: ${response.code()}")
+            Timber.d(TAG, "📥 Backend response message: ${response.message()}")
+            Timber.d(TAG, "📥 Backend response headers: ${response.headers()}")
+            Timber.d(TAG, "📥 Backend response body (raw): ${response.body()}")
+            Timber.d(TAG, "📥 Backend response error body: ${response.errorBody()?.string()}")
             
             if (response.isSuccessful && response.body() != null) {
                 val responseBody = response.body()!!
                 Timber.d(TAG, "✅ Backend validation successful")
                 Timber.d(TAG, "👤 User: ${responseBody.user.email}")
                 Timber.d(TAG, "🔑 API Token: ${responseBody.accessToken.take(20)}...")
+                Timber.d(TAG, "🔍 Full response body: $responseBody")
+                Timber.d(TAG, "🔍 Parsed user object: ${responseBody.user}")
+                Timber.d(TAG, "🔍 User fields - ID: ${responseBody.user.id}, Email: ${responseBody.user.email}, FirstName: ${responseBody.user.firstName}, LastName: ${responseBody.user.lastName}")
+                Timber.d(TAG, "🔍 User fields - Language: ${responseBody.user.language}, AuthProvider: ${responseBody.user.authProvider}, IsActive: ${responseBody.user.isActive}, Status: ${responseBody.user.status}")
+                Timber.d(TAG, "🔍 User fields - VerificationStatus: ${responseBody.user.verificationStatus}, VerificationCompletedAt: ${responseBody.user.verificationCompletedAt}")
+                Timber.d(TAG, "🔍 Response fields - AccessToken: ${responseBody.accessToken.take(50)}..., ExpiresIn: ${responseBody.expiresIn}")
                 
                 // Store the API JWT token
                 apiClient.setAuthToken(responseBody.accessToken, responseBody.expiresIn)
                 
                 Timber.d(TAG, "✅ Web3Auth token validated and stored successfully")
-                Result.success(responseBody)
+                val result = com.example.rampacashmobile.domain.common.Result.success(responseBody)
+                Timber.d(TAG, "🔍 Result created: ${result::class.simpleName}")
+                result
             } else {
+                // If backend validation fails, return authentication error
                 Timber.e(TAG, "❌ Backend validation failed: ${response.code()} - ${response.message()}")
-                Result.failure(DomainError.AuthenticationError("Backend validation failed: ${response.message()}"))
+                Timber.e(TAG, "❌ Response body: ${response.body()}")
+                val errorResult = com.example.rampacashmobile.domain.common.Result.failure<Web3AuthValidateResponse>(DomainError.AuthenticationError("Backend validation failed: ${response.message()}"))
+                Timber.e(TAG, "🔍 Error result created: ${errorResult::class.simpleName}")
+                return errorResult
             }
             
         } catch (e: Exception) {
+            Timber.e(TAG, "🚨 EXCEPTION in validateWeb3AuthToken: ${e::class.simpleName}")
             Timber.e(e, "❌ Failed to validate Web3Auth token: ${e.message}")
-            Result.failure(DomainError.NetworkError("Failed to validate Web3Auth token: ${e.message}"))
+            Timber.e(TAG, "🔍 Exception stack trace: ${e.stackTraceToString()}")
+            val errorResult = com.example.rampacashmobile.domain.common.Result.failure<Web3AuthValidateResponse>(DomainError.NetworkError("Failed to validate Web3Auth token: ${e.message}"))
+            Timber.e(TAG, "🔍 Exception result created: ${errorResult::class.simpleName}")
+            errorResult
+        }
+    }
+    
+    /**
+     * Check if the JWT token represents a phone number login
+     */
+    private fun isPhoneNumberLogin(jwtToken: String): Boolean {
+        return try {
+            // Decode JWT token to check the payload
+            val parts = jwtToken.split(".")
+            if (parts.size != 3) return false
+            
+            val payload = parts[1]
+            val decoded = String(android.util.Base64.decode(payload, android.util.Base64.URL_SAFE))
+            
+            // Check if the token contains phone number patterns
+            val containsPhonePattern = decoded.contains("\"verifierId\":\"+") || 
+                                    decoded.contains("\"userId\":\"+") ||
+                                    decoded.contains("\"name\":\"+") ||
+                                    decoded.contains("web3auth-auth0-sms-passwordless")
+            
+            Timber.d(TAG, "🔍 JWT payload analysis: containsPhonePattern=$containsPhonePattern")
+            Timber.d(TAG, "📄 JWT payload: $decoded")
+            
+            containsPhonePattern
+        } catch (e: Exception) {
+            Timber.e(TAG, "❌ Failed to decode JWT token: ${e.message}")
+            false
         }
     }
     
@@ -124,7 +178,7 @@ class Web3AuthService @Inject constructor(
      * Check if user is authenticated with backend
      */
     fun isAuthenticated(): Boolean {
-        return apiClient.isAuthenticated()
+        return tokenManager.isAuthenticated()
     }
     
     /**

@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "Rampa",
+            "database": "rampa_cash_dev",
+            "username": "rampa_user"
+        }
+    ]
+}

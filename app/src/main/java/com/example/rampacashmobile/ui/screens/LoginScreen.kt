@@ -29,10 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.ui.graphics.painter.Painter
-// Ensure painterResource is imported: import androidx.compose.ui.res.painterResource
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
+import com.example.rampacashmobile.ui.components.VerificationStatusBanner
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.web3auth.core.types.Provider
 
@@ -162,6 +162,23 @@ fun LoginScreen(
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         letterSpacing = (-0.5).sp
+                    )
+                }
+
+                // Verification Status Banner (if user is logged in but needs verification)
+                if (viewState.isWeb3AuthLoggedIn && viewState.showVerificationBanner) {
+                    VerificationStatusBanner(
+                        verificationStatus = viewState.userVerificationStatus,
+                        userStatus = viewState.userStatus,
+                        onCompleteProfileClick = {
+                            // Navigate to profile completion screen
+                            navController.navigate("profile_completion") {
+                                popUpTo("login") { inclusive = false }
+                            }
+                        },
+                        onDismiss = {
+                            viewModel.dismissVerificationBanner()
+                        }
                     )
                 }
 

@@ -10,10 +10,12 @@ import com.example.rampacashmobile.R
 import com.example.rampacashmobile.data.repository.UserRepository
 import com.example.rampacashmobile.data.api.service.Web3AuthService
 import com.example.rampacashmobile.data.api.service.TokenRefreshService
+import com.example.rampacashmobile.data.api.service.UserVerificationService
 import com.example.rampacashmobile.data.api.ApiClient
 import com.example.rampacashmobile.domain.valueobjects.WalletAddress
 import com.example.rampacashmobile.domain.valueobjects.UserId
 import com.example.rampacashmobile.domain.common.Result
+import com.example.rampacashmobile.domain.common.DomainError
 import com.example.rampacashmobile.domain.services.WalletDomainService
 import com.example.rampacashmobile.domain.services.TransactionDomainService
 import com.example.rampacashmobile.domain.services.ContactDomainService
@@ -74,7 +76,13 @@ data class MainViewState(
     val needsOnboardingNavigation: Boolean = false,
     val onboardingAuthProvider: String = "",
     val onboardingExistingEmail: String = "",
-    val onboardingExistingPhone: String = ""
+    val onboardingExistingPhone: String = "",
+    // User verification status
+    val userVerificationStatus: String? = null, // PENDING_VERIFICATION, VERIFIED, REJECTED
+    val userStatus: String? = null, // ACTIVE, SUSPENDED, PENDING_VERIFICATION
+    val missingFields: List<String> = emptyList(),
+    val isUserVerified: Boolean = false,
+    val showVerificationBanner: Boolean = false
 )
 
 /**
@@ -96,10 +104,19 @@ class MainViewModel @Inject constructor(
         // Backend API services
         private val web3AuthService: Web3AuthService,
         private val tokenRefreshService: TokenRefreshService,
-        private val apiClient: ApiClient
-    ) : ViewModel() {
+        private val apiClient: ApiClient,
+        private val userVerificationService: UserVerificationService,
+        // Web3Auth domain service for wallet-specific operations
+        private val web3AuthDomainService: com.example.rampacashmobile.domain.services.Web3AuthDomainService,
+        // Web3Auth state service for state management operations
+        private val web3AuthStateService: com.example.rampacashmobile.domain.services.Web3AuthStateService
+) : BaseViewModel() {
     companion object {
         private const val TAG = "MainViewModel"
+    }
+    
+    init {
+        android.util.Log.d(TAG, "🚀🚀🚀 MainViewModel constructor called")
     }
 
     private val rpcUri = android.net.Uri.parse(BuildConfig.RPC_URI)
@@ -169,7 +186,7 @@ class MainViewModel @Inject constructor(
                     // Show login screen
                     _state.update { it.copy(isLoading = false) }
                 }
-                
+
             } catch (e: Exception) {
                 Timber.e(e, "❌ Error during app initialization")
                 _state.update { it.copy(isLoading = false) }
@@ -228,8 +245,8 @@ class MainViewModel @Inject constructor(
                             isLoading = false,
                             isWeb3AuthLoggedIn = true,
                             web3AuthUserInfo = userApiModel,
-                            userAddress = userProfile.email, // Temporary - should be wallet address
-                            userLabel = "${userProfile.firstName} ${userProfile.lastName}"
+                            userAddress = userProfile.email ?: "", // Temporary - should be wallet address
+                            userLabel = "${userProfile.firstName ?: ""} ${userProfile.lastName ?: ""}"
                         )
                     }
                     
@@ -244,13 +261,13 @@ class MainViewModel @Inject constructor(
                     _state.update { it.copy(isLoading = false) }
                 }
             }
-        } catch (e: Exception) {
+            } catch (e: Exception) {
             Timber.e(TAG, "❌ Exception loading authenticated user data: ${e.message}", e)
             clearAuthenticationState()
             _state.update { it.copy(isLoading = false) }
         }
     }
-    
+
     /**
      * Load user's wallet data and balances
      */
@@ -341,18 +358,18 @@ class MainViewModel @Inject constructor(
 
     // Web3Auth methods
     fun setWeb3AuthLoading(loading: Boolean) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "setWeb3AuthLoading() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "setWeb3AuthLoading: $loading")
+        web3AuthStateService.setWeb3AuthLoading(loading)
     }
 
     fun setWeb3AuthProviderLoading(provider: Provider) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "setWeb3AuthProviderLoading() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "setWeb3AuthProviderLoading: $provider")
+        web3AuthStateService.setWeb3AuthProviderLoading(provider)
     }
 
     fun setWeb3AuthError(errorMessage: String) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "setWeb3AuthError() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "setWeb3AuthError: $errorMessage")
+        web3AuthStateService.setWeb3AuthError(errorMessage)
     }
 
     fun handleWeb3AuthSuccess(
@@ -361,32 +378,115 @@ class MainViewModel @Inject constructor(
         solanaPublicKey: String,
         displayAddress: String
     ) {
-        Timber.d(TAG, "🔐 Web3Auth login successful, exchanging token with backend...")
+        android.util.Log.d(TAG, "🚀🚀🚀 ENTERING handleWeb3AuthSuccess method - FIRST LINE")
+        android.util.Log.d(TAG, "🔐 Web3Auth login successful, exchanging token with backend...")
+        android.util.Log.d(TAG, "🔍 Method parameters: provider=$provider, solanaPublicKey=$solanaPublicKey")
+        android.util.Log.d(TAG, "🔍 Web3AuthResponse type: ${web3AuthResponse::class.simpleName}")
+        android.util.Log.d(TAG, "🔍 Provider type: ${provider::class.simpleName}")
+        android.util.Log.d(TAG, "🔍 SolanaPublicKey type: ${solanaPublicKey::class.simpleName}")
+        android.util.Log.d(TAG, "🔍 DisplayAddress type: ${displayAddress::class.simpleName}")
         
         viewModelScope.launch {
             try {
+                android.util.Log.d(TAG, "🚀 ENTERING viewModelScope.launch block")
+                android.util.Log.d(TAG, "🔄 Starting Web3Auth token validation...")
+                android.util.Log.d(TAG, "🔍 Web3Auth response: ${web3AuthResponse.userInfo?.name}")
+                
+                // First, handle Web3Auth wallet connection (delegate to Web3AuthDomainService)
+                android.util.Log.d(TAG, "🔗 Delegating Web3Auth wallet connection to Web3AuthDomainService...")
+                val walletConnectionResult = web3AuthDomainService.handleWeb3AuthWalletConnection(
+                    web3AuthResponse, provider, solanaPublicKey, displayAddress
+                )
+                
+                when (walletConnectionResult) {
+                    is Result.Success -> {
+                        android.util.Log.d(TAG, "✅ Web3Auth wallet connection successful")
+                        val walletData = walletConnectionResult.data
+                        android.util.Log.d(TAG, "🔑 Wallet data: ${walletData.displayName} (${walletData.providerName})")
+                    }
+                    is Result.Failure -> {
+                        android.util.Log.e(TAG, "❌ Web3Auth wallet connection failed: ${walletConnectionResult.error.message}")
+                        // Continue with backend validation anyway - wallet connection might still work
+                    }
+                }
+                
                 // Call Web3AuthService to exchange token with backend
+                android.util.Log.d(TAG, "📞 About to call web3AuthService.validateWeb3AuthToken")
                 val result = web3AuthService.validateWeb3AuthToken(web3AuthResponse)
+                android.util.Log.d(TAG, "📞 web3AuthService.validateWeb3AuthToken completed")
+                android.util.Log.d(TAG, "🔄 Web3Auth validation result: ${result::class.simpleName}")
                 
                 when (result) {
                     is Result.Success -> {
                         val response = result.data
-                        Timber.d(TAG, "✅ Backend token exchange successful")
-                        Timber.d(TAG, "👤 User: ${response.user.email}")
-                        Timber.d(TAG, "🔑 API Token: ${response.accessToken.take(20)}...")
+                        android.util.Log.d(TAG, "✅ Backend token exchange successful")
+                        android.util.Log.d(TAG, "👤 User: ${response.user.email ?: "No email"}")
+                        android.util.Log.d(TAG, "🔑 API Token: ${response.accessToken.take(20)}...")
+                        android.util.Log.d(TAG, "🔍 Full user response: ${response.user}")
                         
-                        // Update UI state
+                        // Check user verification status
+                        val isVerified = response.user.verificationStatus == "verified"
+                        val showBanner = response.user.verificationStatus == "pending_verification"
+                        
+                        android.util.Log.d(TAG, "🔍 User verification status: ${response.user.verificationStatus}")
+                        android.util.Log.d(TAG, "🔍 User status: ${response.user.status}")
+                        android.util.Log.d(TAG, "🔍 Is verified: $isVerified")
+                        android.util.Log.d(TAG, "🔍 Show verification banner: $showBanner")
+                        
+                        // Check if user has complete profile (Google, Apple, etc.)
+                        val hasCompleteProfile = !response.user.email.isNullOrBlank() && 
+                                                !response.user.firstName.isNullOrBlank() && 
+                                                !response.user.lastName.isNullOrBlank()
+                        
+                        android.util.Log.d(TAG, "🔍 Profile completeness check:")
+                        android.util.Log.d(TAG, "  - Email: ${response.user.email}")
+                        android.util.Log.d(TAG, "  - FirstName: ${response.user.firstName}")
+                        android.util.Log.d(TAG, "  - LastName: ${response.user.lastName}")
+                        android.util.Log.d(TAG, "  - Has complete profile: $hasCompleteProfile")
+                        android.util.Log.d(TAG, "  - Onboarding completed: ${userRepository.isOnboardingCompleted()}")
+                        
+                        // If user has complete profile, automatically mark onboarding as completed
+                        if (hasCompleteProfile && !userRepository.isOnboardingCompleted()) {
+                            android.util.Log.d(TAG, "✅ User has complete profile, marking onboarding as completed")
+                            userRepository.completeOnboarding(
+                                walletAddress = displayAddress,
+                                authProvider = provider.toString().lowercase()
+                            )
+                        }
+                        
+                        // Update UI state with verification information
                         _state.value = _state.value.copy(
-                    isWeb3AuthLoading = false,
-                    loadingProvider = null,
-                    isWeb3AuthLoggedIn = true,
+                            isWeb3AuthLoading = false,
+                            loadingProvider = null,
+                            isWeb3AuthLoggedIn = true,
                             web3AuthUserInfo = response.user,
                             web3AuthSolanaPublicKey = solanaPublicKey,
-                            userAddress = displayAddress
+                            userAddress = displayAddress,
+                            userVerificationStatus = response.user.verificationStatus,
+                            userStatus = response.user.status,
+                            isUserVerified = isVerified,
+                            showVerificationBanner = showBanner
                         )
+                        
+                        // Now check if user needs onboarding after we have the complete profile
+                        val needsOnboardingCheck = needsOnboarding()
+                        android.util.Log.d(TAG, "🔍 Final onboarding check: $needsOnboardingCheck")
+                        
+                        if (needsOnboardingCheck) {
+                            android.util.Log.d(TAG, "🎯 User needs onboarding after profile check - setting navigation flag")
+                            val (existingEmail, existingPhone) = extractUserInfoFromAuth(web3AuthResponse, provider)
+                            setNeedsOnboardingNavigation(provider.toString().lowercase(), existingEmail, existingPhone)
+                        } else {
+                            android.util.Log.d(TAG, "✅ User has complete profile - no onboarding needed")
+                        }
+                        
+                        // Load additional user data (wallet, transactions, etc.) to enable canTransact
+                        android.util.Log.d(TAG, "🔄 Loading authenticated user data to enable transactions...")
+                        loadAuthenticatedUserData()
                     }
                     is Result.Failure -> {
-                        Timber.e(TAG, "❌ Backend token exchange failed: ${result.error.message}")
+                        android.util.Log.e(TAG, "❌ Backend token exchange failed: ${result.error.message}")
+                        android.util.Log.e(TAG, "❌ Error type: ${result.error::class.simpleName}")
                         _state.value = _state.value.copy(
                             isWeb3AuthLoading = false,
                             loadingProvider = null,
@@ -396,7 +496,9 @@ class MainViewModel @Inject constructor(
                     }
             }
             } catch (e: Exception) {
-                Timber.e(TAG, "❌ Exception during backend token exchange: ${e.message}", e)
+                android.util.Log.e(TAG, "🚨 EXCEPTION in handleWeb3AuthSuccess: ${e::class.simpleName}")
+                android.util.Log.e(TAG, "❌ Exception during backend token exchange: ${e.message}", e)
+                android.util.Log.e(TAG, "🔍 Exception stack trace: ${e.stackTraceToString()}")
                 _state.value = _state.value.copy(
                     isWeb3AuthLoading = false,
                     loadingProvider = null,
@@ -450,7 +552,7 @@ class MainViewModel @Inject constructor(
                 
                 Timber.d(TAG, "✅ Complete logout process finished")
                 
-            } catch (e: Exception) {
+                } catch (e: Exception) {
                 Timber.e(TAG, "❌ Exception during logout: ${e.message}", e)
                 
                 // Even if there's an exception, clear local state
@@ -461,18 +563,18 @@ class MainViewModel @Inject constructor(
     }
 
     fun handleWeb3AuthSessionRestore(privateKey: String, solanaPublicKey: String, displayAddress: String) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "handleWeb3AuthSessionRestore() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "handleWeb3AuthSessionRestore: $displayAddress")
+        web3AuthStateService.handleWeb3AuthSessionRestore(privateKey, solanaPublicKey, displayAddress)
     }
 
     fun handleWeb3AuthRedirect(data: Uri) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "handleWeb3AuthRedirect() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "handleWeb3AuthRedirect: $data")
+        web3AuthStateService.handleWeb3AuthRedirect(data)
     }
 
     fun onWeb3AuthCancelled() {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "onWeb3AuthCancelled() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "onWeb3AuthCancelled")
+        web3AuthStateService.onWeb3AuthCancelled()
     }
     
     /**
@@ -548,15 +650,15 @@ class MainViewModel @Inject constructor(
                 _state.update { 
                     it.copy(
                         isLoading = false,
-                        isWeb3AuthLoggedIn = false,
-                        web3AuthUserInfo = null,
-                        web3AuthPrivateKey = null,
+            isWeb3AuthLoggedIn = false,
+            web3AuthUserInfo = null,
+            web3AuthPrivateKey = null,
                         web3AuthSolanaPublicKey = null,
-                        userAddress = "",
+            userAddress = "",
                         userLabel = "",
                         canTransact = false,
-                        solBalance = 0.0,
-                        eurcBalance = 0.0,
+            solBalance = 0.0,
+            eurcBalance = 0.0,
                         usdcBalance = 0.0
                     )
                 }
@@ -580,36 +682,246 @@ class MainViewModel @Inject constructor(
         tokenDecimals: Int = 6,
         recipientName: String? = null
     ) {
-        // TODO: Delegate to Web3AuthViewModel
-        Timber.d(TAG, "handleWeb3AuthSplTransfer() - TODO: Delegate to Web3AuthViewModel")
+        android.util.Log.d(TAG, "handleWeb3AuthSplTransfer: $recipientAddress, $amount, $tokenMintAddress")
+        web3AuthStateService.handleWeb3AuthSplTransfer(recipientAddress, amount, tokenMintAddress)
     }
 
     // Onboarding methods
     fun setNeedsOnboardingNavigation(authProvider: String, existingEmail: String, existingPhone: String) {
-        // TODO: Delegate to OnboardingViewModel
-        Timber.d(TAG, "setNeedsOnboardingNavigation() - TODO: Delegate to OnboardingViewModel")
+        Timber.d(TAG, "🎯 Setting onboarding navigation: provider=$authProvider, email=$existingEmail, phone=$existingPhone")
+        
+        // Update UI state to trigger onboarding navigation
+        _state.value = _state.value.copy(
+            needsOnboardingNavigation = true,
+            onboardingAuthProvider = authProvider,
+            onboardingExistingEmail = existingEmail,
+            onboardingExistingPhone = existingPhone
+        )
     }
 
     fun clearOnboardingNavigation() {
-        // TODO: Delegate to OnboardingViewModel
-        Timber.d(TAG, "clearOnboardingNavigation() - TODO: Delegate to OnboardingViewModel")
+        Timber.d(TAG, "🧹 Clearing onboarding navigation")
+        
+        // Clear onboarding navigation flags
+        _state.value = _state.value.copy(
+            needsOnboardingNavigation = false,
+            onboardingAuthProvider = "",
+            onboardingExistingEmail = "",
+            onboardingExistingPhone = ""
+        )
     }
 
     fun extractUserInfoFromAuth(response: Web3AuthResponse, provider: Provider): Pair<String, String> {
-        // TODO: Delegate to OnboardingViewModel
-        Timber.d(TAG, "extractUserInfoFromAuth() - TODO: Delegate to OnboardingViewModel")
-        return Pair("", "")
+        Timber.d(TAG, "🔍 Extracting user info from Web3Auth response")
+        
+        val userInfo = response.userInfo
+        val email = userInfo?.email ?: ""
+        val name = userInfo?.name ?: ""
+
+        return when (provider) {
+            Provider.GOOGLE, Provider.APPLE -> {
+                // Email is primary, extract name parts
+                val nameParts = name.split(" ", limit = 2)
+                val firstName = nameParts.getOrNull(0) ?: ""
+                val lastName = nameParts.getOrNull(1) ?: ""
+
+                // Update onboarding data with pre-filled info
+                val onboardingData = com.example.rampacashmobile.data.model.OnboardingData(
+                    firstName = firstName,
+                    lastName = lastName,
+                    email = email,
+                    authProvider = provider.toString().lowercase()
+                )
+                userRepository.updateOnboardingData(onboardingData)
+
+                Pair(email, "")
+            }
+            Provider.SMS_PASSWORDLESS -> {
+                // Phone is primary
+                val phoneNumber = extractPhoneNumberFromWeb3Auth(response)
+                Pair("", phoneNumber)
+            }
+            else -> Pair("", "")
+        }
     }
 
     fun needsOnboarding(): Boolean {
-        // TODO: Delegate to OnboardingViewModel
-        Timber.d(TAG, "needsOnboarding() - TODO: Delegate to OnboardingViewModel")
-        return false
+        // For users with complete profiles from backend (Google, Apple, etc.), 
+        // we don't need onboarding even if local onboarding flag is not set
+        val currentState = _state.value
+        val hasCompleteProfile = currentState.web3AuthUserInfo?.let { userInfo ->
+            !userInfo.email.isNullOrBlank() && 
+            !userInfo.firstName.isNullOrBlank() && 
+            !userInfo.lastName.isNullOrBlank()
+        } ?: false
+        
+        // Only require onboarding if:
+        // 1. Local onboarding is not completed AND
+        // 2. User doesn't have a complete profile from backend
+        return !userRepository.isOnboardingCompleted() && !hasCompleteProfile
     }
 
     fun completeUserOnboarding(onboardingData: com.example.rampacashmobile.data.model.OnboardingData) {
-        // TODO: Delegate to OnboardingViewModel
-        Timber.d(TAG, "completeUserOnboarding() - TODO: Delegate to OnboardingViewModel")
+        viewModelScope.launch {
+            try {
+                Timber.d(TAG, "✅ Completing user onboarding...")
+                
+                // Update user repository with onboarding data
+                userRepository.updateOnboardingData(onboardingData)
+
+                // Complete onboarding (this will mark it as completed internally)
+                userRepository.completeOnboarding(
+                    walletAddress = "", // Will be set by the onboarding screen
+                    authProvider = onboardingData.authProvider
+                )
+                
+                // Clear onboarding navigation
+                clearOnboardingNavigation()
+                
+                // Now that onboarding is complete, try to validate the Web3Auth token again
+                // This should work now that we have the required user information
+                Timber.d(TAG, "🔄 Onboarding complete - user can now proceed with normal login flow")
+                
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Failed to complete onboarding: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Extract phone number from Web3Auth response
+     */
+    private fun extractPhoneNumberFromWeb3Auth(web3AuthResponse: Web3AuthResponse): String {
+        return try {
+            // Try to get phone number from userInfo
+            val userInfo = web3AuthResponse.userInfo
+            val phoneNumber = userInfo?.name ?: userInfo?.verifierId ?: ""
+            
+            Timber.d(TAG, "📞 Extracted phone number from Web3Auth: $phoneNumber")
+            phoneNumber
+        } catch (e: Exception) {
+            Timber.e(TAG, "❌ Failed to extract phone number: ${e.message}", e)
+            ""
+        }
+    }
+
+    // User verification and operation restriction methods
+
+    /**
+     * Check if user can perform financial operations
+     */
+    fun canPerformFinancialOperations(): Boolean {
+        val currentState = _state.value
+        val isVerified = currentState.userVerificationStatus == "VERIFIED"
+        val isActive = currentState.userStatus == "ACTIVE"
+        
+        Timber.d(TAG, "🔍 Can perform financial operations: verified=$isVerified, active=$isActive")
+        return isVerified && isActive
+    }
+
+    /**
+     * Check if user can browse the app
+     */
+    fun canBrowseApp(): Boolean {
+        val currentState = _state.value
+        val isActive = currentState.userStatus == "ACTIVE"
+        val isPending = currentState.userStatus == "PENDING_VERIFICATION"
+        
+        Timber.d(TAG, "🔍 Can browse app: active=$isActive, pending=$isPending")
+        return isActive || isPending
+    }
+
+    /**
+     * Check if user should see verification banner
+     */
+    fun shouldShowVerificationBanner(): Boolean {
+        val currentState = _state.value
+        val isPendingVerification = currentState.userVerificationStatus == "PENDING_VERIFICATION"
+        val isNotSuspended = currentState.userStatus != "SUSPENDED"
+        
+        Timber.d(TAG, "🔍 Should show verification banner: pending=$isPendingVerification, notSuspended=$isNotSuspended")
+        return isPendingVerification && isNotSuspended
+    }
+
+    /**
+     * Check if user account is suspended
+     */
+    fun isAccountSuspended(): Boolean {
+        val currentState = _state.value
+        val isSuspended = currentState.userStatus == "SUSPENDED"
+        
+        Timber.d(TAG, "🔍 Is account suspended: $isSuspended")
+        return isSuspended
+    }
+
+    /**
+     * Get missing fields for profile completion
+     */
+    fun getMissingFields(): List<String> {
+        val currentState = _state.value
+        val user = currentState.web3AuthUserInfo
+        val missingFields = mutableListOf<String>()
+        
+        if (user?.email.isNullOrBlank()) missingFields.add("email")
+        if (user?.firstName.isNullOrBlank()) missingFields.add("firstName")
+        if (user?.lastName.isNullOrBlank()) missingFields.add("lastName")
+        
+        Timber.d(TAG, "🔍 Missing fields: $missingFields")
+        return missingFields
+    }
+
+    /**
+     * Navigate to profile completion screen
+     */
+    fun navigateToProfileCompletion() {
+        Timber.d(TAG, "🎯 Navigating to profile completion screen")
+        // TODO: Implement navigation to profile completion screen
+        // This will be handled by the UI layer
+    }
+
+    /**
+     * Dismiss verification banner
+     */
+    fun dismissVerificationBanner() {
+        Timber.d(TAG, "❌ Dismissing verification banner")
+        _state.update { it.copy(showVerificationBanner = false) }
+    }
+
+    /**
+     * Refresh user verification status from backend
+     */
+    fun refreshVerificationStatus() {
+        viewModelScope.launch {
+            try {
+                Timber.d(TAG, "🔄 Refreshing verification status...")
+                
+                val result = userVerificationService.getVerificationStatus()
+                
+                when (result) {
+                    is Result.Success -> {
+                        val verificationStatus = result.data
+                        Timber.d(TAG, "✅ Verification status refreshed")
+                        Timber.d(TAG, "🔍 Status: ${verificationStatus.verificationStatus}")
+                        Timber.d(TAG, "📋 Missing fields: ${verificationStatus.missingFields}")
+                        
+                        _state.update { 
+                            it.copy(
+                                userVerificationStatus = verificationStatus.verificationStatus,
+                                missingFields = verificationStatus.missingFields,
+                                isUserVerified = verificationStatus.isVerified,
+                                showVerificationBanner = verificationStatus.verificationStatus == "PENDING_VERIFICATION"
+                            )
+                        }
+                    }
+                    is Result.Failure -> {
+                        Timber.e(TAG, "❌ Failed to refresh verification status: ${result.error.message}")
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Timber.e(TAG, "❌ Exception during verification status refresh: ${e.message}", e)
+            }
+        }
     }
 
     // Utility methods
@@ -623,9 +935,9 @@ class MainViewModel @Inject constructor(
         Timber.d(TAG, "onTransactionSuccessDone() - TODO: Delegate to appropriate ViewModel")
     }
 
-    fun clearError() {
-        // TODO: Delegate to all ViewModels
-        Timber.d(TAG, "clearError() - TODO: Delegate to all ViewModels")
+    override fun clearError() {
+        logErrorClearing("MainViewModel")
+        web3AuthStateService.clearError()
     }
 
     // User data access
@@ -776,7 +1088,7 @@ class MainViewModel @Inject constructor(
                     Timber.d(TAG, "❌ User no longer authenticated on app resume")
                     clearAuthenticationState()
                 }
-                
+
             } catch (e: Exception) {
                 Timber.e(TAG, "❌ Exception during app resume check: ${e.message}", e)
             }

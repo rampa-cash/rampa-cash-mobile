@@ -103,6 +103,7 @@ class ApiClient @Inject constructor(
     val visaCardApiService: VISACardApiService = retrofit.create(VISACardApiService::class.java)
     val onOffRampApiService: OnOffRampApiService = retrofit.create(OnOffRampApiService::class.java)
     val inquiryApiService: InquiryApiService = retrofit.create(InquiryApiService::class.java)
+    val userVerificationApiService: UserVerificationApiService = retrofit.create(UserVerificationApiService::class.java)
     
     /**
      * Get authentication token from secure storage

@@ -40,7 +40,7 @@ class ConnectionViewModel @Inject constructor(
     private val persistenceUseCase: PersistenceUseCase,
     private val walletDomainService: WalletDomainService,
     @ApplicationContext private val context: Context
-) : ViewModel() {
+) : BaseViewModel() {
 
     companion object {
         private const val TAG = "ConnectionViewModel"
@@ -385,8 +385,9 @@ class ConnectionViewModel @Inject constructor(
     /**
      * Clear error state
      */
-    fun clearError() {
-        _connectionState.update { it.copy(error = null) }
+    override fun clearError() {
+        logErrorClearing("ConnectionViewModel")
+        clearErrorInState(_connectionState) { it.copy(error = null) }
     }
 
     /**

@@ -44,7 +44,7 @@ class Web3AuthViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val persistenceUseCase: PersistenceUseCase,
     private val walletDomainService: WalletDomainService
-) : ViewModel() {
+) : BaseViewModel() {
 
     companion object {
         private const val TAG = "Web3AuthViewModel"
@@ -117,76 +117,6 @@ class Web3AuthViewModel @Inject constructor(
     /**
      * Handle successful Web3Auth login
      */
-    fun handleWeb3AuthSuccess(
-        web3AuthResponse: Web3AuthResponse, 
-        provider: Provider, 
-        solanaPublicKey: String, 
-        displayAddress: String
-    ) {
-        try {
-            val privateKey = web3AuthResponse.privKey
-            val userInfo = web3AuthResponse.userInfo
-
-            if (privateKey != null) {
-                val providerName = when(provider) {
-                    Provider.GOOGLE -> "Google"
-                    Provider.FACEBOOK -> "Facebook"
-                    Provider.TWITTER -> "Twitter"
-                    Provider.DISCORD -> "Discord"
-                    Provider.APPLE -> "Apple"
-                    else -> provider.name
-                }
-
-                val displayName = userInfo?.name ?: userInfo?.email ?: "Web3Auth User"
-
-                // Persist Web3Auth session
-                try {
-                    Timber.d(TAG, "💾 About to persist Web3Auth session for: $displayName")
-                    persistenceUseCase.persistWeb3AuthConnection(
-                        pubKey = SolanaPublicKey.from(solanaPublicKey),
-                        accountLabel = displayName,
-                        privateKey = privateKey,
-                        providerName = providerName,
-                        userInfo = userInfo?.name ?: userInfo?.email ?: ""
-                    )
-                    Timber.d(TAG, "✅ Web3Auth session persisted successfully")
-
-                    // Verify persistence worked
-                    val testConnection = persistenceUseCase.getWalletConnection()
-                    Timber.d(TAG, "🧪 Persistence verification: ${testConnection::class.simpleName}")
-                } catch (e: Exception) {
-                    Timber.e(TAG, "⚠️ Failed to persist Web3Auth session: ${e.message}", e)
-                    // Continue anyway - session will work for this app session
-                }
-
-                _web3AuthState.update { 
-                    it.copy(
-                        isLoading = false,
-                        loadingProvider = null,
-                        isLoggedIn = true,
-                        userInfo = displayName,
-                        privateKey = privateKey,
-                        solanaPublicKey = solanaPublicKey,
-                        providerName = providerName,
-                        displayAddress = displayAddress,
-                        error = null
-                    )
-                }
-
-                Timber.d(TAG, "Web3Auth login successful with $providerName - Solana address: $solanaPublicKey")
-            } else {
-                throw Exception("No private key received from Web3Auth")
-            }
-        } catch (e: Exception) {
-            Timber.e(TAG, "Failed to handle Web3Auth response", e)
-            _web3AuthState.update { 
-                it.copy(
-                    isLoading = false,
-                    error = "Failed to process login response: ${e.message}"
-                )
-            }
-        }
-    }
 
     /**
      * Handle Web3Auth logout
@@ -382,8 +312,9 @@ class Web3AuthViewModel @Inject constructor(
     /**
      * Clear error state
      */
-    fun clearError() {
-        _web3AuthState.update { it.copy(error = null) }
+    override fun clearError() {
+        logErrorClearing("Web3AuthViewModel")
+        clearErrorInState(_web3AuthState) { it.copy(error = null) }
     }
 
     /**

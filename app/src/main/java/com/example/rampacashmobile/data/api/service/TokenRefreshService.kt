@@ -90,12 +90,4 @@ class TokenRefreshService @Inject constructor(
             false
         }
     }
-
-    /**
-     * Clear all tokens and force re-authentication
-     */
-    fun clearTokensAndForceReauth() {
-        Timber.d(TAG, "🚪 Clearing tokens and forcing re-authentication")
-        tokenManager.clearTokens()
-    }
 }

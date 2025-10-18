@@ -27,7 +27,7 @@ import javax.inject.Inject
 class OnboardingViewModel @Inject constructor(
     private val userRepository: UserRepository,
     @ApplicationContext private val context: Context
-) : ViewModel() {
+) : BaseViewModel() {
 
     companion object {
         private const val TAG = "OnboardingViewModel"
@@ -170,8 +170,9 @@ class OnboardingViewModel @Inject constructor(
     /**
      * Clear error state
      */
-    fun clearError() {
-        _onboardingState.update { it.copy(error = null) }
+    override fun clearError() {
+        logErrorClearing("OnboardingViewModel")
+        clearErrorInState(_onboardingState) { it.copy(error = null) }
     }
 
     /**
