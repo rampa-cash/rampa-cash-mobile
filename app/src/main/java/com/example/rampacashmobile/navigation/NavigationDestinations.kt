@@ -16,11 +16,11 @@ sealed class NavigationDestination(
     val icon: ImageVector? = null,
     val customIconRes: Int? = null
 ) {
-    object Home : NavigationDestination("dashboard", "Home", customIconRes = R.drawable.rampa_white_translucid)
-    object Transfers : NavigationDestination("transfers", "Transfers", Icons.AutoMirrored.Filled.List)
-    object Send : NavigationDestination("send", "Send", Icons.AutoMirrored.Filled.Send)
-    object Investment : NavigationDestination("investment", "Invest", customIconRes = R.drawable.chart_icon)
-    object Learn : NavigationDestination("learn", "Learn", customIconRes = R.drawable.bonk1_logo)
+    object Home : NavigationDestination("dashboard", "Home", customIconRes = R.drawable.ic_nav_home)
+    object Transfers : NavigationDestination("transfers", "Transfers", customIconRes = R.drawable.ic_nav_transfers)
+    object Send : NavigationDestination("send", "Send", customIconRes = R.drawable.ic_nav_send)
+    object Investment : NavigationDestination("investment", "Invest", customIconRes = R.drawable.ic_nav_investment)
+    object Learn : NavigationDestination("learn", "Learn", customIconRes = R.drawable.ic_nav_learn)
     object Card : NavigationDestination("card", "Card", Icons.Default.AccountBox)
     object Recharge : NavigationDestination("recharge", "Recharge", Icons.Default.Add)
     object Profile : NavigationDestination("profile", "Profile", Icons.Default.AccountBox)

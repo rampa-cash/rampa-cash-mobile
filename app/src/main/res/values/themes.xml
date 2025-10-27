@@ -7,9 +7,10 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         
-        <!-- AndroidX Splash Screen (works on all versions) -->
+        <!-- AndroidX Splash Screen (works on all versions) - Using carbon base theme from Figma -->
         <item name="android:windowSplashScreenBackground">@color/rampa_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/rampa_trsl_txt_w_bott_foreground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/rampa_icon_splash_foreground</item>
         <item name="android:windowSplashScreenAnimationDuration">1000</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
     </style>
 </resources>

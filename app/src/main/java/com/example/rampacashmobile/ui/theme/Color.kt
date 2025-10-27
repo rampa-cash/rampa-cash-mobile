@@ -3,15 +3,27 @@ package com.example.rampacashmobile.ui.theme
 import androidx.compose.ui.graphics.Color
 
 object RampaColors {
-    // Background colors (matching React Tailwind)
-    val Background = Color(0xFF111827)        // bg-gray-900
-    val Surface = Color(0xFF1F2937)           // bg-gray-800
-    val SurfaceVariant = Color(0xFF374151)    // bg-gray-700
+    // Background colors (matching Figma design system)
+    val CarbonBase = Color(0xFF0C0C0C)          // Carbon base - main background from Figma
+    
+    val Background = Color(0xFF0C0C0C)        // Carbon base - main background
+    val Surface = Color(0xFF1a1a1a)            // Slightly lighter surface
+    val SurfaceVariant = Color(0xFF262626)    // Card/surface variant
 
-    // Text colors
-    val OnBackground = Color.White            // text-white
-    val OnSurface = Color.White              // text-white
-    val OnSurfaceVariant = Color(0xFF9CA3AF) // text-gray-400
+    // Text colors (matching Figma design)
+    val OnBackground = Color(0xFFfcfcfd)       // Very light text (background/variant)
+    val OnSurface = Color(0xFFfcfcfd)         // Light text on surfaces
+    val OnSurfaceVariant = Color(0xFFa1a1aa)  // Gray text for secondary info
+
+    // Gradient colors (for green blur effect across the app)
+    // Radial gradient: Green blur for a subtle background effect
+    val GradientGreenCenter = Color(0xFF16F096).copy(alpha = 0.15f)  // Green at 15% opacity from center
+    val GradientGreenEdges = Color(0xFF16F096).copy(alpha = 0.0f)    // Green at 0% opacity at edges (transparent)
+    val GradientGreenFull = Color(0xFF16F096)   // Full opacity green for reference
+    
+    // Legacy purple gradient (kept for backward compatibility)
+    val GradientPurple = Color(0xFF9A46FF).copy(alpha = 0.2f)
+    val GradientPurpleFull = Color(0xFF9A46FF)
 
     // Primary colors
     val Primary = Color(0xFF6366F1)          // indigo-500
@@ -30,4 +42,9 @@ object RampaColors {
     // Border colors
     val Border = Color(0xFF374151)           // border-gray-600
     val BorderLight = Color(0xFF4B5563)      // border-gray-500
+    
+    // Helper function to get the radial gradient colors for green blur effect
+    fun getBlurGradientColors(): Pair<Color, Color> {
+        return Pair(GradientGreenCenter, GradientGreenEdges)
+    }
 }

@@ -17,7 +17,6 @@ import com.example.rampacashmobile.ui.screens.*
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.example.rampacashmobile.ui.screens.WithdrawScreen
-import com.example.rampacashmobile.viewmodel.WithdrawViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 
 @Composable
@@ -35,8 +34,13 @@ fun NavigationGraph(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Only show bottom navigation when not on login screen and not in loading state
-    val showBottomBar = currentRoute != "login" && !sharedViewState.isLoading
+    // Only show bottom navigation when not on login screen, not in loading state, and not on receive screen
+    val showBottomBar = currentRoute != "login" && 
+                        currentRoute != "receive" && 
+                        currentRoute != "recharge" && 
+                        currentRoute != "withdraw" && 
+                        currentRoute != "transaction_success" &&
+                        !sharedViewState.isLoading
 
     Scaffold(
         bottomBar = {
@@ -126,8 +130,7 @@ fun NavigationGraph(
             }
             composable("withdraw") {
                 WithdrawScreen(
-                    navController = navController,
-                    viewModel = hiltViewModel<WithdrawViewModel>() // << CORRECTED
+                    navController = navController
                 )
             }
             composable("profile") { 
