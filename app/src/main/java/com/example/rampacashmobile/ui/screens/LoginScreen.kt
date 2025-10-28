@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 // Ensure painterResource is imported: import androidx.compose.ui.res.painterResource
 import com.example.rampacashmobile.R
-import com.example.rampacashmobile.ui.theme.RampaColors
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender

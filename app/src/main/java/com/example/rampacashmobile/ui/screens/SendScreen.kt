@@ -38,6 +38,7 @@ import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
+import android.net.Uri
 
 // Test addresses from TokenTransferSection
 data class TestAddress(val address: String, val label: String)
@@ -63,6 +64,7 @@ fun SendScreen(
     var isInputFocused by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showContactsSheet by remember { mutableStateOf(false) }
     
     // Track the last processed transaction to prevent repeated navigation
     var lastProcessedTransactionSignature by remember { mutableStateOf<String?>(null) }
@@ -105,9 +107,7 @@ fun SendScreen(
         TestAddress("2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn", "Tio Luis")
     )
 
-    // Token switching functions
-    val nextToken = { selectedTokenIndex = (selectedTokenIndex + 1) % tokens.size }
-    val prevToken = { selectedTokenIndex = (selectedTokenIndex - 1 + tokens.size) % tokens.size }
+    // Currently selected token
     val selectedToken = tokens[selectedTokenIndex]
     
     // Filter test addresses based on input and focus state
@@ -177,11 +177,8 @@ fun SendScreen(
         if (viewState.showTransactionSuccess && 
             transactionDetails != null &&
             transactionDetails.signature != lastProcessedTransactionSignature) {
-            
             Log.d("SendScreen", "🎯 Navigating to TransactionSuccessScreen for ${transactionDetails.signature.take(8)}")
             lastProcessedTransactionSignature = transactionDetails.signature
-            
-            // Navigate to dedicated transaction success screen
             navController.navigate("transaction_success")
         }
     }
@@ -199,12 +196,10 @@ fun SendScreen(
             // Header with TopNavBar
             item {
                 Spacer(modifier = Modifier.height(24.dp))
-                
                 TopNavBar(
                     navController = navController,
                     showBackButton = false
                 )
-                
                 Spacer(modifier = Modifier.height(4.dp))
             }
             
@@ -217,9 +212,7 @@ fun SendScreen(
                     color = Color(0xFFFFFDF8),
                     lineHeight = 32.sp
                 )
-                
                 Spacer(modifier = Modifier.height(4.dp))
-                
                 Text(
                     text = "Move money securely to anyone, anywhere, instantly on Solana",
                     fontSize = 16.sp,
@@ -227,17 +220,15 @@ fun SendScreen(
                     color = Color(0xFFF1F2F3), // --text/normal-2
                     lineHeight = (16 * 1.14).sp
                 )
-                
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
             // Token/Balance Selection
             item {
                 TokenBalanceCard(
-                tokens = tokens,
-                selectedTokenIndex = selectedTokenIndex,
-                onPrevious = prevToken,
-                    onNext = nextToken
+                    tokens = tokens,
+                    selectedTokenIndex = selectedTokenIndex,
+                    onSelectToken = { index -> selectedTokenIndex = index }
                 )
             }
             
@@ -246,164 +237,117 @@ fun SendScreen(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                Text(
-                    text = "Where you're sending the funds",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight(400), // Regular
-                    color = Color(0xFFFFFDF8), // --text/normal
-                    lineHeight = (16 * 1.14).sp
-                )
+                    Text(
+                        text = "Where you're sending the funds",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight(400), // Regular
+                        color = Color(0xFFFFFDF8), // --text/normal
+                        lineHeight = (16 * 1.14).sp
+                    )
 
-                // Input Field
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            Color(0xFF26292C), // --background/dim
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color(0xFF62696F), // --outline/outline-i
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 16.dp, vertical = 17.dp)
-                ) {
+                    // Input Field
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                Color(0xFF26292C), // --background/dim
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFF62696F), // --outline/outline-i
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 17.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = Color(0xFFA3A8AE),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            BasicTextField(
+                                value = recipientAddress,
+                                onValueChange = { input ->
+                                    recipientAddress = input
+                                    if (recipientName != null) {
+                                        val matchingContact = testAddresses.find { it.address == input }
+                                        recipientName = matchingContact?.label
+                                    }
+                                    error = null
+                                },
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight(400),
+                                    color = if (recipientAddress.isEmpty()) Color(0xFFA3A8AE) else Color(0xFFFFFDF8)
+                                ),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { focusState ->
+                                        isInputFocused = focusState.isFocused
+                                        if (focusState.isFocused) {
+                                            showContactsSheet = true
+                                        }
+                                        showDropdown = false
+                                    },
+                                decorationBox = { innerTextField ->
+                                    if (recipientAddress.isEmpty()) {
+                                        Text(
+                                            text = "Search for contact to send",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight(400),
+                                            color = Color(0xFFA3A8AE), // --text/less-emphasis
+                                            lineHeight = (16 * 1.4).sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                        }
+                    }
+
+                    // Info message
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = Color(0xFFA3A8AE),
-                            modifier = Modifier.size(20.dp)
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = Color(0xFFFFFDF8),
+                            modifier = Modifier.size(14.dp)
                         )
-                        BasicTextField(
-                            value = recipientAddress,
-                            onValueChange = { input ->
-                                recipientAddress = input
-                                if (recipientName != null) {
-                                    val matchingContact = testAddresses.find { it.address == input }
-                                    recipientName = matchingContact?.label
-                                }
-                                error = null
-                            },
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight(400),
-                                color = if (recipientAddress.isEmpty()) Color(0xFFA3A8AE) else Color(0xFFFFFDF8)
-                            ),
-                            singleLine = true,
-                            modifier = Modifier
-                                .weight(1f)
-                                .onFocusChanged { focusState ->
-                                    isInputFocused = focusState.isFocused
-                                    showDropdown = focusState.isFocused
-                                },
-                            decorationBox = { innerTextField ->
-                                if (recipientAddress.isEmpty()) {
-                                    Text(
-                                        text = "Search for contact to send",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight(400),
-                                        color = Color(0xFFA3A8AE), // --text/less-emphasis
-                                        lineHeight = (16 * 1.4).sp
-                                    )
-                                }
-                                innerTextField()
-                            }
+                        Text(
+                            text = "Ensure this is a valid Solana address",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight(400),
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            color = Color(0xFFFFFDF8), // --text/normal
+                            lineHeight = (14 * 1.4).sp
                         )
                     }
                 }
+            }
 
-                // Info message
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // Continue button to amount screen
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        val symbol = selectedToken.symbol
+                        val recipient = Uri.encode(recipientAddress)
+                        navController.navigate("send_amount/$symbol/$recipient")
+                    },
+                    enabled = recipientAddress.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = Color(0xFFFFFDF8),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Ensure this is a valid Solana address",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight(400),
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        color = Color(0xFFFFFDF8), // --text/normal
-                        lineHeight = (14 * 1.4).sp
-                    )
-                }
-
-                // Suggestions Dropdown (separate from input)
-                if (showDropdown && filteredAddresses.isNotEmpty()) {
-                    Card(
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF1F2937)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp)
-                    ) {
-                        Column {
-                            // Header when showing all addresses (empty input but focused)
-                            if (recipientAddress.isEmpty()) {
-                                Text(
-                                    text = "Saved Contacts",
-                                    color = Color(0xFF9CA3AF),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(16.dp, 12.dp, 16.dp, 8.dp)
-                                )
-                            }
-                            
-                            filteredAddresses.forEach { address ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp, 8.dp)
-                                        .clickable {
-                                            recipientAddress = address.address
-                                            recipientName = address.label // Set the contact name
-                                            showDropdown = false
-                                            isInputFocused = false
-                                            error = null
-                                        },
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = address.label,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 16.sp
-                                        )
-                                        Text(
-                                            text = "${address.address.take(8)}...${address.address.takeLast(8)}",
-                                            color = Color(0xFF9CA3AF),
-                                            fontSize = 14.sp
-                                        )
-                                    }
-                                }
-                                
-                                // Add divider between items (except last one)
-                                if (address != filteredAddresses.last()) {
-                                    HorizontalDivider(
-                                        color = Color(0xFF374151),
-                                        thickness = 1.dp,
-                                        modifier = Modifier.padding(horizontal = 16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                    Text("Continue")
                 }
             }
         }
@@ -415,6 +359,50 @@ fun SendScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 90.dp, start = 16.dp, end = 16.dp)
         )
+
+        // Contacts Modal Bottom Sheet
+        if (showContactsSheet) {
+            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ModalBottomSheet(
+                onDismissRequest = { showContactsSheet = false },
+                sheetState = sheetState
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Contacts",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFFFFDF8)
+                    )
+
+                    // Simple list of contacts
+                    testAddresses.forEach { address ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    recipientAddress = address.address
+                                    recipientName = address.label
+                                    showContactsSheet = false
+                                }
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = address.label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                Text(text = "${address.address.take(8)}...${address.address.takeLast(8)}", color = Color(0xFF9CA3AF), fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -422,8 +410,7 @@ fun SendScreen(
 private fun TokenBalanceCard(
     tokens: List<Token>,
     selectedTokenIndex: Int,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onSelectToken: (Int) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -445,6 +432,7 @@ private fun TokenBalanceCard(
                 .background(Color.White.copy(alpha = 0.2f))
                 .padding(16.dp)
         ) {
+            var expanded by remember { mutableStateOf(false) }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -487,16 +475,41 @@ private fun TokenBalanceCard(
                     )
                 }
                 
-                // Balance - formatted nicely
-                Text(
-                    text = "$${String.format("%.2f", selectedToken.balance)}",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight(400), // Regular
-                    color = Color(0xFFA9EABF), // --text/success
-                    lineHeight = 24.sp,
-                    letterSpacing = 0.sp,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                )
+                // Balance - formatted nicely and used as dropdown anchor
+                Box {
+                    Text(
+                        text = "$${String.format("%.2f", selectedToken.balance)}",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight(400), // Regular
+                        color = Color(0xFFA9EABF), // --text/success
+                        lineHeight = 24.sp,
+                        letterSpacing = 0.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        modifier = Modifier.clickable { expanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        tokens.forEachIndexed { index, token ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = token.symbol, color = Color.White)
+                                        Text(text = token.name, color = Color(0xFF9CA3AF))
+                                    }
+                                },
+                                onClick = {
+                                    onSelectToken(index)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.data.model.OnboardingData
-import com.example.rampacashmobile.ui.theme.RampaColors
 import com.example.rampacashmobile.viewmodel.MainViewModel
 
 @Composable

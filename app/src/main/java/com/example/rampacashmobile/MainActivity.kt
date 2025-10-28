@@ -26,7 +26,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.rampacashmobile.navigation.NavigationGraph
 import com.example.rampacashmobile.ui.components.RampaScreenBackground
 import com.example.rampacashmobile.ui.theme.RampaCashMobileTheme
-import com.example.rampacashmobile.ui.theme.RampaColors
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
@@ -71,23 +70,21 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         setContent {
             RampaCashMobileTheme {
                 // Apply Rampa gradient background globally (including splash screen)
-                RampaScreenBackground {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .windowInsetsPadding(WindowInsets.navigationBars),
-                        color = Color.Transparent
-                    ) {
-                        val navController = rememberNavController()
+                // Remove Surface wrapper - it was applying a background color
+                RampaScreenBackground(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                ) {
+                    val navController = rememberNavController()
 
-                        // Use NavigationGraph instead of single MainScreen
-                        NavigationGraph(
-                            navController = navController,
-                            intentSender = sender,
-                            web3AuthManager = web3AuthManager,
-                            web3AuthCallback = this@MainActivity
-                        )
-                    }
+                    // Use NavigationGraph instead of single MainScreen
+                    NavigationGraph(
+                        navController = navController,
+                        intentSender = sender,
+                        web3AuthManager = web3AuthManager,
+                        web3AuthCallback = this@MainActivity
+                    )
                 }
             }
         }

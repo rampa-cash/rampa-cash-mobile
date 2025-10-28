@@ -104,6 +104,39 @@ fun NavigationGraph(
                 )
             }
 
+            // Send flow screens
+            composable("send_amount/{token}/{recipient}") { backStackEntry ->
+                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
+                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
+                SendAmountScreen(
+                    navController = navController,
+                    tokenSymbol = token,
+                    recipientAddress = recipient
+                )
+            }
+            composable("send_confirm/{token}/{recipient}/{amount}") { backStackEntry ->
+                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
+                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
+                val amount = backStackEntry.arguments?.getString("amount") ?: "0"
+                SendConfirmScreen(
+                    navController = navController,
+                    tokenSymbol = token,
+                    recipientAddress = recipient,
+                    amount = amount
+                )
+            }
+            composable("send_success/{token}/{recipient}/{amount}") { backStackEntry ->
+                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
+                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
+                val amount = backStackEntry.arguments?.getString("amount") ?: "0"
+                SendSuccessScreen(
+                    navController = navController,
+                    tokenSymbol = token,
+                    recipientAddress = recipient,
+                    amount = amount
+                )
+            }
+
             composable("investment") {
                 InvestmentScreen(navController = navController)
             }
