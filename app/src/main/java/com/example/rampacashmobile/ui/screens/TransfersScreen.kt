@@ -8,9 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,11 +19,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rampacashmobile.R
+import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -49,6 +47,12 @@ enum class TransactionType {
     SENT, RECEIVED
 }
 
+// Grouped transactions for date-based grouping
+data class GroupedTransactions(
+    val date: String,
+    val transactions: List<Transaction>
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransfersScreen(
@@ -59,6 +63,23 @@ fun TransfersScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Note: Transaction history is fetched once in MainScreen on wallet connection
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF111827))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Top Navigation with Profile Button
+            TopNavBar(
+                title = "Transfers",
+                navController = navController,
+                showBackButton = false,
+                showProfileButton = true,
+                showChatButton = false
+            )
             
             // Handle snackbar messages
             LaunchedEffect(viewState.snackbarMessage) {
@@ -68,19 +89,53 @@ fun TransfersScreen(
                 }
             }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when {
-            !viewState.canTransact && !viewState.isWeb3AuthLoggedIn -> {
-                NoWalletContent()
-            }
-            viewState.transactionHistory.isEmpty() -> {
-                EmptyContent(viewModel = viewModel)
-            }
-            else -> {
-                TransactionsList(
-                    navController = navController,
-                    transactions = viewState.transactionHistory
-                )
+            // Content
+            when {
+                !viewState.canTransact && !viewState.isWeb3AuthLoggedIn -> {
+                    NoWalletContent()
+                }
+                viewState.transactionHistory.isEmpty() -> {
+                    EmptyContent(viewModel = viewModel)
+                }
+                else -> {
+                    // Show transactions with header and refresh button
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Header with refresh button
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Transaction History",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            
+                            IconButton(
+                                onClick = { 
+                                    viewModel.getTransactionHistory()
+                                },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Transactions",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                        
+                        TransactionsList(
+                            transactions = viewState.transactionHistory,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
 
@@ -223,153 +278,137 @@ private fun EmptyContent(viewModel: MainViewModel) {
 
 @Composable
 private fun TransactionsList(
-    navController: NavController,
-    transactions: List<Transaction>
+    transactions: List<Transaction>,
+    modifier: Modifier = Modifier
 ) {
+    val groupedTransactions = remember(transactions) {
+        groupTransactionsByDate(transactions)
+    }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            bottom = 90.dp
-        )
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(bottom = 90.dp) // Space for bottom nav
     ) {
-        // Header and back button
-        item {
-            Spacer(modifier = Modifier.height(77.dp)) // Space for status bar
-            
-            // Header row with back button and title
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                // Back button
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-                
-                // Title - absolute center
-                Text(
-                    text = "Recent Transaction",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight(400),
-                    color = Color(0xFFFFFDF8),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .offset(x = (-22).dp) // Offset to compensate for back button
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp)) // Small gap before transactions
+        items(groupedTransactions) { group ->
+            TransactionGroup(group = group)
         }
-        
-        items(transactions) { transaction ->
-            TransactionItem(transaction = transaction)
+    }
+}
+
+@Composable
+private fun TransactionGroup(group: GroupedTransactions) {
+    Column {
+        // Date Header
+        Text(
+            text = group.date,
+            color = Color(0xFF9CA3AF),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        // Transactions
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            group.transactions.forEach { transaction ->
+                TransactionItem(transaction = transaction)
+            }
         }
     }
 }
 
 @Composable
 private fun TransactionItem(transaction: Transaction) {
-    // Format time
-    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-    val timeStr = timeFormat.format(transaction.date)
-    
-    // Determine if received or sent
-    val isReceived = transaction.transactionType == TransactionType.RECEIVED
-    val amountColor = if (isReceived) Color(0xFFA9EABF) else Color(0xFFFDA0B6) // Success/Error colors from Figma
-    val amountPrefix = if (isReceived) "+" else "-"
-    
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.2f))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1F2937)
+        ),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left side: Icon + Info
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            // Token Icon
+            Image(
+                painter = painterResource(id = transaction.tokenIcon),
+                contentDescription = "${transaction.tokenSymbol} logo",
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Fit
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Transaction Details
+            Column(
                 modifier = Modifier.weight(1f)
             ) {
-                // Token Icon - circular container
-                Box(
-                    modifier = Modifier.size(44.dp),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = transaction.tokenIcon),
-                        contentDescription = "${transaction.tokenSymbol} logo",
-                        contentScale = ContentScale.Fit
+                    Text(
+                        text = if (transaction.transactionType == TransactionType.RECEIVED) "Received" else "Sent",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Text(
+                        text = "${if (transaction.transactionType == TransactionType.RECEIVED) "+" else "-"}${
+                            String.format("%.2f", transaction.amount)
+                        } ${transaction.tokenSymbol}",
+                        color = if (transaction.transactionType == TransactionType.RECEIVED)
+                            Color(0xFF10B981) else Color(0xFFEF4444),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                // Transaction Details
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    // Title - show token symbol
-                    Text(
-                        text = transaction.tokenSymbol,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight(400),
-                        color = Color(0xFFFFFDF8),
-                        lineHeight = (16 * 1.14).sp
-                    )
-                    
-                    // Timestamp with calendar icon
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Calendar icon - using Text for now
-                        Text(
-                            text = "📅",
-                            fontSize = 12.sp,
-                            color = Color(0xFFF1F2F3),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "TODAY, $timeStr".uppercase(),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight(400),
-                            color = Color(0xFFF1F2F3),
-                            lineHeight = (12 * 1.4).sp
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "From ${truncateAddress(transaction.sender)}",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 14.sp
+                )
             }
-            
-            // Right side: Amount
-            Text(
-                text = "$amountPrefix$${String.format("%.2f", transaction.amount)}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight(400),
-                color = amountColor,
-                lineHeight = (16 * 1.4).sp,
-                textAlign = TextAlign.End,
-                letterSpacing = 0.sp,
-                fontFamily = FontFamily.Monospace
-            )
         }
     }
+}
+
+// Helper function to truncate addresses
+private fun truncateAddress(address: String): String {
+    return if (address.length < 12) address
+    else "${address.take(4)}...${address.takeLast(4)}"
+}
+
+// Helper function to format date for grouping
+private fun formatDateForGrouping(date: Date): String {
+    val formatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    return formatter.format(date)
+}
+
+// Helper function to group transactions by date
+private fun groupTransactionsByDate(transactions: List<Transaction>): List<GroupedTransactions> {
+    val grouped = transactions
+        .sortedByDescending { it.date.time }
+        .groupBy { formatDateForGrouping(it.date) }
+        .map { (date, txs) ->
+            GroupedTransactions(date = date, transactions = txs)
+        }
+
+    return grouped
 }
 
 // Note: Mock transaction generation removed - now using real transaction data from RPC 

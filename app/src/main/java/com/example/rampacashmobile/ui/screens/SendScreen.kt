@@ -2,28 +2,14 @@ package com.example.rampacashmobile.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.example.rampacashmobile.R
 import androidx.compose.runtime.*
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -38,7 +24,6 @@ import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
-import android.net.Uri
 
 // Test addresses from TokenTransferSection
 data class TestAddress(val address: String, val label: String)
@@ -64,7 +49,6 @@ fun SendScreen(
     var isInputFocused by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var showContactsSheet by remember { mutableStateOf(false) }
     
     // Track the last processed transaction to prevent repeated navigation
     var lastProcessedTransactionSignature by remember { mutableStateOf<String?>(null) }
@@ -107,7 +91,9 @@ fun SendScreen(
         TestAddress("2FDPt2KnppnSw7uArZfxLTJi7iWPz6rerHDZzw3j34fn", "Tio Luis")
     )
 
-    // Currently selected token
+    // Token switching functions
+    val nextToken = { selectedTokenIndex = (selectedTokenIndex + 1) % tokens.size }
+    val prevToken = { selectedTokenIndex = (selectedTokenIndex - 1 + tokens.size) % tokens.size }
     val selectedToken = tokens[selectedTokenIndex]
     
     // Filter test addresses based on input and focus state
@@ -163,195 +149,289 @@ fun SendScreen(
         isLoading = viewState.isLoading
     }
 
-    // Handle snackbar messages
-    LaunchedEffect(viewState.snackbarMessage) {
-        viewState.snackbarMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearSnackBar()
-        }
-    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF111827)) // Dark background to match React
+    ) {
 
-    // Handle transaction success - navigate to success screen
-    LaunchedEffect(viewState.showTransactionSuccess, viewState.transactionDetails?.signature) {
-        val transactionDetails = viewState.transactionDetails
-        if (viewState.showTransactionSuccess && 
-            transactionDetails != null &&
-            transactionDetails.signature != lastProcessedTransactionSignature) {
-            Log.d("SendScreen", "🎯 Navigating to TransactionSuccessScreen for ${transactionDetails.signature.take(8)}")
-            lastProcessedTransactionSignature = transactionDetails.signature
-            navController.navigate("transaction_success")
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Use LazyColumn to match InvestmentScreen and LearnScreen structure
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 90.dp
-            )
+        // Main content
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Header with TopNavBar
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                TopNavBar(
-                    navController = navController,
-                    showBackButton = false
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
+            // Top Navigation with Profile Button
+            TopNavBar(
+                title = "Send Funds",
+                navController = navController,
+                showBackButton = false,
+                showProfileButton = true,
+                showChatButton = false
+            )
             
-            // Title and description (same item to reduce spacing)
-            item {
-                Text(
-                    text = "Send Funds",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight(500), // Medium
-                    color = Color(0xFFFFFDF8),
-                    lineHeight = 32.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Move money securely to anyone, anywhere, instantly on Solana",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight(400), // Regular
-                    color = Color(0xFFF1F2F3), // --text/normal-2
-                    lineHeight = (16 * 1.14).sp
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            // Handle snackbar messages
+            LaunchedEffect(viewState.snackbarMessage) {
+                viewState.snackbarMessage?.let { message ->
+                    snackbarHostState.showSnackbar(message)
+                    viewModel.clearSnackBar()
+                }
             }
-            
-            // Token/Balance Selection
-            item {
-                TokenBalanceCard(
-                    tokens = tokens,
-                    selectedTokenIndex = selectedTokenIndex,
-                    onSelectToken = { index -> selectedTokenIndex = index }
-                )
-            }
-            
-            // Recipient Address Input
-            item {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Where you're sending the funds",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight(400), // Regular
-                        color = Color(0xFFFFFDF8), // --text/normal
-                        lineHeight = (16 * 1.14).sp
-                    )
 
-                    // Input Field
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                Color(0xFF26292C), // --background/dim
-                                shape = RoundedCornerShape(8.dp)
+            // Handle transaction success - navigate to success screen
+            LaunchedEffect(viewState.showTransactionSuccess, viewState.transactionDetails?.signature) {
+                val transactionDetails = viewState.transactionDetails
+                if (viewState.showTransactionSuccess && 
+                    transactionDetails != null &&
+                    transactionDetails.signature != lastProcessedTransactionSignature) {
+                    
+                    Log.d("SendScreen", "🎯 Navigating to TransactionSuccessScreen for ${transactionDetails.signature.take(8)}")
+                    lastProcessedTransactionSignature = transactionDetails.signature
+                    
+                    // Navigate to dedicated transaction success screen
+                    navController.navigate("transaction_success")
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Token Switcher
+                TokenSwitcher(
+                    selectedToken = selectedToken,
+                    onPrevious = prevToken,
+                    onNext = nextToken,
+                    modifier = Modifier.padding(top = 0.dp, bottom = 16.dp)
+                )
+
+                // Send Form
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // Amount Input
+                    Column {
+                        Text(
+                            text = "Amount",
+                            fontSize = 18.sp,
+                            color = Color(0xFF9CA3AF),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        Card(
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF1F2937)
                             )
-                            .border(
-                                width = 1.dp,
-                                color = Color(0xFF62696F), // --outline/outline-i
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 16.dp, vertical = 17.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = Color(0xFFA3A8AE),
-                                modifier = Modifier.size(20.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = amount,
+                                    onValueChange = {
+                                        amount = it
+                                        error = null
+                                    },
+                                    placeholder = {
+                                        Text(
+                                            "Enter ${selectedToken.symbol} amount",
+                                            color = Color(0xFF6B7280)
+                                        )
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color.Transparent,
+                                        unfocusedBorderColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Text(
+                                    text = selectedToken.symbol,
+                                    color = Color(0xFFD1D5DB),
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Recipient Input with Suggestions
+                    Column {
+                        Text(
+                            text = "Recipient Address",
+                            fontSize = 18.sp,
+                            color = Color(0xFF9CA3AF),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        // Input Field
+                        Card(
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF1F2937)
                             )
-                            BasicTextField(
+                        ) {
+                            OutlinedTextField(
                                 value = recipientAddress,
                                 onValueChange = { input ->
                                     recipientAddress = input
+                                    // Clear contact name when manually typing (unless it matches a contact)
                                     if (recipientName != null) {
                                         val matchingContact = testAddresses.find { it.address == input }
                                         recipientName = matchingContact?.label
                                     }
                                     error = null
                                 },
-                                textStyle = androidx.compose.ui.text.TextStyle(
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight(400),
-                                    color = if (recipientAddress.isEmpty()) Color(0xFFA3A8AE) else Color(0xFFFFFDF8)
+                                placeholder = {
+                                    Text(
+                                        "Enter address or search contacts",
+                                        color = Color(0xFF6B7280)
+                                    )
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent
                                 ),
-                                singleLine = true,
                                 modifier = Modifier
-                                    .weight(1f)
+                                    .fillMaxWidth()
                                     .onFocusChanged { focusState ->
                                         isInputFocused = focusState.isFocused
-                                        if (focusState.isFocused) {
-                                            showContactsSheet = true
-                                        }
-                                        showDropdown = false
+                                        showDropdown = focusState.isFocused
                                     },
-                                decorationBox = { innerTextField ->
+                                singleLine = true
+                            )
+                        }
+
+                        // Suggestions Dropdown (separate from input)
+                        if (showDropdown && filteredAddresses.isNotEmpty()) {
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFF1F2937)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp)
+                            ) {
+                                Column {
+                                    // Header when showing all addresses (empty input but focused)
                                     if (recipientAddress.isEmpty()) {
                                         Text(
-                                            text = "Search for contact to send",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight(400),
-                                            color = Color(0xFFA3A8AE), // --text/less-emphasis
-                                            lineHeight = (16 * 1.4).sp
+                                            text = "Saved Contacts",
+                                            color = Color(0xFF9CA3AF),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.padding(16.dp, 12.dp, 16.dp, 8.dp)
                                         )
                                     }
-                                    innerTextField()
+                                    
+                                    filteredAddresses.forEach { address ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp, 8.dp)
+                                                .clickable {
+                                                    recipientAddress = address.address
+                                                    recipientName = address.label // Set the contact name
+                                                    showDropdown = false
+                                                    isInputFocused = false
+                                                    error = null
+                                                },
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = address.label,
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Medium,
+                                                    fontSize = 16.sp
+                                                )
+                                                Text(
+                                                    text = "${address.address.take(8)}...${address.address.takeLast(8)}",
+                                                    color = Color(0xFF9CA3AF),
+                                                    fontSize = 14.sp
+                                                )
+                                            }
+                                        }
+                                        
+                                        // Add divider between items (except last one)
+                                        if (address != filteredAddresses.last()) {
+                                            HorizontalDivider(
+                                                color = Color(0xFF374151),
+                                                thickness = 1.dp,
+                                                modifier = Modifier.padding(horizontal = 16.dp)
+                                            )
+                                        }
+                                    }
                                 }
+                            }
+                        }
+                    }
+
+                    // Error message
+                    error?.let { errorMessage ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0x1AEF4444)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = Color(0xFFEF4444),
+                                fontSize = 18.sp,
+                                modifier = Modifier.padding(12.dp)
                             )
                         }
                     }
 
-                    // Info message
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Send Button
+                    Button(
+                        onClick = handleSend,
+                        enabled = amount.isNotEmpty() && recipientAddress.isNotEmpty() && !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF10B981),
+                            disabledContainerColor = Color(0xFF6B7280)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = Color(0xFFFFFDF8),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "Ensure this is a valid Solana address",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight(400),
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                            color = Color(0xFFFFFDF8), // --text/normal
-                            lineHeight = (14 * 1.4).sp
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = "Send Funds",
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
-
-            // Continue button to amount screen
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        val symbol = selectedToken.symbol
-                        val recipient = Uri.encode(recipientAddress)
-                        navController.navigate("send_amount/$symbol/$recipient")
-                    },
-                    enabled = recipientAddress.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Continue")
-                }
-            }
         }
-        
+
         // Snackbar positioned above navigation bar
         SnackbarHost(
             hostState = snackbarHostState,
@@ -359,158 +439,5 @@ fun SendScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 90.dp, start = 16.dp, end = 16.dp)
         )
-
-        // Contacts Modal Bottom Sheet
-        if (showContactsSheet) {
-            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-            ModalBottomSheet(
-                onDismissRequest = { showContactsSheet = false },
-                sheetState = sheetState
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Contacts",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFFFDF8)
-                    )
-
-                    // Simple list of contacts
-                    testAddresses.forEach { address ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    recipientAddress = address.address
-                                    recipientName = address.label
-                                    showContactsSheet = false
-                                }
-                                .padding(vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = address.label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                                Text(text = "${address.address.take(8)}...${address.address.takeLast(8)}", color = Color(0xFF9CA3AF), fontSize = 14.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TokenBalanceCard(
-    tokens: List<Token>,
-    selectedTokenIndex: Int,
-    onSelectToken: (Int) -> Unit
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Choose which balance to send from",
-            fontSize = 16.sp,
-            fontWeight = FontWeight(400), // Regular
-            color = Color(0xFFFFFDF8), // --text/normal
-            lineHeight = (16 * 1.14).sp
-        )
-        
-        val selectedToken = tokens[selectedTokenIndex]
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.2f))
-                .padding(16.dp)
-        ) {
-            var expanded by remember { mutableStateOf(false) }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Token Icon - circular container
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Color(0xFF26292C), // --background/dim
-                            shape = CircleShape
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color(0xFF62696F), // --outline/outline-i
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Token icon placeholder
-                    Text(
-                        text = selectedToken.symbol.take(1),
-                        fontSize = 16.sp,
-                        color = Color(0xFFFFFDF8)
-                    )
-                }
-                
-                // Token symbol and balance
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = selectedToken.symbol,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight(400), // Regular
-                        color = Color(0xFFFFFDF8), // --text/normal
-                        lineHeight = (16 * 1.14).sp
-                    )
-                }
-                
-                // Balance - formatted nicely and used as dropdown anchor
-                Box {
-                    Text(
-                        text = "$${String.format("%.2f", selectedToken.balance)}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight(400), // Regular
-                        color = Color(0xFFA9EABF), // --text/success
-                        lineHeight = 24.sp,
-                        letterSpacing = 0.sp,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        modifier = Modifier.clickable { expanded = true }
-                    )
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        tokens.forEachIndexed { index, token ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(text = token.symbol, color = Color.White)
-                                        Text(text = token.name, color = Color(0xFF9CA3AF))
-                                    }
-                                },
-                                onClick = {
-                                    onSelectToken(index)
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }

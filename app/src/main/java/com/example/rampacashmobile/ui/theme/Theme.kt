@@ -11,30 +11,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// Define your actual colors here (matching Figma design)
+// Define your actual colors here (matching your React design)
 private val RampaDarkColorScheme = darkColorScheme(
     primary = Color(0xFF6366F1),        // Indigo-500 (your primary button color)
     secondary = Color(0xFF22C55E),      // Green-500 (your success color)
     tertiary = Color(0xFF3B82F6),       // Blue-500 (your info color)
 
-    // Background colors (Carbon base theme from Figma)
-    background = Color(0xFF0C0C0C),     // Carbon base - from Figma Variables
-    surface = Color(0xFF1a1a1a),        // Slightly lighter surface for cards
-    surfaceVariant = Color(0xFF262626), // Card/surface variant
+    // Background colors
+    background = Color(0xFF111827),     // Your dark background
+    surface = Color(0xFF1F2937),        // Your card/surface color
+    surfaceVariant = Color(0xFF374151), // Your border color
 
-    // Text colors (matching Figma design)
+    // Text colors
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = Color(0xFFfcfcfd),   // Very light text on dark background (background/variant from Figma)
-    onSurface = Color(0xFFfcfcfd),      // Very light text on surfaces
-    onSurfaceVariant = Color(0xFFa1a1aa), // Gray text for secondary info
+    onBackground = Color.White,         // White text on dark background
+    onSurface = Color.White,            // White text on surfaces
+    onSurfaceVariant = Color(0xFF9CA3AF), // Gray text for secondary info
 
     // Other colors
     error = Color(0xFFEF4444),          // Red-500 for errors
     onError = Color.White,
-    outline = Color(0xFF262626),        // Border color
-    outlineVariant = Color(0xFF404040)  // Lighter border
+    outline = Color(0xFF374151),        // Border color
+    outlineVariant = Color(0xFF4B5563)  // Lighter border
 )
 
 private val RampaLightColorScheme = lightColorScheme(

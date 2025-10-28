@@ -25,7 +25,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.rampacashmobile.ui.components.RampaScreenBackground
 import com.example.rampacashmobile.ui.components.TopNavBar
 import kotlinx.coroutines.delay
 
@@ -66,11 +65,15 @@ fun CardScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFF111827))
     ) {
         // Top Navigation with Profile Button
         TopNavBar(
+            title = "Card",
             navController = navController,
-            showBackButton = false
+            showBackButton = false,
+            showProfileButton = true,
+            showChatButton = false
         )
         
         Column(

@@ -17,6 +17,7 @@ import com.example.rampacashmobile.ui.screens.*
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.example.rampacashmobile.ui.screens.WithdrawScreen
+import com.example.rampacashmobile.viewmodel.WithdrawViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 
 @Composable
@@ -34,13 +35,8 @@ fun NavigationGraph(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Only show bottom navigation when not on login screen, not in loading state, and not on receive screen
-    val showBottomBar = currentRoute != "login" && 
-                        currentRoute != "receive" && 
-                        currentRoute != "recharge" && 
-                        currentRoute != "withdraw" && 
-                        currentRoute != "transaction_success" &&
-                        !sharedViewState.isLoading
+    // Only show bottom navigation when not on login screen and not in loading state
+    val showBottomBar = currentRoute != "login" && !sharedViewState.isLoading
 
     Scaffold(
         bottomBar = {
@@ -104,39 +100,6 @@ fun NavigationGraph(
                 )
             }
 
-            // Send flow screens
-            composable("send_amount/{token}/{recipient}") { backStackEntry ->
-                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
-                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
-                SendAmountScreen(
-                    navController = navController,
-                    tokenSymbol = token,
-                    recipientAddress = recipient
-                )
-            }
-            composable("send_confirm/{token}/{recipient}/{amount}") { backStackEntry ->
-                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
-                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
-                val amount = backStackEntry.arguments?.getString("amount") ?: "0"
-                SendConfirmScreen(
-                    navController = navController,
-                    tokenSymbol = token,
-                    recipientAddress = recipient,
-                    amount = amount
-                )
-            }
-            composable("send_success/{token}/{recipient}/{amount}") { backStackEntry ->
-                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
-                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
-                val amount = backStackEntry.arguments?.getString("amount") ?: "0"
-                SendSuccessScreen(
-                    navController = navController,
-                    tokenSymbol = token,
-                    recipientAddress = recipient,
-                    amount = amount
-                )
-            }
-
             composable("investment") {
                 InvestmentScreen(navController = navController)
             }
@@ -163,7 +126,8 @@ fun NavigationGraph(
             }
             composable("withdraw") {
                 WithdrawScreen(
-                    navController = navController
+                    navController = navController,
+                    viewModel = hiltViewModel<WithdrawViewModel>() // << CORRECTED
                 )
             }
             composable("profile") { 
