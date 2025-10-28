@@ -205,7 +205,8 @@ fun NavigationGraph(
                             navController = navController,
                             tokenSymbol = details.tokenSymbol,
                             recipientAddress = details.recipientAddress,
-                            amount = details.amount
+                            amount = details.amount,
+                            viewModel = sharedViewModel
                         )
                     }
                 }

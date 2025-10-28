@@ -15,13 +15,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.rampacashmobile.viewmodel.MainViewModel
 
 @Composable
 fun SendSummaryScreen(
     navController: NavController,
     tokenSymbol: String,
     recipientAddress: String,
-    amount: String
+    amount: String,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
     val currencySymbol = when (tokenSymbol.uppercase()) {
         "EURC" -> "€"
@@ -122,7 +125,11 @@ fun SendSummaryScreen(
 
         Spacer(modifier = Modifier.weight(1f))
         Button(
-            onClick = { navController.navigate("transfers") { popUpTo("dashboard") { inclusive = false } } },
+            onClick = {
+                // Reset success state then navigate
+                viewModel.onTransactionSuccessDone()
+                navController.navigate("transfers") { popUpTo("dashboard") { inclusive = false } }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Done")
