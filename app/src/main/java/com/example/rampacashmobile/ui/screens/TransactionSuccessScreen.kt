@@ -89,6 +89,7 @@ fun TransactionSuccessScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .background(Color(0xFF111827)) // Dark background to match app theme
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -96,8 +97,11 @@ fun TransactionSuccessScreen(
             // Top Navigation Bar
             if (navController != null) {
                 TopNavBar(
+                    title = "Transaction Success",
                     navController = navController,
-                    showBackButton = false
+                    showBackButton = false,
+                    showProfileButton = true,  // Show avatar and card buttons
+                    showChatButton = false
                 )
             }
             

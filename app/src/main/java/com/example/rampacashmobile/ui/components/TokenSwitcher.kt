@@ -6,12 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.rotate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,155 +28,83 @@ import com.example.rampacashmobile.ui.screens.Token
 
 @Composable
 fun TokenSwitcher(
-    tokens: List<Token>,
-    selectedTokenIndex: Int,
+    selectedToken: Token,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedToken = tokens[selectedTokenIndex]
-    
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        color = Color(0xFF0e0f10),
-        shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
+        // Previous Button
+        IconButton(
+            onClick = onPrevious,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    Color.White.copy(alpha = 0.1f)
+                )
         ) {
-            // Token Selector - Clickable dropdown with menu
-            Box {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { expanded = true },
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Token Icon
-                            TokenIcon(
-                                tokenSymbol = selectedToken.symbol,
-                                size = 24.dp
-                            )
-                            
-                            // Token Name
-                            Text(
-                                text = selectedToken.name,
-                                fontSize = 14.sp,
-                                color = Color(0xFFf7f7f8),
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                        
-                        // Rotated arrow icon
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "Toggle",
-                            modifier = Modifier
-                                .size(16.dp)
-                                .rotate(270f),
-                            tint = Color.White
-                        )
-                    }
-                }
-                
-                // Dropdown menu
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1a1a1a), RoundedCornerShape(8.dp)),
-                ) {
-                    tokens.forEachIndexed { index, token ->
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    TokenIcon(
-                                        tokenSymbol = token.symbol,
-                                        size = 24.dp
-                                    )
-                                    Text(
-                                        text = token.name,
-                                        fontSize = 14.sp,
-                                        color = Color.White
-                                    )
-                                }
-                            },
-                            onClick = {
-                                if (index < selectedTokenIndex) {
-                                    repeat(selectedTokenIndex - index) { onPrevious() }
-                                } else if (index > selectedTokenIndex) {
-                                    repeat(index - selectedTokenIndex) { onNext() }
-                                }
-                                expanded = false
-                            },
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                        )
-                    }
-                }
-            }
-            
-            // Balance Display - Figma design
-            Text(
-                text = "ALL ACCOUNT",
-                fontSize = 12.sp,
-                color = Color(0xFFfffdf8),
-                letterSpacing = 0.8.sp,
-                fontWeight = FontWeight.Normal
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = "Previous token",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
             )
-            
-            // Balance Amount - Large number
-            Text(
-                text = String.format(
-                    "€%.2f",
-                    selectedToken.balance
-                ),
-                fontSize = 52.sp,
-                color = Color(0xFF23d3d5),
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.sp,
-                lineHeight = 52.sp
-            )
-            
-            // Token indicator dots
+        }
+        
+        Spacer(modifier = Modifier.width(24.dp))
+        
+        // Token Display
+        Surface(
+            modifier = Modifier
+                .clip(RoundedCornerShape(24.dp)),
+            color = Color(0xFF1F2937)
+        ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                repeat(tokens.size) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(if (index == selectedTokenIndex) 6.dp else 4.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (index == selectedTokenIndex) Color(0xFF23d3d5)
-                                else Color(0xFF3e4247)
-                            )
-                    )
-                }
+                // Token Icon
+                TokenIcon(
+                    tokenSymbol = selectedToken.symbol,
+                    size = 24.dp
+                )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // Token Symbol
+                Text(
+                    text = selectedToken.symbol,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
             }
+        }
+        
+        Spacer(modifier = Modifier.width(24.dp))
+        
+        // Next Button
+        IconButton(
+            onClick = onNext,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    Color.White.copy(alpha = 0.1f)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Next token",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }
