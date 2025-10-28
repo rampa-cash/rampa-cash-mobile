@@ -148,6 +148,43 @@ fun NavigationGraph(
                 LearnScreen(navController = navController)
             }
 
+            // Submodules list screen
+            composable(
+                route = "submodules/{moduleId}",
+                arguments = listOf(
+                    navArgument("moduleId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val moduleId = backStackEntry.arguments?.getString("moduleId") ?: ""
+                SubmoduleListScreen(
+                    navController = navController,
+                    moduleId = moduleId
+                )
+            }
+
+            // Lesson screen
+            composable(
+                route = "lesson/{moduleId}/{submoduleId}",
+                arguments = listOf(
+                    navArgument("moduleId") {
+                        type = NavType.StringType
+                    },
+                    navArgument("submoduleId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val moduleId = backStackEntry.arguments?.getString("moduleId") ?: ""
+                val submoduleId = backStackEntry.arguments?.getString("submoduleId") ?: ""
+                LessonScreen(
+                    navController = navController,
+                    moduleId = moduleId,
+                    submoduleId = submoduleId
+                )
+            }
+
             composable("card") {
                 CardScreen(navController = navController)
             }

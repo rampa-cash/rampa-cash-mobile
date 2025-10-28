@@ -7,7 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,16 +15,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.R
+import com.example.rampacashmobile.viewmodel.LearnViewModel
+import com.example.rampacashmobile.data.LearnModule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LearnScreen(navController: NavController) {
+fun LearnScreen(
+    navController: NavController,
+    viewModel: LearnViewModel = hiltViewModel()
+) {
+    val modules by viewModel.modules.collectAsState()
+    val totalBonksEarned by viewModel.totalBonksEarned.collectAsState()
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -62,7 +69,7 @@ fun LearnScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Total Bonks earned: 450",
+                        text = "Total Bonks earned: $totalBonksEarned",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -115,42 +122,13 @@ fun LearnScreen(navController: NavController) {
                 }
             }
 
-            // Learning Modules
-            LearnModuleCard(
-                title = "Basics of Investing",
-                bonkReward = 50,
-                progress = 0.6f,
-                isCompleted = false,
-                submodules = listOf(
-                    "What is Investing?",
-                    "Types of Investments", 
-                    "Setting Investment Goals"
+            // Learning Modules - Rendered dynamically from ViewModel
+            modules.forEach { module ->
+                LearnModuleCard(
+                    module = module,
+                    navController = navController
                 )
-            )
-
-            LearnModuleCard(
-                title = "Risk Management",
-                bonkReward = 50,
-                progress = 0f,
-                isCompleted = false,
-                submodules = listOf(
-                    "Understanding Risk vs Reward",
-                    "Risk Assessment Tools",
-                    "Portfolio Risk Management"
-                )
-            )
-
-            LearnModuleCard(
-                title = "Diversification",
-                bonkReward = 50,
-                progress = 0f,
-                isCompleted = false,
-                submodules = listOf(
-                    "Asset Class Diversification",
-                    "Geographic Diversification",
-                    "Time Diversification"
-                )
-            )
+            }
 
             // Exchange Anytime Section
             Card(
@@ -183,7 +161,7 @@ fun LearnScreen(navController: NavController) {
                             modifier = Modifier.size(48.dp)
                         )
                         Icon(
-                            imageVector = Icons.Default.ArrowForward,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Exchange arrow",
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
@@ -202,18 +180,19 @@ fun LearnScreen(navController: NavController) {
 
 @Composable
 private fun LearnModuleCard(
-    title: String,
-    bonkReward: Int,
-    progress: Float,
-    isCompleted: Boolean,
-    submodules: List<String>
+    module: LearnModule,
+    navController: NavController
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
+            .clickable {
+                if (module.submodules.isNotEmpty()) {
+                    navController.navigate("submodules/${module.id}")
+                }
+            },
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF1F2937)
         ),
@@ -230,13 +209,13 @@ private fun LearnModuleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = title,
+                    text = module.title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = "$bonkReward BONK",
+                    text = "${module.bonkReward} BONK",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF10B981)
@@ -245,7 +224,7 @@ private fun LearnModuleCard(
             
             Spacer(modifier = Modifier.height(12.dp))
             LinearProgressIndicator(
-                progress = { progress },
+                progress = { module.progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp),
@@ -253,7 +232,7 @@ private fun LearnModuleCard(
                 trackColor = Color(0xFF374151),
             )
             
-            if (isCompleted) {
+            if (module.isCompleted) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -283,22 +262,29 @@ private fun LearnModuleCard(
                         color = Color(0xFF9CA3AF),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    submodules.forEach { submodule ->
+                    module.submodules.forEach { submodule ->
+                        val isSubmoduleCompleted = module.completedSubmodules.contains(submodule.id)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
-                                .clickable { /* Handle submodule click */ },
+                                .clickable(
+                                    onClick = {
+                                        if (submodule.lessons.isNotEmpty()) {
+                                            navController.navigate("lesson/${module.id}/${submodule.id}")
+                                        }
+                                    }
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "•",
+                                text = if (isSubmoduleCompleted) "✓" else "•",
                                 fontSize = 16.sp,
-                                color = Color(0xFF10B981),
+                                color = if (isSubmoduleCompleted) Color(0xFF10B981) else Color(0xFF6B7280),
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Text(
-                                text = submodule,
+                                text = submodule.title,
                                 fontSize = 14.sp,
                                 color = Color.White,
                                 modifier = Modifier.weight(1f)
@@ -309,16 +295,20 @@ private fun LearnModuleCard(
             }
             
             // Expand/Collapse indicator
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = if (isExpanded) "Tap to collapse" else "Tap to view submodules",
-                    fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
-                )
+            if (module.submodules.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isExpanded = !isExpanded },
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = if (isExpanded) "Tap to collapse" else "Tap to view submodules",
+                        fontSize = 12.sp,
+                        color = Color(0xFF6B7280)
+                    )
+                }
             }
         }
     }
