@@ -1,6 +1,12 @@
 package com.example.rampacashmobile.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
@@ -23,130 +29,163 @@ fun BottomNavBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    Box(
-        modifier = Modifier.fillMaxWidth()
+    // Aqua/Cyan color for active state
+    val activeColor = Color(0xFF23d3d5) // flow-aqua
+    val inactiveColor = Color(0xFFf1f2f3) // text normal
+    // Match the theme gradient colors
+    val backgroundDark = Color(0xFF000000) // Pure black to match gradient
+    val borderDark = Color(0xFF1a1c1e) // outline background-outline
+    val buttonBackgroundDark = Color(0xFF26292c) // background dim
+    val buttonBorderDark = Color(0xFF323639) // outline ii
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundDark)
+            .border(BorderStroke(1.dp, borderDark), RoundedCornerShape(0.dp))
     ) {
-        // Main Navigation Bar
-        NavigationBar(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(75.dp),
-            containerColor = Color(0xFF1F2937), // Dark background matching React version
-            contentColor = Color(0xFFD1D5DB), // Light content color
-            tonalElevation = 8.dp
+                .height(64.dp)
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             bottomNavigationItems.forEach { destination ->
-                if (destination == NavigationDestination.Send) {
-                    // Empty space for the floating send button
-                    Box(
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    NavigationBarItem(
-                        selected = currentRoute == destination.route,
-                        onClick = {
+                val isSelected = currentRoute == destination.route
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
                             if (destination.route == "dashboard") {
-                                // Navigate to dashboard and clear the entire back stack
                                 navController.navigate("dashboard") {
                                     popUpTo(0) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             } else {
-                                // For other destinations, navigate normally
                                 navController.navigate(destination.route) {
                                     popUpTo("dashboard") { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
                             }
-                        },
-                        icon = {
-                            // Fixed height container to ensure consistent text alignment
+                        }
+                ) {
+                    if (destination == NavigationDestination.Send) {
+                        // Floating Send Button in the center
+                        val isSendSelected = currentRoute == "send"
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Box(
-                                modifier = Modifier
-                                    .height(32.dp)
-                                    .fillMaxWidth(),
+                                modifier = Modifier.size(64.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (destination.customIconRes != null) {
-                                    // Larger size for custom icons, especially the Rampa logo
-                                    val iconSize = if (destination.route == "dashboard") 32.dp else 28.dp
-                                    Icon(
-                                        painter = painterResource(id = destination.customIconRes),
-                                        contentDescription = destination.title,
-                                        tint = Color.Unspecified,
-                                        modifier = Modifier.size(iconSize)
+                                // Background based on selection
+                                if (isSendSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                activeColor,
+                                                shape = CircleShape
+                                            )
                                     )
                                 } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .border(
+                                                BorderStroke(1.dp, buttonBorderDark),
+                                                CircleShape
+                                            )
+                                            .background(
+                                                buttonBackgroundDark,
+                                                shape = CircleShape
+                                            )
+                                    )
+                                }
+
+                                // Icon and label
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 7.dp)
+                                ) {
                                     Icon(
-                                        imageVector = destination.icon!!,
-                                        contentDescription = destination.title,
-                                        modifier = Modifier.size(24.dp)
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Send",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = if (isSendSelected) Color.White else inactiveColor
+                                    )
+                                    Text(
+                                        text = destination.title,
+                                        fontSize = 12.sp,
+                                        color = if (isSendSelected) Color.White else inactiveColor,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
-                        },
-                        label = {
-                            Text(
-                                text = destination.title,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFF10B981), // Active green color
-                            selectedTextColor = Color(0xFF10B981),
-                            unselectedIconColor = Color(0xFFD1D5DB), // Light gray for inactive
-                            unselectedTextColor = Color(0xFFD1D5DB),
-                            indicatorColor = Color.Transparent // Remove default indicator
-                        )
-                    )
-                }
-            }
-        }
-
-        // Floating Send Button positioned above the navigation bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-8).dp), // Adjusted for taller navigation bar
-            contentAlignment = Alignment.Center
-        ) {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate("send") {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                    } else {
+                        // Regular navigation items
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Top border for selected items
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(2.dp)
+                                        .align(Alignment.TopCenter)
+                                        .background(activeColor)
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (destination.customIconRes != null) {
+                                        Icon(
+                                            painter = painterResource(id = destination.customIconRes),
+                                            contentDescription = destination.title,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = if (isSelected) activeColor else inactiveColor
+                                        )
+                                    } else if (destination.icon != null) {
+                                        Icon(
+                                            imageVector = destination.icon!!,
+                                            contentDescription = destination.title,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = if (isSelected) activeColor else inactiveColor
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
-                },
-                modifier = Modifier.size(72.dp), // Increased from 60px for better touch target
-                containerColor = Color(0xFF10B981), // Green color matching React version
-                contentColor = Color.White,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 8.dp,
-                    pressedElevation = 12.dp
-                )
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = "Send",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
         }
+        
+        // Bottom padding
+        Spacer(modifier = Modifier.height(32.dp))
     }
 } 

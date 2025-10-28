@@ -8,7 +8,25 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- App theme colors -->
-    <color name="rampa_background">#111827</color>
-    <color name="rampa_surface">#1F2937</color>
+    <!-- App theme colors (matching Figma design system) -->
+    <!-- Background colors -->
+    <color name="carbon_base">#FF0C0C0C</color>
+    <color name="rampa_background">#FF0C0C0C</color>
+    <color name="rampa_surface">#FF1a1a1a</color>
+    <color name="rampa_surface_variant">#FF262626</color>
+    
+    <!-- Text colors -->
+    <color name="rampa_text_primary">#FFFCFCFD</color>
+    <color name="rampa_text_secondary">#FFA1A1AA</color>
+    
+    <!-- Gradient colors (from Figma blur effect) -->
+    <color name="gradient_purple">#9A46FF</color>
+    <color name="gradient_green">#16F096</color>
+    
+    <!-- Accent colors -->
+    <color name="primary_color">#FF6366F1</color>
+    <color name="success_color">#FF22C55E</color>
+    <color name="info_color">#FF3B82F6</color>
+    <color name="warning_color">#FFF59E0B</color>
+    <color name="error_color">#FFEF4444</color>
 </resources>
