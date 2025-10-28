@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -78,27 +79,44 @@ fun ReceiveScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF111827))
-    ) {
-        // Top Navigation with Profile Button
-        TopNavBar(
-            title = "Receive Stablecoin",
-            navController = navController,
-            showBackButton = false,
-            showProfileButton = true,
-            showChatButton = false
-        )
-        
+    ) { 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
-                .padding(bottom = 90.dp), // Add bottom padding for navigation bar
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(top = 50.dp) // Add top margin to push content down
+                .padding(bottom = 16.dp), // Reduced bottom padding since no bottom nav
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Stablecoin Selection
-            StablecoinSelector(
+            // Top Navigation with Back Button
+            TopNavBar(
+                navController = navController,
+                showBackButton = true
+            )
+            
+            // Header section
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "Receive money",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFfffdf8)
+                )
+                Text(
+                    text = "Share your wallet address to receive money instantly",
+                    fontSize = 16.sp,
+                    color = Color(0xFFf1f2f3),
+                    lineHeight = 18.24.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Currency dropdown
+            CurrencySelector(
                 selectedToken = selectedToken,
                 tokens = tokens,
                 showDropdown = showTokenDropdown,
@@ -109,8 +127,7 @@ fun ReceiveScreen(
                 onDropdownToggle = { showTokenDropdown = !showTokenDropdown }
             )
 
-            // Network Selection (Static)
-            NetworkSelector()
+            Spacer(modifier = Modifier.height(16.dp))
 
             // QR Code
             QRCodeSection(
@@ -118,20 +135,41 @@ fun ReceiveScreen(
                 isConnected = isConnected
             )
 
-            // Wallet Address
-            WalletAddressSection(walletAddress = walletAddress)
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Warning Box
-            WarningSection()
-
-            // Copy Address Button
-            CopyAddressButton(
+            // Wallet Address with Copy button
+            WalletAddressWithCopy(
                 walletAddress = walletAddress,
-                isConnected = isConnected,
                 onCopy = { address ->
                     copyToClipboard(context, address) { copySuccess = it }
                 }
             )
+
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Share address button
+            Button(
+                onClick = {
+                    if (isConnected) {
+                        copyToClipboard(context, walletAddress) { copySuccess = it }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = isConnected,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFfaf9f6),
+                    disabledContainerColor = Color(0xFF4B5563)
+                ),
+                shape = RoundedCornerShape(99.dp),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                Text(
+                    text = "Share address",
+                    color = Color(0xFF1a1c1e),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
 
             // Copy Success Message
             copySuccess?.let { message ->
@@ -167,140 +205,90 @@ fun ReceiveScreen(
 }
 
 @Composable
-private fun StablecoinSelector(
+private fun CurrencySelector(
     selectedToken: ReceiveToken,
     tokens: List<ReceiveToken>,
     showDropdown: Boolean,
     onTokenSelect: (ReceiveToken) -> Unit,
     onDropdownToggle: () -> Unit
 ) {
-    Column {
-        Text(
-            text = "STABLECOIN",
-            fontSize = 16.sp,
-            color = Color(0xFF9CA3AF),
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        Box {
-            Card(
+    Box {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onDropdownToggle() },
+            color = Color.White.copy(alpha = 0.2f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDropdownToggle() },
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1F2937)
-                ),
-                shape = RoundedCornerShape(8.dp)
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = selectedToken.icon),
-                            contentDescription = selectedToken.symbol,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Fit
-                        )
-                        Text(
-                            text = selectedToken.symbol,
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Dropdown",
-                        tint = Color.White
+                    Image(
+                        painter = painterResource(id = selectedToken.icon),
+                        contentDescription = selectedToken.symbol,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(
+                        text = selectedToken.symbol,
+                        color = Color(0xFFfffdf8),
+                        fontSize = 16.sp
                     )
                 }
-            }
-
-            // Dropdown Menu
-            if (showDropdown) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1F2937)
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    Column {
-                        tokens.forEach { token ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onTokenSelect(token) }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Image(
-                                    painter = painterResource(id = token.icon),
-                                    contentDescription = token.symbol,
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Fit
-                                )
-                                Text(
-                                    text = "${token.symbol} - ${token.name}",
-                                    color = Color.White,
-                                    fontSize = 22.sp
-                                )
-                            }
-                            if (token != tokens.last()) {
-                                Divider(
-                                    color = Color(0xFF374151),
-                                    thickness = 1.dp
-                                )
-                            }
-                        }
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Dropdown",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
-    }
-}
 
-@Composable
-private fun NetworkSelector() {
-    Column {
-        Text(
-            text = "NETWORK",
-            fontSize = 16.sp,
-            color = Color(0xFF9CA3AF),
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1F2937)
-            ),
-            shape = RoundedCornerShape(8.dp)
+        // Dropdown Menu
+        DropdownMenu(
+            expanded = showDropdown,
+            onDismissRequest = onDropdownToggle,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1a1a1a), RoundedCornerShape(8.dp)),
         ) {
-            Text(
-                text = "Solana",
-                color = Color.White,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(12.dp)
-            )
+            tokens.forEach { token ->
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = token.icon),
+                                contentDescription = token.symbol,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Fit
+                            )
+                            Text(
+                                text = "${token.symbol} - ${token.name}",
+                                color = Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
+                    },
+                    onClick = {
+                        onTokenSelect(token)
+                    }
+                )
+            }
         }
     }
 }
@@ -310,47 +298,38 @@ private fun QRCodeSection(
     walletAddress: String,
     isConnected: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1F2937)
-        ),
-        shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Card(
-                modifier = Modifier.size(200.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                ),
-                shape = RoundedCornerShape(8.dp)
+        if (isConnected) {
+            // White card with rounded corners containing the QR code
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White,
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(10.dp),
+                        .fillMaxWidth()
+                        .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isConnected) {
-                        QRCode(
-                            text = walletAddress,
-                            size = 180
-                        )
-                    } else {
-                        Text(
-                            text = "Connect your wallet to generate a QR code",
-                            color = Color(0xFF666666),
-                            fontSize = 22.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    QRCode(
+                        text = walletAddress,
+                        size = 180
+                    )
                 }
             }
+        } else {
+            Text(
+                text = "Connect your wallet to generate a QR code",
+                color = Color(0xFF666666),
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -374,115 +353,55 @@ private fun QRCode(
 }
 
 @Composable
-private fun WalletAddressSection(walletAddress: String) {
-    Column {
-        Text(
-            text = "WALLET ADDRESS",
-            fontSize = 16.sp,
-            color = Color(0xFF9CA3AF),
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        Text(
-            text = walletAddress,
-            color = Color.White,
-            fontSize = 24.sp,
-            fontFamily = FontFamily.Monospace,
-            lineHeight = 24.sp
-        )
-    }
-}
-
-@Composable
-private fun WarningSection() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1F2937)
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Text(
-                text = "Check Before You Deposit",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                WarningItem("Only send supported stablecoins.")
-                WarningItem("Don't send SOL or other unsupported tokens.")
-                WarningItem("Each address is unique.")
-                WarningItem("Wrong deposits may be lost or take 1-2 weeks to recover (fees apply).")
-            }
-        }
-    }
-}
-
-@Composable
-private fun WarningItem(text: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = "•",
-            color = Color(0xFF9CA3AF),
-            fontSize = 22.sp,
-            modifier = Modifier.padding(top = 2.dp)
-        )
-        Text(
-            text = text,
-            color = Color(0xFF9CA3AF),
-            fontSize = 22.sp,
-            lineHeight = 20.sp
-        )
-    }
-}
-
-@Composable
-private fun CopyAddressButton(
+private fun WalletAddressWithCopy(
     walletAddress: String,
-    isConnected: Boolean,
     onCopy: (String) -> Unit
 ) {
-    Button(
-        onClick = { if (isConnected) onCopy(walletAddress) },
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        enabled = isConnected,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White.copy(alpha = 0.9f),
-            disabledContainerColor = Color(0xFF4B5563)
-        ),
-        shape = RoundedCornerShape(32.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color(0xFF62696f))
     ) {
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Copy",
-                tint = if (isConnected) Color(0xFF111827) else Color(0xFF9CA3AF),
-                modifier = Modifier.size(24.dp)
-            )
-            Text(
-                text = "Copy Address",
-                color = if (isConnected) Color(0xFF111827) else Color(0xFF9CA3AF),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Your wallet address",
+                    fontSize = 14.sp,
+                    color = Color(0xFFf1f2f3)
+                )
+                Text(
+                    text = if (walletAddress.length > 16) {
+                        "${walletAddress.take(8)}...${walletAddress.takeLast(8)}"
+                    } else walletAddress,
+                    fontSize = 16.sp,
+                    color = Color(0xFFfffdf8)
+                )
+            }
+            Button(
+                onClick = { onCopy(walletAddress) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFfcfcfd)
+                ),
+                shape = RoundedCornerShape(99.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "COPY",
+                    fontSize = 12.sp,
+                    color = Color(0xFF1a1c1e),
+                    fontWeight = FontWeight.Normal
+                )
+            }
         }
     }
 }

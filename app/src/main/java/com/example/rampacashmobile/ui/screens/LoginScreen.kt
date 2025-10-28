@@ -6,14 +6,21 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -29,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 // Ensure painterResource is imported: import androidx.compose.ui.res.painterResource
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.viewmodel.MainViewModel
@@ -106,19 +114,7 @@ fun LoginScreen(
         )
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF0F172A), // Dark slate
-                        Color(0xFF1E293B), // Lighter slate
-                        Color(0xFF111827)  // Original dark
-                    )
-                )
-            )
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         // Show loading during session restoration
         if (viewState.isLoading) {
             Box(
@@ -133,126 +129,81 @@ fun LoginScreen(
             }
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween // Keeps top and bottom content pushed out
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Top Section: Logo and Welcome
+                // Top section: Title and subtitle
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(top = 60.dp) // Maintain top padding
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 145.dp, end = 16.dp),
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(300.dp) // Increased logo size
-                            .padding(bottom = 24.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.mipmap.rampa_trsl_txt_w_bott_foreground),
-                            contentDescription = "Rampa Logo",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
                     Text(
-                        text = "Welcome to Rampa",
+                        text = "Join Rampa your way",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFf1f2f3),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Text(
+                        text = "Choose how you want to start your journey",
                         fontSize = 32.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        letterSpacing = (-0.5).sp
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFfffdf8),
+                        lineHeight = 32.sp
                     )
                 }
 
-                // Middle Section: Login Options with Adjusted Spacing
+                Spacer(modifier = Modifier.height(26.dp))
+
+                // Authentication options cards
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        ModernPhoneButton(
-                            buttonText = "Continue with Phone",
-                            iconPainter = painterResource(id = R.drawable.ic_logo_phone),
-                            iconContentDescription = "Phone logo",
-                            isLoading = viewState.loadingProvider == Provider.SMS_PASSWORDLESS,
-                            isAnyLoading = viewState.isWeb3AuthLoading,
-                            onClick = {
-                                showPhoneDialog = true
+                    AuthOptionCard(
+                        title = "Google",
+                        description = "Use your Google account to get started",
+                        iconRes = R.drawable.ic_figma_google,
+                        isLoading = viewState.loadingProvider == Provider.GOOGLE,
+                        onClick = {
+                            if (web3AuthManager != null && web3AuthCallback != null) {
+                                viewModel.setWeb3AuthProviderLoading(Provider.GOOGLE)
+                                web3AuthManager.login(Provider.GOOGLE, web3AuthCallback)
                             }
-                        )
-                        ModernSocialButton(
-                            buttonText = "Continue with",
-                            iconPainter = painterResource(id = R.drawable.ic_logo_google),
-                            iconContentDescription = "Google logo",
-                            isLoading = viewState.loadingProvider == Provider.GOOGLE,
-                            isAnyLoading = viewState.isWeb3AuthLoading,
-                            onClick = {
-                                if (web3AuthManager != null && web3AuthCallback != null) {
-                                    viewModel.setWeb3AuthProviderLoading(Provider.GOOGLE)
-                                    web3AuthManager.login(Provider.GOOGLE, web3AuthCallback)
-                                }
+                        }
+                    )
+
+                    AuthOptionCard(
+                        title = "Apple",
+                        description = "Connect easily with your Apple ID",
+                        iconRes = R.drawable.ic_logo_apple,
+                        isLoading = viewState.loadingProvider == Provider.APPLE,
+                        onClick = {
+                            if (web3AuthManager != null && web3AuthCallback != null) {
+                                viewModel.setWeb3AuthProviderLoading(Provider.APPLE)
+                                web3AuthManager.login(Provider.APPLE, web3AuthCallback)
                             }
-                        )
-                        ModernSocialButton(
-                            buttonText = "Continue with",
-                            iconPainter = painterResource(id = R.drawable.ic_logo_apple),
-                            iconContentDescription = "Apple logo",
-                            isLoading = viewState.loadingProvider == Provider.APPLE,
-                            isAnyLoading = viewState.isWeb3AuthLoading,
-                            onClick = {
-                                if (web3AuthManager != null && web3AuthCallback != null) {
-                                    viewModel.setWeb3AuthProviderLoading(Provider.APPLE)
-                                    web3AuthManager.login(Provider.APPLE, web3AuthCallback)
-                                }
-                            }
-                        )
-                    }
+                        }
+                    )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    AuthOptionCard(
+                        title = "Email",
+                        description = "Create a secure account with your email",
+                        iconRes = R.drawable.ic_figma_email,
+                        isLoading = false,
+                        onClick = {
+                            // TODO: Implement email signup
+                        }
+                    )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(1.dp)
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(Color.Transparent, Color(0xFF334155), Color(0xFF475569))
-                                    )
-                                )
-                        )
-                        Text(
-                            text = "OR",
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = Color(0xFF64748B),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 2.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(1.dp)
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(Color(0xFF475569), Color(0xFF334155), Color.Transparent)
-                                    )
-                                )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    ModernWalletButton(
+                    AuthOptionCard(
+                        title = "Wallet",
+                        description = "Join directly with your crypto wallet",
+                        iconVector = Icons.Default.AccountBox,
+                        isLoading = false,
                         enabled = intentSender != null,
                         onClick = {
                             if (intentSender != null) {
@@ -261,36 +212,107 @@ fun LoginScreen(
                         }
                     )
 
-                    if (!viewState.walletFound) {
+                    AuthOptionCard(
+                        title = "Phone",
+                        description = "Sign up fast using your mobile number",
+                        iconRes = R.drawable.ic_logo_phone,
+                        isLoading = viewState.loadingProvider == Provider.SMS_PASSWORDLESS,
+                        onClick = {
+                            showPhoneDialog = true
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthOptionCard(
+    title: String,
+    description: String,
+    iconRes: Int? = null,
+    iconVector: ImageVector? = null,
+    isLoading: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = { if (enabled && !isLoading) onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(74.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.2f)
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF9945FF)
+                        )
+                    } else {
+                        when {
+                            iconVector != null -> {
+                                Icon(
+                                    imageVector = iconVector,
+                                    contentDescription = title,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Color(0xFFfffdf8) // White color to match Figma design
+                                )
+                            }
+                            iconRes != null -> {
+                                Image(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = title,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Column {
                         Text(
-                            text = "⚠️ Install Phantom or Solflare to continue",
-                            fontSize = 13.sp,
-                            color = Color(0xFFEF4444),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 12.dp)
+                            text = title,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFFfffdf8),
+                            lineHeight = (16 * 1.14).sp
+                        )
+                        Text(
+                            text = description,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0xFFf1f2f3),
+                            lineHeight = (14 * 1.4).sp
                         )
                     }
-                } // End of Middle Login Options Column
-
-                // Bottom Section: Modern Footer
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 32.dp)
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("🔒", fontSize = 12.sp)
-                        Text("Secure", fontSize = 12.sp, color = Color(0xFF64748B))
-                        Text("•", fontSize = 12.sp, color = Color(0xFF64748B))
-                        Text("⚡", fontSize = 12.sp)
-                        Text("Fast", fontSize = 12.sp, color = Color(0xFF64748B))
-                        Text("•", fontSize = 12.sp, color = Color(0xFF64748B))
-                        Text("🌐", fontSize = 12.sp)
-                        Text("Decentralized", fontSize = 12.sp, color = Color(0xFF64748B))
-                    }
                 }
+
+                // Arrow icon
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_figma_arrow_right),
+                    contentDescription = "Navigate",
+                    modifier = Modifier.size(16.dp),
+                    tint = Color(0xFFfffdf8)
+                )
             }
         }
     }

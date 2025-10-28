@@ -2,7 +2,9 @@ package com.example.rampacashmobile.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +34,7 @@ import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
+import com.example.rampacashmobile.R
 import java.util.*
 
 // Token data class
@@ -148,93 +151,76 @@ fun MainScreen(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
+    // Fetch transaction history once when wallet is connected
+    LaunchedEffect(
+        viewState.canTransact,
+        viewState.isWeb3AuthLoggedIn,
+        viewState.userAddress
     ) {
-
-        // Main content
-        Column(
-            modifier = Modifier.fillMaxSize()
+        if ((viewState.canTransact || viewState.isWeb3AuthLoggedIn) &&
+            !viewState.userAddress.isNullOrEmpty() &&
+            viewState.transactionHistory.isEmpty() &&
+            !viewState.isLoadingTransactions
         ) {
-            // Top Navigation with Profile Button (only show when connected)
+            Log.d("MainScreen", "🔄 Fetching transaction history (one-time)...")
+            delay(1500) // Reasonable delay to ensure connection is established
+            viewModel.getTransactionHistory()
+        }
+    }
+
+    LaunchedEffect(viewState.snackbarMessage) {
+        viewState.snackbarMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearSnackBar()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Show loading screen during session restoration or logout
+        if (viewState.isLoading || (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty())) {
+            LoadingScreen()
+            return@Box
+        }
+        
+        // Use LazyColumn to match InvestmentScreen and LearnScreen structure
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 90.dp
+            )
+        ) {
+            // Top Navigation Header (only show when connected)
             if (viewState.canTransact) {
-                TopNavBar(
-                    title = "Dashboard",
-                    navController = navController,
-                    showBackButton = false,
-                    showProfileButton = true,
-                    showChatButton = false
-                )
-            }
-
-            // Fetch transaction history once when wallet is connected
-            LaunchedEffect(
-                viewState.canTransact,
-                viewState.isWeb3AuthLoggedIn,
-                viewState.userAddress
-            ) {
-                if ((viewState.canTransact || viewState.isWeb3AuthLoggedIn) &&
-                    !viewState.userAddress.isNullOrEmpty() &&
-                    viewState.transactionHistory.isEmpty() &&
-                    !viewState.isLoadingTransactions
-                ) {
-                    Log.d("MainScreen", "🔄 Fetching transaction history (one-time)...")
-                    delay(1500) // Reasonable delay to ensure connection is established
-                    viewModel.getTransactionHistory()
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    TopNavBar(
+                        navController = navController,
+                        showBackButton = false
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
-            }
-
-            LaunchedEffect(viewState.snackbarMessage) {
-                viewState.snackbarMessage?.let { message ->
-                    snackbarHostState.showSnackbar(message)
-                    viewModel.clearSnackBar()
-                }
-            }
-
-            // Show loading screen during session restoration or logout
-            if (viewState.isLoading || (!viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty())) {
-                LoadingScreen()
             }
             // Don't handle transaction success navigation here - let SendScreen handle it
             
-            // Show main dashboard content (but not when showing transaction success)
-            if (!viewState.isLoading && 
-                !(!viewState.canTransact && !viewState.isWeb3AuthLoggedIn && viewState.userAddress.isEmpty()) &&
-                !viewState.showTransactionSuccess) {
-                Log.d(
-                    "MainScreen",
-                    "📱 Showing main content - showTransactionSuccess: ${viewState.showTransactionSuccess}, hasDetails: ${viewState.transactionDetails != null}"
-                )
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
-                    ) {
-                        // Token Switcher and Wallet Card (only show when connected)
-                        if (viewState.canTransact) {
-                                                         // Token Switcher
-                             TokenSwitcher(
-                                 selectedToken = selectedToken,
-                                 onPrevious = prevToken,
-                                 onNext = nextToken,
-                                 modifier = Modifier.padding(top = 0.dp, bottom = 16.dp)
-                             )
+            // Token Switcher and Wallet Card (only show when connected)
+            if (viewState.canTransact && !viewState.showTransactionSuccess) {
+                    item {
+                        // Token Switcher
+                        TokenSwitcher(
+                            tokens = tokens,
+                            selectedTokenIndex = selectedTokenIndex,
+                            onPrevious = prevToken,
+                            onNext = nextToken,
+                            modifier = Modifier.padding(top = 0.dp, bottom = 16.dp)
+                        )
 
-                            // Updated Wallet Connection Card with selected token
-                            WalletConnectionCard(
-                                selectedToken = selectedToken,
-                                walletName = viewState.userLabel,
-                                address = viewState.userAddress,
-                                fullAddressForCopy = viewState.fullAddressForCopy,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-
-                            // Action buttons (Recharge, Receive, and Withdraw)
-                            Row(
+                    }
+                    
+                    item {
+                        // Action buttons (Add Funds, Receive Money, and Cash Out)
+                        Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
@@ -243,75 +229,91 @@ fun MainScreen(
                                     Alignment.CenterHorizontally
                                 )
                             ) {
-                                // Recharge Button
-                                Button(
-                                    onClick = { navController.navigate("recharge") },
-                                    modifier = Modifier.weight(1f), // Use weight for equal distribution
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(vertical = 12.dp) // Adjusted padding slightly
+                                // Add Funds Button
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) { // For icon above text
+                                    Button(
+                                        onClick = { navController.navigate("recharge") },
+                                        modifier = Modifier.size(64.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF26292c)
+                                        ),
+                                        shape = CircleShape,
+                                        border = BorderStroke(1.dp, Color(0xFF62696f)),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
                                         Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Recharge",
+                                            painter = painterResource(id = R.drawable.add_funds),
+                                            contentDescription = "Add funds",
                                             tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Recharge", color = Color.White, fontSize = 14.sp)
                                     }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text("Add funds", color = Color(0xFFfffdf8), fontSize = 14.sp)
                                 }
 
-                                // Receive Button
-                                Button(
-                                    onClick = { navController.navigate("receive") },
-                                    modifier = Modifier.weight(1f), // Use weight
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(vertical = 12.dp)
+                                // Receive Money Button
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Button(
+                                        onClick = { navController.navigate("receive") },
+                                        modifier = Modifier.size(64.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF26292c)
+                                        ),
+                                        shape = CircleShape,
+                                        border = BorderStroke(1.dp, Color(0xFF62696f)),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
                                         Icon(
-                                            imageVector = Icons.Default.KeyboardArrowDown, // Consider a download/receive icon
-                                            contentDescription = "Receive",
+                                            painter = painterResource(id = R.drawable.ic_receive_money),
+                                            contentDescription = "Receive money",
                                             tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Receive", color = Color.White, fontSize = 14.sp)
                                     }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text("Receive money", color = Color(0xFFfffdf8), fontSize = 14.sp)
                                 }
 
-                                // VVVVVV NEW WITHDRAW BUTTON VVVVVV
-                                Button(
-                                    onClick = { navController.navigate("withdraw") }, // New navigation route
-                                    modifier = Modifier.weight(1f), // Use weight
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(vertical = 12.dp)
+                                // Cash Out Button
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Button(
+                                        onClick = { navController.navigate("withdraw") },
+                                        modifier = Modifier.size(64.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF26292c)
+                                        ),
+                                        shape = CircleShape,
+                                        border = BorderStroke(1.dp, Color(0xFF62696f)),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
                                         Icon(
-                                            imageVector = Icons.Default.KeyboardArrowUp, // Example: Upload/Outgoing icon
-                                            // Alternative: Icons.AutoMirrored.Filled.Logout, Icons.Filled.Send, Icons.Filled.AccountBalance
-                                            contentDescription = "Withdraw",
+                                            painter = painterResource(id = R.drawable.ic_cash_out),
+                                            contentDescription = "Cash out",
                                             tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Withdraw", color = Color.White, fontSize = 14.sp)
                                     }
-                                }
-                                // ^^^^^^ NEW WITHDRAW BUTTON ^^^^^^
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("Cash out", color = Color(0xFFfffdf8), fontSize = 14.sp)
                             }
-
-                            // Recent Transfers Section
-                            RecentTransfersSection(viewModel = viewModel)
                         }
                     }
+                    
+                    item {
+                        // Recent Transfers Section
+                        RecentTransfersSection(viewModel = viewModel)
+                    }
                 }
-            }
         }
 
         // Snackbar positioned above navigation bar

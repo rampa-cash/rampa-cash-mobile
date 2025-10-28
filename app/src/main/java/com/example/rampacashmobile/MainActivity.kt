@@ -10,6 +10,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -17,9 +19,12 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.example.rampacashmobile.navigation.NavigationGraph
+import com.example.rampacashmobile.ui.components.RampaScreenBackground
 import com.example.rampacashmobile.ui.theme.RampaCashMobileTheme
 import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
@@ -64,11 +69,12 @@ class MainActivity : ComponentActivity(), Web3AuthManager.Web3AuthCallback {
         
         setContent {
             RampaCashMobileTheme {
-                Surface(
+                // Apply Rampa gradient background globally (including splash screen)
+                // Remove Surface wrapper - it was applying a background color
+                RampaScreenBackground(
                     modifier = Modifier
                         .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.navigationBars),
-                    color = MaterialTheme.colorScheme.background
+                        .windowInsetsPadding(WindowInsets.navigationBars)
                 ) {
                     val navController = rememberNavController()
 
