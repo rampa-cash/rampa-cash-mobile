@@ -1,286 +1,427 @@
-// File: app/src/main/java/com/example/rampacashmobile/ui/screens/WithdrawScreen.kt
 package com.example.rampacashmobile.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.rampacashmobile.R // Import your R file
-import com.example.rampacashmobile.ui.components.TopNavBar
-import com.example.rampacashmobile.viewmodel.WithdrawViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Screen state
+enum class WithdrawScreenState {
+    AMOUNT_INPUT,
+    COUNTRY_SELECTION
+}
+
 @Composable
 fun WithdrawScreen(
-    navController: NavController,
-    viewModel: WithdrawViewModel = hiltViewModel()
+    navController: NavController
 ) {
-    val context = LocalContext.current // For toast or other context needs
-
-    // Observe states from ViewModel
-    val amount = viewModel.amount
-    val selectedCountryCode = viewModel.selectedCountryCode
-    val currentRegion = viewModel.currentRegion
-    val availableCountryOptions = viewModel.availableCountryOptions
-
-    val isLoading = viewModel.isLoading
-    val errorMessage = viewModel.errorMessage
-    val withdrawalSuccess = viewModel.withdrawalSuccess
-
-    // State for the country dropdown menu
+    var screenState by remember { mutableStateOf(WithdrawScreenState.AMOUNT_INPUT) }
+    var amount by remember { mutableStateOf("") }
+    var selectedCountry by remember { mutableStateOf<String?>(null) }
     var countryDropdownExpanded by remember { mutableStateOf(false) }
 
-    // Effect to handle success (e.g., show message and navigate back)
-    LaunchedEffect(withdrawalSuccess) {
-        if (withdrawalSuccess) {
-            // Show success message (e.g., Toast)
-            // Toast.makeText(context, "Withdrawal initiated successfully!", Toast.LENGTH_LONG).show()
-            viewModel.clearMessages() // Reset success flag in VM
-            navController.popBackStack()
-        }
+    val quickAmounts = listOf("50", "100", "500")
+    
+    // Calculate fees
+    val fees = if (amount.isNotEmpty()) {
+        val amountValue = amount.toDoubleOrNull() ?: 0.0
+        amountValue * 0.0005 // 0.05% fee
+    } else {
+        0.0
     }
 
-    Scaffold(
-        topBar = {
-            TopNavBar(
-                title = stringResource(R.string.withdraw_screen_title), // "Withdraw Funds"
-                navController = navController,
-                showBackButton = false // No back button for this screen
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (screenState) {
+            WithdrawScreenState.AMOUNT_INPUT -> {
+                AmountInputScreen(
+                    navController = navController,
+                    amount = amount,
+                    onAmountChange = { amount = it },
+                    quickAmounts = quickAmounts,
+                    fees = fees,
+                    onContinue = { screenState = WithdrawScreenState.COUNTRY_SELECTION }
+                )
+            }
+            WithdrawScreenState.COUNTRY_SELECTION -> {
+                CountrySelectionScreen(
+                    navController = navController,
+                    selectedCountry = selectedCountry,
+                    onCountryChange = { selectedCountry = it },
+                    countryDropdownExpanded = countryDropdownExpanded,
+                    onDropdownExpandedChange = { countryDropdownExpanded = it },
+                    onBackToAmount = { screenState = WithdrawScreenState.AMOUNT_INPUT }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AmountInputScreen(
+    navController: NavController,
+    amount: String,
+    onAmountChange: (String) -> Unit,
+    quickAmounts: List<String>,
+    fees: Double,
+    onContinue: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Back button
+        IconButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier
+                .offset(x = 16.dp, y = 77.dp)
+                .size(44.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
             )
         }
-    ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(start = 16.dp, top = 145.dp, end = 16.dp)
         ) {
-
-            // --- Amount Field (Common to all) ---
-            OutlinedTextField(
-                value = amount,
-                onValueChange = viewModel::onAmountChange,
-                label = { Text(stringResource(R.string.label_amount_to_withdraw, viewModel.selectedTokenSymbol)) }, // e.g., "Amount to Withdraw (USD)"
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), // NumberPassword to suggest numbers
-                singleLine = true,
-                isError = errorMessage?.contains("amount", ignoreCase = true) == true // Basic error highlighting
-            )
-
-            // --- Country Selector ---
-            Text(
-                text = stringResource(R.string.withdraw_select_country_banking), // "Select your country of banking:"
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = countryDropdownExpanded,
-                onExpandedChange = { countryDropdownExpanded = !countryDropdownExpanded },
-                modifier = Modifier.fillMaxWidth()
+            // Large amount display with input
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                OutlinedTextField(
-                    value = selectedCountryCode?.let { code ->
-                        availableCountryOptions.find { it.first == code }?.second ?: code
-                    } ?: stringResource(R.string.placeholder_select_country),
-                    onValueChange = { /* Read only */ },
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.label_country)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryDropdownExpanded) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
+                Text(
+                    text = "€",
+                    fontSize = 52.sp,
+                    fontWeight = FontWeight(500), // Medium
+                    color = Color(0xFF23D3D5), // --flow-aqua
+                    letterSpacing = 0.sp
                 )
-                ExposedDropdownMenu(
-                    expanded = countryDropdownExpanded,
-                    onDismissRequest = { countryDropdownExpanded = false },
-                    modifier = Modifier.fillMaxWidth()
+                VerticalDivider(
+                    color = Color(0xFF62696F), // --outline/outline-i
+                    modifier = Modifier.height(70.dp)
+                )
+                // Editable amount field
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(70.dp),
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    availableCountryOptions.forEach { selectionOption ->
-                        DropdownMenuItem(
-                            text = { Text(selectionOption.second) },
-                            onClick = {
-                                viewModel.onCountrySelected(selectionOption.first)
-                                countryDropdownExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    if (amount.isEmpty()) {
+                        Text(
+                            text = "0.00",
+                            fontSize = 52.sp,
+                            fontWeight = FontWeight(500), // Medium
+                            color = Color(0xFF23D3D5).copy(alpha = 0.3f), // --flow-aqua
+                            letterSpacing = 0.sp
+                        )
+                    }
+                    // Hidden text field for input
+                    BasicTextField(
+                        value = amount,
+                        onValueChange = onAmountChange,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            fontSize = 52.sp,
+                            fontWeight = FontWeight(500),
+                            color = Color(0xFF23D3D5),
+                            letterSpacing = 0.sp
+                        ),
+                        singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Fees display
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color.White.copy(alpha = 0.2f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Fees:",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight(400),
+                        color = Color(0xFFFFFDF8)
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "0.05%",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight(400),
+                            color = Color(0xFF23D3D5) // --flow-aqua
+                        )
+                        Text(
+                            text = "€${String.format("%.2f", fees)}",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight(400),
+                            color = Color(0xFFFFFDF8)
                         )
                     }
                 }
             }
 
-            // --- Spacer ---
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Conditional Forms based on Region ---
-            if (selectedCountryCode != null) {
-                when (currentRegion) {
-                    "Europe" -> EuropeanWithdrawalForm(viewModel)
-                    "LatinAmerica" -> LatinAmericanWithdrawalForm(viewModel)
-                    else -> Text(
-                        text = stringResource(R.string.withdraw_service_unavailable_country_selected, selectedCountryCode),
-                        textAlign = TextAlign.Center
+            // Quick amount buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                quickAmounts.forEach { amt ->
+                    Box(
+                        modifier = Modifier
+                            .height(44.dp)
+                            .background(
+                                Color(0xFF26292C), // --background/dim
+                                RoundedCornerShape(99.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFF62696F), // --outline/outline-i
+                                shape = RoundedCornerShape(99.dp)
+                            )
+                            .clickable { onAmountChange(amt) }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "€$amt",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight(400),
+                            color = Color(0xFFFFFDF8),
+                            letterSpacing = 0.sp
+                        )
+                    }
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .height(44.dp)
+                        .background(
+                            Color(0xFF26292C),
+                            RoundedCornerShape(99.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xFF62696F),
+                            shape = RoundedCornerShape(99.dp)
+                        )
+                        .clickable { },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Use Max",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight(400),
+                        color = Color(0xFFFFFDF8),
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
             }
 
-            // --- Error Message Display ---
-            errorMessage?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            // --- Spacer to push button to bottom ---
             Spacer(modifier = Modifier.weight(1f))
 
-            // --- Withdraw Button ---
+            // Continue button
             Button(
-                onClick = { viewModel.initiateWithdrawal() },
-                enabled = !isLoading && selectedCountryCode != null && currentRegion != null, // Add more validation based on form fields
+                onClick = onContinue,
+                enabled = amount.isNotEmpty() && amount.toDoubleOrNull() != null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (amount.isNotEmpty()) Color(0xFF23D3D5) else Color(0xFF26292C), // Non-active
+                    disabledContainerColor = Color(0xFF26292C)
+                ),
+                shape = RoundedCornerShape(99.dp)
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text(stringResource(R.string.withdraw_button_action)) // e.g., "Proceed to Withdraw"
-                }
+                Text(
+                    text = "Continue to Bank Details",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFFFFDF8)
+                )
             }
         }
     }
 }
 
 @Composable
-fun EuropeanWithdrawalForm(viewModel: WithdrawViewModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            stringResource(R.string.withdraw_sepa_details_europe), // "SEPA Bank Transfer Details (Europe)"
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = viewModel.sepaAccountHolderName,
-            onValueChange = viewModel::onSepaAccountHolderNameChange,
-            label = { Text(stringResource(R.string.label_account_holder_name)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("Account holder name",ignoreCase = true) == true
-        )
-        OutlinedTextField(
-            value = viewModel.sepaIban,
-            onValueChange = viewModel::onSepaIbanChange,
-            label = { Text(stringResource(R.string.label_iban)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("IBAN",ignoreCase = true) == true
-        )
-        OutlinedTextField(
-            value = viewModel.sepaBicSwift,
-            onValueChange = viewModel::onSepaBicSwiftChange,
-            label = { Text(stringResource(R.string.label_bic_swift)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("BIC/SWIFT",ignoreCase = true) == true
-        )
-        OutlinedTextField(
-            value = viewModel.sepaBankName,
-            onValueChange = viewModel::onSepaBankNameChange,
-            label = { Text(stringResource(R.string.label_bank_name)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = viewModel.sepaReference,
-            onValueChange = viewModel::onSepaReferenceChange,
-            label = { Text(stringResource(R.string.label_reference_optional)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-    }
-}
+private fun CountrySelectionScreen(
+    navController: NavController,
+    selectedCountry: String?,
+    onCountryChange: (String) -> Unit,
+    countryDropdownExpanded: Boolean,
+    onDropdownExpandedChange: (Boolean) -> Unit,
+    onBackToAmount: () -> Unit
+) {
+    val countries = listOf(
+        "United Kingdom",
+        "Spain",
+        "Germany",
+        "France",
+        "Netherlands",
+        "Belgium",
+        "Portugal",
+        "Italy"
+    )
 
-@Composable
-fun LatinAmericanWithdrawalForm(viewModel: WithdrawViewModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Back button - goes back to amount input screen
+        IconButton(
+            onClick = { onBackToAmount() },
+            modifier = Modifier
+                .offset(x = 16.dp, y = 77.dp)
+                .size(44.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 16.dp, top = 90.dp, end = 16.dp)
+        ) {
+            // Header
         Text(
-            stringResource(R.string.withdraw_latam_details_provider), // "Bank Details (Latin America - via Provider)"
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = viewModel.latamFirstName,
-            onValueChange = viewModel::onLatamFirstNameChange,
-            label = { Text(stringResource(R.string.label_first_name)) },
+                text = "Choose Destination",
+                fontSize = 16.sp,
+                fontWeight = FontWeight(400),
+                color = Color(0xFFFFFDF8),
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("First name", ignoreCase = true) == true
-        )
-        OutlinedTextField(
-            value = viewModel.latamLastName,
-            onValueChange = viewModel::onLatamLastNameChange,
-            label = { Text(stringResource(R.string.label_last_name)) },
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(55.dp))
+
+            // Country selection section
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Select your payout country",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFFFFDF8)
+                )
+
+                // Country dropdown
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .clickable { onDropdownExpandedChange(true) }
+                        .padding(horizontal = 12.dp, vertical = 18.dp)
+                ) {
+                    Row(
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("Last name", ignoreCase = true) == true
-        )
-        OutlinedTextField(
-            value = viewModel.latamBankAccountNumber,
-            onValueChange = viewModel::onLatamBankAccountNumberChange,
-            // You can make the label dynamic based on country if needed
-            label = {
-                val labelText = when (viewModel.selectedCountryCode) {
-                    "MX" -> stringResource(R.string.label_clabe_mx)
-                    "AR" -> stringResource(R.string.label_cbu_ar) // Add this string
-                    "CO" -> stringResource(R.string.label_account_number_co)
-                    else -> stringResource(R.string.label_bank_account_number) // Generic
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Location",
+                                tint = Color(0xFFFFFDF8),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = selectedCountry ?: "Country",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight(400),
+                                color = Color(0xFFFFFDF8)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Dropdown",
+                            tint = Color(0xFFFFFDF8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
-                Text(labelText)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("Bank account number", ignoreCase = true) == true
-        )
-        // Bank Name might be optional for some LATAM countries/Bitso, required for others
-        // You can add conditional logic for its display if needed, or based on Bitso's requirements
-        OutlinedTextField(
-            value = viewModel.latamBankName,
-            onValueChange = viewModel::onLatamBankNameChange,
-            label = { Text(stringResource(R.string.label_bank_name_optional_latam)) }, // e.g. "Bank Name (if applicable)"
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = viewModel.errorMessage?.contains("Bank name", ignoreCase = true) == true && viewModel.selectedCountryCode == "CO" // Example
-        )
 
-        // Informational text for Bitso
+                DropdownMenu(
+                    expanded = countryDropdownExpanded,
+                    onDismissRequest = { onDropdownExpandedChange(false) }
+                ) {
+                    countries.forEach { country ->
+                        DropdownMenuItem(
+                            text = { Text(country, color = Color.White) },
+                            onClick = {
+                                onCountryChange(country)
+                                onDropdownExpandedChange(false)
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Withdraw button
+            Button(
+                onClick = { /* Navigate to bank details */ },
+                enabled = selectedCountry != null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selectedCountry != null) Color(0xFF23D3D5) else Color(0xFF26292C),
+                    disabledContainerColor = Color(0xFF26292C)
+                ),
+                shape = RoundedCornerShape(99.dp)
+            ) {
         Text(
-            stringResource(R.string.withdraw_provider_info_latam), // e.g., "Withdrawals processed by our partner for Latin America."
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(top = 8.dp)
-        )
+                    text = "Withdraw",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFFFFDF8)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(80.dp))
+        }
     }
 }

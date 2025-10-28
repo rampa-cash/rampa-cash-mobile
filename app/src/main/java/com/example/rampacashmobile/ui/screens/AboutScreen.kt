@@ -21,15 +21,11 @@ fun AboutScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF111827))
     ) {
         // Top Navigation
         TopNavBar(
-            title = "About rampa",
             navController = navController,
-            showBackButton = false,
-            showProfileButton = false,
-            showChatButton = false
+            showBackButton = false
         )
         
         // Main Content

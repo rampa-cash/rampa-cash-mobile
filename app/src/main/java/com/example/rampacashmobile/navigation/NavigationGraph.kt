@@ -18,7 +18,6 @@ import com.example.rampacashmobile.viewmodel.MainViewModel
 import com.example.rampacashmobile.viewmodel.InvestmentViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.example.rampacashmobile.ui.screens.WithdrawScreen
-import com.example.rampacashmobile.viewmodel.WithdrawViewModel
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 
 
@@ -37,10 +36,17 @@ fun NavigationGraph(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Only show bottom navigation when not on login screen and not in loading state
+    // Only show bottom navigation when not on login screen, not in loading state, and not on specific flow screens
     val showBottomBar = currentRoute != "login" &&
-            !sharedViewState.isLoading &&
-            !currentRoute.orEmpty().startsWith("tokenDetail/")
+                        currentRoute != "receive" &&
+                        currentRoute != "recharge" &&
+                        currentRoute != "withdraw" &&
+                        !currentRoute.orEmpty().startsWith("send_amount") &&
+                        !currentRoute.orEmpty().startsWith("send_confirm") &&
+                        !currentRoute.orEmpty().startsWith("send_summary") &&
+                        currentRoute != "transaction_success" &&
+                        !sharedViewState.isLoading &&
+                        !currentRoute.orEmpty().startsWith("tokenDetail/")
 
     Scaffold(
         bottomBar = {
@@ -64,6 +70,7 @@ fun NavigationGraph(
                 )
             }
 
+            // User onboarding screen for collecting additional info
             composable("user_onboarding/{authProvider}/{existingEmail}/{existingPhone}") { backStackEntry ->
                 val authProvider = backStackEntry.arguments?.getString("authProvider") ?: ""
                 val existingEmail = backStackEntry.arguments?.getString("existingEmail") ?: ""
@@ -100,6 +107,43 @@ fun NavigationGraph(
                     navController = navController,
                     intentSender = intentSender,
                     viewModel = sharedViewModel
+                )
+            }
+
+            // Send flow screens
+            composable("send_amount/{token}/{recipient}") { backStackEntry ->
+                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
+                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
+                SendAmountScreen(
+                    navController = navController,
+                    tokenSymbol = token,
+                    recipientAddress = recipient,
+                    viewModel = sharedViewModel
+                )
+            }
+            composable("send_confirm/{token}/{recipient}/{amount}") { backStackEntry ->
+                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
+                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
+                val amount = backStackEntry.arguments?.getString("amount") ?: "0"
+                SendConfirmScreen(
+                    navController = navController,
+                    tokenSymbol = token,
+                    recipientAddress = recipient,
+                    amount = amount,
+                    viewModel = sharedViewModel,
+                    intentSender = intentSender
+                )
+            }
+
+            composable("send_summary/{token}/{recipient}/{amount}") { backStackEntry ->
+                val token = backStackEntry.arguments?.getString("token") ?: "USDC"
+                val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
+                val amount = backStackEntry.arguments?.getString("amount") ?: "0"
+                SendSummaryScreen(
+                    navController = navController,
+                    tokenSymbol = token,
+                    recipientAddress = recipient,
+                    amount = amount
                 )
             }
 
@@ -205,8 +249,7 @@ fun NavigationGraph(
 
             composable("withdraw") {
                 WithdrawScreen(
-                    navController = navController,
-                    viewModel = hiltViewModel<WithdrawViewModel>()
+                    navController = navController
                 )
             }
 
@@ -226,21 +269,8 @@ fun NavigationGraph(
             composable("transaction_success") {
                 Log.d("NavigationGraph", "📱 Transaction success route reached - hasDetails: ${sharedViewState.transactionDetails != null}, showSuccess: ${sharedViewState.showTransactionSuccess}")
 
-                when {
-                    sharedViewState.transactionDetails != null -> {
-                        Log.d("NavigationGraph", "✅ Showing TransactionSuccessScreen")
-                        TransactionSuccessScreen(
-                            transactionDetails = sharedViewState.transactionDetails!!,
-                            navController = navController,
-                            onDone = {
-                                sharedViewModel.onTransactionSuccessDone()
-                                navController.navigate("dashboard") {
-                                    popUpTo("dashboard") { inclusive = true }
-                                }
-                            }
-                        )
-                    }
-                    else -> {
+                when (val details = sharedViewState.transactionDetails) {
+                    null -> {
                         Log.d("NavigationGraph", "❌ No transaction details, redirecting to dashboard")
                         LaunchedEffect(Unit) {
                             kotlinx.coroutines.delay(500)
@@ -248,6 +278,16 @@ fun NavigationGraph(
                                 popUpTo("dashboard") { inclusive = true }
                             }
                         }
+                    }
+                    else -> {
+                        // Show the new summary screen using details from state
+                        SendSummaryScreen(
+                            navController = navController,
+                            tokenSymbol = details.tokenSymbol,
+                            recipientAddress = details.recipientAddress,
+                            amount = details.amount,
+                            viewModel = sharedViewModel
+                        )
                     }
                 }
             }

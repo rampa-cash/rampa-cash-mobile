@@ -23,6 +23,7 @@ import com.example.rampacashmobile.ui.components.TopNavBar
 import com.example.rampacashmobile.R
 import com.example.rampacashmobile.viewmodel.LearnViewModel
 import com.example.rampacashmobile.data.LearnModule
+import com.example.rampacashmobile.data.Submodule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,11 +38,8 @@ fun LearnScreen(
     ) {
         // Top Navigation with Profile Button
         TopNavBar(
-            title = "Learn & Earn",
             navController = navController,
-            showBackButton = false,
-            showProfileButton = true,
-            showChatButton = false
+            showBackButton = false
         )
         
         // Content
@@ -123,7 +121,7 @@ fun LearnScreen(
             }
 
             // Learning Modules - Rendered dynamically from ViewModel
-            modules.forEach { module ->
+            modules.forEach { module: LearnModule ->
                 LearnModuleCard(
                     module = module,
                     navController = navController
@@ -262,7 +260,7 @@ private fun LearnModuleCard(
                         color = Color(0xFF9CA3AF),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    module.submodules.forEach { submodule ->
+                    module.submodules.forEach { submodule: Submodule ->
                         val isSubmoduleCompleted = module.completedSubmodules.contains(submodule.id)
                         Row(
                             modifier = Modifier
