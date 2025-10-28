@@ -1,17 +1,12 @@
 package com.example.rampacashmobile.ui.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -20,12 +15,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,6 +34,10 @@ import com.example.rampacashmobile.usecase.InvestmentDataUseCase
 import com.example.rampacashmobile.viewmodel.InvestmentViewModel
 import java.text.DecimalFormat
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,16 +60,16 @@ fun InvestmentScreen(
             // Header with TopNavBar
             item {
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 // TopNavBar
                 TopNavBar(
                     navController = navController,
                     showBackButton = false
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
             }
-            
+
             // Title and description
             item {
                 Text(
@@ -77,9 +79,9 @@ fun InvestmentScreen(
                     color = Color(0xFFFFFDF8),
                     lineHeight = 32.sp
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 Text(
                     text = "Invest in tokenized assets with live data from Jupiter. Refresh to stay updated.",
                     fontSize = 16.sp,
@@ -87,10 +89,10 @@ fun InvestmentScreen(
                     color = Color(0xFFFFFDF8),
                     lineHeight = (16 * 1.14).sp
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
-            
+
             // Content based on state
             if (viewState.isLoading) {
                 item {
@@ -148,23 +150,43 @@ fun InvestmentScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Retry", color = Color.White)
                             }
+                            
+                            IconButton(
+                                onClick = { viewModel.refreshData() }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Prices",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             } else {
-                // Token cards list
+                // Success state - show tokens
                 items(viewState.tokens) { token ->
                     TokenCard(
                         token = token,
+                        navController = navController,
                         onBuyClick = { clickedToken ->
+                            // Show feedback to user
                             Toast.makeText(
                                 context,
                                 "Buy ${clickedToken.symbol} - Coming Soon!",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            
+                            // TODO: Navigate to buy screen or show buy dialog
+                            // This could navigate to a dedicated buy screen with:
+                            // navController.navigate("buy/${clickedToken.address}")
                         }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -172,8 +194,9 @@ fun InvestmentScreen(
 }
 
 @Composable
-private fun TokenCard(
+fun TokenCard(
     token: InvestmentDataUseCase.InvestmentTokenInfo,
+    navController: NavController,
     onBuyClick: (InvestmentDataUseCase.InvestmentTokenInfo) -> Unit
 ) {
     val priceFormatter = DecimalFormat("£#,##0.00")
@@ -193,10 +216,7 @@ private fun TokenCard(
         "SPYx" -> R.drawable.sp_icon
         else -> R.drawable.investment_icon
     }
-    
-    // Format address
-    val formattedAddress = "${token.address.take(4)}…${token.address.takeLast(4)}".uppercase()
-    
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -212,11 +232,10 @@ private fun TokenCard(
         ) {
             // Left side: Icon + Info
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Token Icon in circular container with border
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -235,44 +254,37 @@ private fun TokenCard(
                     Image(
                         painter = painterResource(id = iconResource),
                         contentDescription = token.symbol,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
                     )
                 }
-                
+
                 // Token Info
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
                         text = token.symbol,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight(400), // Regular
-                        color = Color(0xFFFFFDF8), // --text/normal
-                        lineHeight = (16 * 1.14).sp
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFFDF8)
                     )
-                    
-                    // Address with wallet icon
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle, // Using AccountCircle as placeholder for wallet icon
-                            contentDescription = "Wallet",
-                            tint = Color(0xFFFFFDF8),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = formattedAddress,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight(400), // Regular
-                            color = Color(0xFFFFFDF8), // --text/normal
-                            lineHeight = (12 * 1.4).sp,
-                            letterSpacing = 0.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
-                    }
+                    Text(
+                        text = token.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFF1F2F3),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = token.address.take(8) + "..." + token.address.takeLast(6),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFF1F2F3).copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp
+                    )
                 }
             }
             
@@ -292,7 +304,7 @@ private fun TokenCard(
                     letterSpacing = 0.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                 )
-                
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -314,6 +326,8 @@ private fun TokenCard(
                 }
             }
             
+            Spacer(modifier = Modifier.width(8.dp))
+            
             // Buy icon on far right
             Icon(
                 imageVector = Icons.Default.ShoppingCart,
@@ -323,4 +337,4 @@ private fun TokenCard(
             )
         }
     }
-} 
+}

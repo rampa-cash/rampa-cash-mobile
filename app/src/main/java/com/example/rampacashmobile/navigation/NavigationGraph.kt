@@ -1,4 +1,3 @@
-// File: app/src/main/java/com/example/rampacashmobile/navigation/NavigationGraph.kt
 package com.example.rampacashmobile.navigation
 
 import android.util.Log
@@ -7,17 +6,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
 import com.example.rampacashmobile.ui.components.BottomNavBar
 import com.example.rampacashmobile.ui.screens.*
 import com.example.rampacashmobile.viewmodel.MainViewModel
+import com.example.rampacashmobile.viewmodel.InvestmentViewModel
 import com.example.rampacashmobile.web3auth.Web3AuthManager
 import com.example.rampacashmobile.ui.screens.WithdrawScreen
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
+
 
 @Composable
 fun NavigationGraph(
@@ -35,15 +37,16 @@ fun NavigationGraph(
     val currentRoute = navBackStackEntry?.destination?.route
 
     // Only show bottom navigation when not on login screen, not in loading state, and not on specific flow screens
-    val showBottomBar = currentRoute != "login" && 
-                        currentRoute != "receive" && 
-                        currentRoute != "recharge" && 
-                        currentRoute != "withdraw" && 
+    val showBottomBar = currentRoute != "login" &&
+                        currentRoute != "receive" &&
+                        currentRoute != "recharge" &&
+                        currentRoute != "withdraw" &&
                         !currentRoute.orEmpty().startsWith("send_amount") &&
                         !currentRoute.orEmpty().startsWith("send_confirm") &&
                         !currentRoute.orEmpty().startsWith("send_summary") &&
                         currentRoute != "transaction_success" &&
-                        !sharedViewState.isLoading
+                        !sharedViewState.isLoading &&
+                        !currentRoute.orEmpty().startsWith("tokenDetail/")
 
     Scaffold(
         bottomBar = {
@@ -54,7 +57,7 @@ fun NavigationGraph(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "login", // Start with login, let LoginScreen handle session restoration
+            startDestination = "login",
             modifier = if (showBottomBar) Modifier.padding(paddingValues) else Modifier
         ) {
             composable("login") {
@@ -148,32 +151,109 @@ fun NavigationGraph(
                 InvestmentScreen(navController = navController)
             }
 
+            // Ruta para detalles del token
+            composable(
+                route = "tokenDetail/{symbol}",
+                arguments = listOf(
+                    navArgument("symbol") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val tokenSymbol = backStackEntry.arguments?.getString("symbol") ?: ""
+                val investmentViewModel: InvestmentViewModel = hiltViewModel()
+
+                TokenDetailScreen(
+                    navController = navController,
+                    tokenSymbol = tokenSymbol,
+                    viewModel = investmentViewModel
+                )
+            }
+
+            // Nueva ruta para detalles del token (legacy - puede ser removida)
+            composable(
+                route = "investment/{investmentId}",
+                arguments = listOf(
+                    navArgument("investmentId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) {
+                // Crear una instancia de InvestmentViewModel en lugar de usar MainViewModel
+                val investmentViewModel: InvestmentViewModel = hiltViewModel()
+
+                InvestmentScreen(
+                    navController = navController,
+                    viewModel = investmentViewModel
+                )
+            }
+
             composable("learn") {
                 LearnScreen(navController = navController)
+            }
+
+            // Submodules list screen
+            composable(
+                route = "submodules/{moduleId}",
+                arguments = listOf(
+                    navArgument("moduleId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val moduleId = backStackEntry.arguments?.getString("moduleId") ?: ""
+                SubmoduleListScreen(
+                    navController = navController,
+                    moduleId = moduleId
+                )
+            }
+
+            // Lesson screen
+            composable(
+                route = "lesson/{moduleId}/{submoduleId}",
+                arguments = listOf(
+                    navArgument("moduleId") {
+                        type = NavType.StringType
+                    },
+                    navArgument("submoduleId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val moduleId = backStackEntry.arguments?.getString("moduleId") ?: ""
+                val submoduleId = backStackEntry.arguments?.getString("submoduleId") ?: ""
+                LessonScreen(
+                    navController = navController,
+                    moduleId = moduleId,
+                    submoduleId = submoduleId
+                )
             }
 
             composable("card") {
                 CardScreen(navController = navController)
             }
-            
-            composable("receive") { 
+
+            composable("receive") {
                 ReceiveScreen(
                     navController = navController,
                     viewModel = sharedViewModel
                 )
             }
-            composable("recharge") { 
+
+            composable("recharge") {
                 RechargeScreen(
                     navController = navController,
                     viewModel = sharedViewModel
                 )
             }
+
             composable("withdraw") {
                 WithdrawScreen(
                     navController = navController
                 )
             }
-            composable("profile") { 
+
+            composable("profile") {
                 ProfileScreen(
                     navController = navController,
                     viewModel = sharedViewModel,
@@ -181,11 +261,11 @@ fun NavigationGraph(
                     web3AuthCallback = web3AuthCallback
                 )
             }
-            
-            composable("about") { 
+
+            composable("about") {
                 AboutScreen(navController = navController)
             }
-            
+
             composable("transaction_success") {
                 Log.d("NavigationGraph", "📱 Transaction success route reached - hasDetails: ${sharedViewState.transactionDetails != null}, showSuccess: ${sharedViewState.showTransactionSuccess}")
 

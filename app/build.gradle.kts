@@ -87,6 +87,8 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     // QR Code generation
     implementation(libs.zxing.core)
+    // Markdown support for learning content
+    implementation(libs.compose.markdown)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
