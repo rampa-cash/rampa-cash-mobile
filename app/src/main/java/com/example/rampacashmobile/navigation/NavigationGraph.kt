@@ -34,11 +34,14 @@ fun NavigationGraph(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Only show bottom navigation when not on login screen, not in loading state, and not on receive screen
+    // Only show bottom navigation when not on login screen, not in loading state, and not on specific flow screens
     val showBottomBar = currentRoute != "login" && 
                         currentRoute != "receive" && 
                         currentRoute != "recharge" && 
                         currentRoute != "withdraw" && 
+                        !currentRoute.orEmpty().startsWith("send_amount") &&
+                        !currentRoute.orEmpty().startsWith("send_confirm") &&
+                        !currentRoute.orEmpty().startsWith("send_summary") &&
                         currentRoute != "transaction_success" &&
                         !sharedViewState.isLoading
 
@@ -111,7 +114,8 @@ fun NavigationGraph(
                 SendAmountScreen(
                     navController = navController,
                     tokenSymbol = token,
-                    recipientAddress = recipient
+                    recipientAddress = recipient,
+                    viewModel = sharedViewModel
                 )
             }
             composable("send_confirm/{token}/{recipient}/{amount}") { backStackEntry ->
@@ -122,14 +126,17 @@ fun NavigationGraph(
                     navController = navController,
                     tokenSymbol = token,
                     recipientAddress = recipient,
-                    amount = amount
+                    amount = amount,
+                    viewModel = sharedViewModel,
+                    intentSender = intentSender
                 )
             }
-            composable("send_success/{token}/{recipient}/{amount}") { backStackEntry ->
+
+            composable("send_summary/{token}/{recipient}/{amount}") { backStackEntry ->
                 val token = backStackEntry.arguments?.getString("token") ?: "USDC"
                 val recipient = backStackEntry.arguments?.getString("recipient") ?: ""
                 val amount = backStackEntry.arguments?.getString("amount") ?: "0"
-                SendSuccessScreen(
+                SendSummaryScreen(
                     navController = navController,
                     tokenSymbol = token,
                     recipientAddress = recipient,
@@ -180,33 +187,26 @@ fun NavigationGraph(
             }
             
             composable("transaction_success") {
-                // Use the already shared ViewModel instance - NO MORE hiltViewModel()!
                 Log.d("NavigationGraph", "📱 Transaction success route reached - hasDetails: ${sharedViewState.transactionDetails != null}, showSuccess: ${sharedViewState.showTransactionSuccess}")
-                
-                // Check if we have transaction details to show
-                when {
-                    sharedViewState.transactionDetails != null -> {
-                        Log.d("NavigationGraph", "✅ Showing TransactionSuccessScreen")
-                        TransactionSuccessScreen(
-                            transactionDetails = sharedViewState.transactionDetails!!,
-                            navController = navController,
-                            onDone = {
-                                sharedViewModel.onTransactionSuccessDone()
-                                navController.navigate("dashboard") {
-                                    popUpTo("dashboard") { inclusive = true }
-                                }
-                            }
-                        )
-                    }
-                    else -> {
+
+                when (val details = sharedViewState.transactionDetails) {
+                    null -> {
                         Log.d("NavigationGraph", "❌ No transaction details, redirecting to dashboard")
-                        // If no transaction details after a short wait, go back to dashboard
                         LaunchedEffect(Unit) {
-                            kotlinx.coroutines.delay(500) // Short delay to allow state to propagate
+                            kotlinx.coroutines.delay(500)
                             navController.navigate("dashboard") {
                                 popUpTo("dashboard") { inclusive = true }
                             }
                         }
+                    }
+                    else -> {
+                        // Show the new summary screen using details from state
+                        SendSummaryScreen(
+                            navController = navController,
+                            tokenSymbol = details.tokenSymbol,
+                            recipientAddress = details.recipientAddress,
+                            amount = details.amount
+                        )
                     }
                 }
             }

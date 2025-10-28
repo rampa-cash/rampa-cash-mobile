@@ -7,6 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -25,12 +26,32 @@ fun SendSuccessScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = "Transfer sent!", fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFFFDF8))
+        // Success icon substitute (can be replaced with asset)
+        Text(text = "✅", fontSize = 56.sp)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Payment successful",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFFFFFDF8),
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(8.dp))
-        Text(text = "$amount $tokenSymbol to ${recipientAddress.take(6)}...${recipientAddress.takeLast(6)}", color = Color(0xFFF1F2F3))
+        Text(
+            text = "$amount $tokenSymbol sent to ${recipientAddress.take(6)}...${recipientAddress.takeLast(6)}",
+            color = Color(0xFFF1F2F3),
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(24.dp))
-        Button(onClick = { navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = true } } }) {
+        Button(
+            onClick = { navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = true } } },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Done")
+        }
+        Spacer(Modifier.height(12.dp))
+        TextButton(onClick = { navController.navigate("send_summary/$tokenSymbol/$recipientAddress/$amount") }) {
+            Text("View details")
         }
     }
 }
