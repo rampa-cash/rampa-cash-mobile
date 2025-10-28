@@ -171,16 +171,7 @@ fun InvestmentScreen(
                         token = token,
                         navController = navController,
                         onBuyClick = { clickedToken ->
-                            // Show feedback to user
-                            Toast.makeText(
-                                context,
-                                "Buy ${clickedToken.symbol} - Coming Soon!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            
-                            // TODO: Navigate to buy screen or show buy dialog
-                            // This could navigate to a dedicated buy screen with:
-                            // navController.navigate("buy/${clickedToken.address}")
+                            navController.navigate("tokenDetail/${token.symbol}")
                         }
                     )
                 }
