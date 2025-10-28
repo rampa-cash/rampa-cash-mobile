@@ -173,6 +173,7 @@ fun InvestmentScreen(
                     items(viewState.tokens) { token ->
                         TokenCard(
                             token = token,
+                            navController = navController,
                             onBuyClick = { clickedToken ->
                                 // Show feedback to user
                                 Toast.makeText(
@@ -200,6 +201,7 @@ fun InvestmentScreen(
 @Composable
 private fun TokenCard(
     token: InvestmentDataUseCase.InvestmentTokenInfo,
+    navController: NavController,
     onBuyClick: (InvestmentDataUseCase.InvestmentTokenInfo) -> Unit
 ) {
     val priceFormatter = DecimalFormat("$#,##0.00")
@@ -219,11 +221,13 @@ private fun TokenCard(
         "SPYx" -> R.drawable.sp_icon
         else -> R.drawable.investment_icon
     }
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: Navigate to token details */ },
+            .clickable {
+                navController.navigate("tokenDetail/${token.symbol}")
+            },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -267,7 +271,7 @@ private fun TokenCard(
                     text = token.address.take(8) + "..." + token.address.takeLast(6),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace,
                     fontSize = 10.sp
                 )
             }
