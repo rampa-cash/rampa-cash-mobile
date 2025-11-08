@@ -212,4 +212,63 @@ class InvestmentDataUseCase @Inject constructor() {
             emptyMap()
         }
     }
+
+    /**
+     * Fetch historical price data for a token
+     * Returns a list of PricePoint objects with timestamp and price
+     */
+    suspend fun getHistoricalPrices(
+        tokenAddress: String,
+        timeRange: String = "7D"
+    ): List<com.example.rampacashmobile.viewmodel.InvestmentViewModel.PricePoint> = withContext(Dispatchers.IO) {
+        try {
+            // Note: Jupiter API doesn't provide historical price data in the free tier
+            // For now, we'll generate mock data based on current price
+            // In a production app, you'd need to use a service like Birdeye, CoinGecko, etc.
+
+            Log.d(TAG, "📈 Generating historical price data for $tokenAddress (range: $timeRange)")
+
+            // First, get current price
+            val currentPriceData = fetchPriceData(listOf(tokenAddress))
+            val currentPrice = currentPriceData[tokenAddress]?.usdPrice?.toFloat() ?: 100f
+
+            // Generate mock historical data based on current price
+            val now = System.currentTimeMillis()
+            val oneDayMillis = 24 * 60 * 60 * 1000L
+            val oneHourMillis = 60 * 60 * 1000L
+
+            val (numPoints, intervalMillis) = when (timeRange) {
+                "1D" -> Pair(24, oneHourMillis)
+                "7D" -> Pair(168, oneHourMillis)
+                "30D" -> Pair(30, oneDayMillis)
+                "1M" -> Pair(30, oneDayMillis)
+                "3M" -> Pair(90, oneDayMillis)
+                "6M" -> Pair(180, oneDayMillis)
+                "1Y" -> Pair(365, oneDayMillis)
+                else -> Pair(30, oneDayMillis)
+            }
+
+            var price = currentPrice * 0.95f // Start from 95% of current price
+
+            (0 until numPoints).map { i ->
+                // Add realistic volatility
+                val volatility = 0.02f
+                val randomChange = Random.nextDouble(-volatility.toDouble(), volatility.toDouble()).toFloat()
+                price *= (1 + randomChange)
+
+                // Add slight upward trend to reach current price
+                val trend = 0.0005f
+                price *= (1 + trend)
+
+                com.example.rampacashmobile.viewmodel.InvestmentViewModel.PricePoint(
+                    timestamp = now - (numPoints - i - 1) * intervalMillis,
+                    price = price
+                )
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error generating historical prices: ${e.message}", e)
+            emptyList()
+        }
+    }
 }
